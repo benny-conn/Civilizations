@@ -1,0 +1,5 @@
+name: Civilizations
+version: 1.0.0
+main: net.tolmikarc.civilizations.CivilizationsPlugin
+api-version: 1.13
+author: Tolmikarc
