@@ -23,15 +23,18 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
     fun addPlayerToRaid(player: Player) {
         CivPlayer.fromBukkitPlayer(player).let {
             playersInvolved.putIfAbsent(it, Settings.RAID_LIVES)
-            val onlinePlayersFromCivs: MutableList<Player> = ArrayList()
-            for (p in Bukkit.getOnlinePlayers()) {
-                if (civBeingRaided.citizens.contains(CivPlayer.fromBukkitPlayer(p)) || civRaiding.citizens.contains(
-                        CivPlayer.fromBukkitPlayer(p)
+
+            if (Common.doesPluginExist("protocollib")) {
+                val onlinePlayersFromCivs: MutableList<Player> = ArrayList()
+                for (p in Bukkit.getOnlinePlayers()) {
+                    if (civBeingRaided.citizens.contains(CivPlayer.fromBukkitPlayer(p)) || civRaiding.citizens.contains(
+                            CivPlayer.fromBukkitPlayer(p)
+                        )
                     )
-                )
-                    onlinePlayersFromCivs.add(p)
+                        onlinePlayersFromCivs.add(p)
+                }
+                NameTag.of("&c" + player.displayName).applyTo(player, onlinePlayersFromCivs)
             }
-            NameTag.of("&c" + player.displayName).applyTo(player, onlinePlayersFromCivs)
         }
     }
 

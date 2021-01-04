@@ -1,5 +1,5 @@
 .idea/
 build.xml
 target/
-pom.xml
+*.xml
 Civilizations.iml
