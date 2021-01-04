@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
+ */
+
 package net.tolmikarc.civilizations.adapter
 
 import com.massivecraft.factions.FLocation

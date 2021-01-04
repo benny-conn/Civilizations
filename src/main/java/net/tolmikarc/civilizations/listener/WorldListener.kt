@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
+ */
+
 package net.tolmikarc.civilizations.listener
 
 import net.tolmikarc.civilizations.util.ClaimUtil.getCivFromLocation
@@ -18,5 +22,5 @@ class WorldListener : Listener {
         }
         if (!civilization.claimToggleables.fire) event.isCancelled = true
     }
-    
+
 }

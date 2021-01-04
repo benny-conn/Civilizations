@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
+ */
+
 package net.tolmikarc.civilizations.task
 
 import net.tolmikarc.civilizations.settings.Settings
@@ -38,7 +42,7 @@ class CooldownTask : BukkitRunnable() {
             return cooldowns.containsKey(map)
         }
 
-        
+
         fun getCooldownRemaining(uuid: UUID, type: CooldownType): Int {
             val map = SimpleEntry(uuid, type)
             return if (cooldowns.containsKey(map)) ((cooldowns[map]!! - System.currentTimeMillis()) / 1000L).toInt() else 0
