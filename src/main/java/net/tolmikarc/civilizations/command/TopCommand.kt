@@ -4,6 +4,8 @@
 
 package net.tolmikarc.civilizations.command
 
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -23,11 +25,67 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
         val page = if (args.size > 1) args[1].toInt() else 1
         if (!args[0].equals("players", ignoreCase = true)) {
             Common.runLaterAsync {
-                TODO("Gotta redo this one")
+                val civilizationsSorted = ArrayList(Civilization.civilizationsMap.values).sortedBy {
+                    return@sortedBy when (args[0]) {
+                        "power" -> it.power
+                        "balance" -> it.bank.balance.toInt()
+                        "land" -> it.totalBlocksCount
+                        "citizens" -> it.citizenCount
+                        else -> it.power
+                    }
+                }
+                val lowerLimit = (page * 10) - 9
+                val upperLimit = page * 10
+                tellNoPrefix("${Settings.PRIMARY_COLOR}======= ${Settings.SECONDARY_COLOR}Top Civs: ${args[0].capitalize()} ($page) ${Settings.PRIMARY_COLOR}=======")
+                when (args[0]) {
+                    "power" -> {
+                        for (i in lowerLimit..(upperLimit + 1)) {
+                            if (i >= civilizationsSorted.size)
+                                break
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].power} ")
+                        }
+                    }
+                    "balance" -> {
+                        for (i in lowerLimit..(upperLimit + 1)) {
+                            if (i >= civilizationsSorted.size)
+                                break
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].bank.balance} ")
+                        }
+                    }
+                    "land" -> {
+                        for (i in lowerLimit..(upperLimit + 1)) {
+                            if (i >= civilizationsSorted.size)
+                                break
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].totalBlocksCount} ")
+                        }
+                    }
+                    "citizens" -> {
+                        for (i in lowerLimit..(upperLimit + 1)) {
+                            if (i >= civilizationsSorted.size)
+                                break
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].citizenCount} ")
+                        }
+                    }
+                    else -> {
+                        for (i in lowerLimit..(upperLimit + 1)) {
+                            if (i >= civilizationsSorted.size)
+                                break
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].power} ")
+                        }
+                    }
+                }
             }
         } else {
             Common.runLaterAsync {
-                TODO("Gotta redo this one")
+                val topPlayers = ArrayList(CivPlayer.playerMap.values).sortedBy { it.power }
+                val lowerLimit = (page * 10) - 9
+                val upperLimit = page * 10
+                tellNoPrefix("${Settings.PRIMARY_COLOR}======= ${Settings.SECONDARY_COLOR}Top Players ($page) ${Settings.PRIMARY_COLOR}=======")
+                for (i in lowerLimit..(upperLimit + 1)) {
+                    if (i >= topPlayers.size)
+                        break
+                    tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${topPlayers[i].playerName}: ${topPlayers[i].power} ")
+                }
             }
         }
     }

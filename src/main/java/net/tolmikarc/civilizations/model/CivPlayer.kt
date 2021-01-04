@@ -49,15 +49,15 @@ data class CivPlayer(val playerUUID: UUID) {
 
     companion object {
         private val QUEUED_FOR_SAVING: MutableSet<CivPlayer> = HashSet()
-        private val cacheMap: MutableMap<UUID, CivPlayer> = HashMap()
+        val playerMap: MutableMap<UUID, CivPlayer> = HashMap()
         private val byName: MutableMap<String?, CivPlayer> = HashMap()
 
         fun fromBukkitPlayer(player: Player): CivPlayer {
-            return cacheMap[player.uniqueId] ?: initializeCivPlayer(player.uniqueId)
+            return playerMap[player.uniqueId] ?: initializeCivPlayer(player.uniqueId)
         }
 
         fun fromUUID(uuid: UUID): CivPlayer? {
-            return cacheMap[uuid]
+            return playerMap[uuid]
         }
 
         fun fromName(displayName: String?): CivPlayer? {
@@ -66,12 +66,12 @@ data class CivPlayer(val playerUUID: UUID) {
 
         fun initializeCivPlayer(uuid: UUID): CivPlayer {
             val civPlayer = CivPlayer(uuid)
-            cacheMap[uuid] = civPlayer
+            playerMap[uuid] = civPlayer
             return civPlayer
         }
 
         fun initialLoadFromDatabase(uuid: UUID) {
-            var civPlayer = cacheMap[uuid]
+            var civPlayer = playerMap[uuid]
             if (civPlayer == null) {
                 civPlayer = initializeCivPlayer(uuid)
                 loadAsync(civPlayer)
