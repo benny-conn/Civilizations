@@ -38,10 +38,8 @@ class CivilizationsPlugin : SimplePlugin() {
     //  WAR
     //  make sure players can get out of claims at all times
     //  find a natural way to introduce players to creating civs/claims
-    //  consider custom groups for permissions and custom land named ares with permissions
     //  Towny and Factions adapter
     //  maybe a system to restore land to original state before players touched it
-    //  colony teleport command
     //  learn about kotlin coroutines
     //  make the conversation canceller a variable
     //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
