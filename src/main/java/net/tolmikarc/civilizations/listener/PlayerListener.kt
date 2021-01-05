@@ -242,30 +242,33 @@ class PlayerListener : Listener {
                 if (civTo == null && civFrom == null) return
                 // are we entering a new civ?
                 if (civTo != null && civTo != civFrom) {
-                    Common.callEvent(
-                        CivEnterEvent(
-                            civTo,
-                            event
+                    if (!Common.callEvent(
+                            CivEnterEvent(
+                                civTo,
+                                event.player
+                            )
                         )
-                    )
+                    ) event.isCancelled = true
                 } else if (civTo == null && civFrom != null) { // are we leaving the civ?
-                    Common.callEvent(
-                        CivLeaveEvent(
-                            civFrom,
-                            event
+                    if (!Common.callEvent(
+                            CivLeaveEvent(
+                                civFrom,
+                                event.player
+                            )
                         )
-                    )
+                    ) event.isCancelled = true
                 }
                 val plotTo = getPlotFromLocation(event.to!!)
                 val plotFrom = getPlotFromLocation(event.from)
                 // are we entering a new plot
                 if (plotTo != null && plotTo != plotFrom) {
-                    Common.callEvent(
-                        PlotEnterEvent(
-                            plotTo,
-                            event
+                    if (!Common.callEvent(
+                            PlotEnterEvent(
+                                plotTo,
+                                event.player
+                            )
                         )
-                    )
+                    ) event.isCancelled = true
                 }
             }
         } finally {
@@ -285,15 +288,33 @@ class PlayerListener : Listener {
             if (civTo == null && civFrom == null) return
             // are we entering a new civ?
             if (civTo != null && civTo != civFrom) {
-                Common.callEvent(CivEnterEvent(civTo, event))
+                if (!Common.callEvent(
+                        CivEnterEvent(
+                            civTo,
+                            event.player
+                        )
+                    )
+                ) event.isCancelled = true
             } else if (civTo == null && civFrom != null) { // are we leaving the civ?
-                Common.callEvent(CivLeaveEvent(civFrom, event))
+                if (!Common.callEvent(
+                        CivLeaveEvent(
+                            civFrom,
+                            event.player
+                        )
+                    )
+                ) event.isCancelled = true
             }
             val plotTo = getPlotFromLocation(event.to!!)
             val plotFrom = getPlotFromLocation(event.from)
             // are we entering a new plot
             if (plotTo != null && plotTo != plotFrom) {
-                Common.callEvent(PlotEnterEvent(plotTo, event))
+                if (!Common.callEvent(
+                        PlotEnterEvent(
+                            plotTo,
+                            event.player
+                        )
+                    )
+                ) event.isCancelled = true
             }
         } finally {
             LagCatcher.end("teleport")
