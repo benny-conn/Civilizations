@@ -5,6 +5,9 @@
 package net.tolmikarc.civilizations.listener
 
 import net.tolmikarc.civilizations.constants.Constants
+import net.tolmikarc.civilizations.event.CivEnterEvent
+import net.tolmikarc.civilizations.event.CivLeaveEvent
+import net.tolmikarc.civilizations.event.PlotEnterEvent
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
@@ -231,9 +234,6 @@ class PlayerListener : Listener {
 
     @EventHandler
     fun onPlayerMove(event: PlayerMoveEvent) {
-        val player = event.player
-        val civPlayer = CivPlayer.fromBukkitPlayer(player)
-        val playersCiv = civPlayer.civilization
         val to: Location = event.to!!
         val from: Location = event.from
         LagCatcher.start("move")
@@ -246,73 +246,49 @@ class PlayerListener : Listener {
                 if (civTo == null && civFrom == null) return
                 // are we entering a new civ?
                 if (civTo != null && civTo != civFrom) {
-                    // does the player have a civilization that is raiding the new civ?
-                    if (isBeingRaided(civTo, playersCiv)) {
-                        // if the player ratio isn't valid, he cannot participate in raid :(
-                        if (!isPlayerToPlayerRatioValid(civTo, playersCiv)) {
-                            Common.tell(player, "&cThere are too many players in this raid for you to participate")
-                            return
-                        }
-                        // if the player is allowed in, then make sure he is a part of the involved players during the raid
-                        civTo.raid!!.addPlayerToRaid(player)
-                    }
-
-                    if (isPlayerOutlaw(CivPlayer.fromBukkitPlayer(player), civTo)) {
-                        // if the settings say no outlaws in, make sure no outlaws come in
-                        if (Settings.OUTLAW_ENTER_DISABLED) {
-                            Common.tell(player, "&4&lWARNING: &cYou are an outlaw in this town and cannot enter.")
-                            event.isCancelled = true
-                            return
-                        }
-                        // if the settings say outlaws can't do anything, make sure the player knows that
-                        if (Settings.OUTLAW_PERMISSIONS_DISABLED)
-                            Common.tell(
-                                player,
-                                "&4&lWARNING: &cYou are an outlaw in this town and cannot do anything."
-                            )
-                    }
-                    // when a player has flight enabled and walks in, make that player fly
-                    if (civTo.citizens.contains(civPlayer) && civPlayer.flying) {
-                        player.allowFlight = true
-                        player.isFlying = true
-                    }
-                    // FINALLY make sure the player knows hes entering a new civ
-                    Remain.sendActionBar(
-                        event.player,
-                        "${Settings.PRIMARY_COLOR}Now entering ${Settings.SECONDARY_COLOR}" + civTo.name + (if (civTo.claimToggleables.pvp) " &4&l[PVP]" else "")
-                    )
+                    Common.callEvent(CivEnterEvent(civTo, event))
                 } else if (civTo == null && civFrom != null) { // are we leaving the civ?
-
-                    // let the player know if we are leaving the civ
-                    Remain.sendActionBar(
-                        player,
-                        "${Settings.PRIMARY_COLOR}Now Leaving ${Settings.SECONDARY_COLOR}" + civFrom.name
-                    )
-                    // stop the player from flying if he leaves his own civ
-                    if (civFrom.citizens.contains(civPlayer) && civPlayer.flying) {
-                        player.isFlying = false
-                    }
+                    Common.callEvent(CivLeaveEvent(civFrom, event))
                 }
                 val plotTo = getPlotFromLocation(event.to!!)
                 val plotFrom = getPlotFromLocation(event.from)
                 // are we entering a new plot
                 if (plotTo != null && plotTo != plotFrom) {
-                    val plotOwner: CivPlayer = plotTo.owner
-                    Remain.sendActionBar(
-                        event.player,
-                        if (plotTo.forSale)
-                            "${Settings.PRIMARY_COLOR}Plot: ${Settings.SECONDARY_COLOR}" + plotTo.price + (if (plotTo.claimToggleables.pvp) " &4&l[PVP]" else "")
-                        else
-                            "${Settings.PRIMARY_COLOR}Plot: ${Settings.SECONDARY_COLOR}" +
-                                    if (plotOwner.playerUUID != civTo?.leader?.playerUUID) plotOwner.playerName
-                                    else "Unowned" + (if (plotTo.claimToggleables.pvp) " &4&l[PVP]" else "")
-                    )
+                   Common.callEvent(PlotEnterEvent(plotTo, event))
                 }
             }
         } finally {
             LagCatcher.end("move")
         }
     }
+
+    @EventHandler
+    fun onPlayerTeleport(event: PlayerTeleportEvent) {
+        val to: Location = event.to!!
+        val from: Location = event.from
+        LagCatcher.start("teleport")
+        try {
+            val civTo = getCivFromLocation(to)
+            val civFrom = getCivFromLocation(from)
+            // make sure some civilization is involved, else what would this code be for?
+            if (civTo == null && civFrom == null) return
+            // are we entering a new civ?
+            if (civTo != null && civTo != civFrom) {
+                Common.callEvent(CivEnterEvent(civTo, event))
+            } else if (civTo == null && civFrom != null) { // are we leaving the civ?
+                Common.callEvent(CivLeaveEvent(civFrom, event))
+            }
+            val plotTo = getPlotFromLocation(event.to!!)
+            val plotFrom = getPlotFromLocation(event.from)
+            // are we entering a new plot
+            if (plotTo != null && plotTo != plotFrom) {
+                Common.callEvent(PlotEnterEvent(plotTo, event))
+            }
+        } finally {
+            LagCatcher.end("teleport")
+        }
+    }
+
 
     @EventHandler
     fun onPVP(event: EntityDamageByEntityEvent) {
@@ -354,86 +330,4 @@ class PlayerListener : Listener {
         }
     }
 
-    @EventHandler
-    fun onPlayerTeleport(event: PlayerTeleportEvent) {
-        val player = event.player
-        val civPlayer = CivPlayer.fromBukkitPlayer(player)
-        val to: Location = event.to!!
-        val from: Location = event.from
-        LagCatcher.start("teleport")
-        try {
-            // Are we going into a new block?
-            if (from.blockX != to.blockX || from.blockZ != to.blockZ) {
-                val civTo = getCivFromLocation(to)
-                val civFrom = getCivFromLocation(from)
-                // make sure some civilization is involved, else what would this code be for?
-                if (civTo == null && civFrom == null) return
-                // are we entering a new civ?
-                if (civTo != null && civTo != civFrom) {
-                    // does the player have a civilization that is raiding the new civ?
-                    if (isBeingRaided(civTo, civPlayer.civilization)) {
-                        // if the player ratio isn't valid, he cannot participate in raid :(
-                        if (!isPlayerToPlayerRatioValid(civTo, civPlayer.civilization)) {
-                            Common.tell(player, "&cThere are too many players in this raid for you to participate")
-                            return
-                        }
-                        // if the player is allowed in, then make sure he is a part of the involved players during the raid
-                        civTo.raid!!.addPlayerToRaid(player)
-                    }
-
-                    if (isPlayerOutlaw(CivPlayer.fromBukkitPlayer(player), civTo)) {
-                        // if the settings say no outlaws in, make sure no outlaws come in
-                        if (Settings.OUTLAW_ENTER_DISABLED) {
-                            Common.tell(player, "&4&lWARNING: &cYou are an outlaw in this town and cannot enter.")
-                            event.isCancelled = true
-                            return
-                        }
-                        // if the settings say outlaws can't do anything, make sure the player knows that
-                        if (Settings.OUTLAW_PERMISSIONS_DISABLED)
-                            Common.tell(
-                                player,
-                                "&4&lWARNING: &cYou are an outlaw in this town and cannot do anything."
-                            )
-                    }
-                    // when a player has flight enabled and walks in, make that player fly
-                    if (civTo.citizens.contains(civPlayer) && civPlayer.flying) {
-                        player.allowFlight = true
-                        player.isFlying = true
-                    }
-                    // FINALLY make sure the player knows hes entering a new civ
-                    Remain.sendActionBar(
-                        event.player,
-                        "${Settings.PRIMARY_COLOR}Now entering ${Settings.SECONDARY_COLOR}" + civTo.name + (if (civTo.claimToggleables.pvp) " &4&l[PVP]" else "")
-                    )
-                } else if (civTo == null && civFrom != null) { // are we leaving the civ?
-                    // let the player know if we are leaving the civ
-                    Remain.sendActionBar(
-                        player,
-                        "${Settings.PRIMARY_COLOR}Now Leaving ${Settings.SECONDARY_COLOR}" + civFrom.name
-                    )
-                    // stop the player from flying if he leaves his own civ
-                    if (civFrom.citizens.contains(civPlayer) && civPlayer.flying) {
-                        player.isFlying = false
-                    }
-                }
-                val plotTo = getPlotFromLocation(event.to!!)
-                val plotFrom = getPlotFromLocation(event.from)
-                // are we entering a new plot
-                if (plotTo != null && plotTo != plotFrom) {
-                    val plotOwner: CivPlayer = plotTo.owner
-                    Remain.sendActionBar(
-                        event.player,
-                        if (plotTo.forSale)
-                            "${Settings.PRIMARY_COLOR}Plot: ${Settings.SECONDARY_COLOR}" + plotTo.price + (if (plotTo.claimToggleables.pvp) " &4&l[PVP]" else "")
-                        else
-                            "${Settings.PRIMARY_COLOR}Plot: ${Settings.SECONDARY_COLOR}" +
-                                    if (plotOwner.playerUUID != civTo?.leader?.playerUUID) plotOwner.playerName
-                                    else "Unowned" + (if (plotTo.claimToggleables.pvp) " &4&l[PVP]" else "")
-                    )
-                }
-            }
-        } finally {
-            LagCatcher.end("teleport")
-        }
-    }
 }

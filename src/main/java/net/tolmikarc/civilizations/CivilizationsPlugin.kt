@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations
 import net.tolmikarc.civilizations.command.CivilizationCommandGroup
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
+import net.tolmikarc.civilizations.listener.CivListener
 import net.tolmikarc.civilizations.listener.EntityListener
 import net.tolmikarc.civilizations.listener.PlayerListener
 import net.tolmikarc.civilizations.listener.WorldListener
@@ -102,6 +103,7 @@ class CivilizationsPlugin : SimplePlugin() {
         registerEvents(PlayerListener())
         registerEvents(EntityListener())
         registerEvents(WorldListener())
+        registerEvents(CivListener())
     }
 
     private fun loadDatabase() {
