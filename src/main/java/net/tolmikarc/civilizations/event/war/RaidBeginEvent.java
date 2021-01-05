@@ -14,6 +14,7 @@ public class RaidBeginEvent extends Event {
 	private static final HandlerList handlers = new HandlerList();
 
 	private final Raid raid;
+	private boolean cancelled;
 
 
 	public RaidBeginEvent(Raid raid) {

@@ -16,12 +16,13 @@ import org.bukkit.craftbukkit.v1_16_R3.entity.CraftPlayer
 import org.bukkit.entity.Player
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.PlayerUtil
+import org.mineacademy.fo.model.HookManager
 import java.lang.reflect.InvocationTargetException
 
 
 /**
  *
- * Courtesy of FrostedSnowman at https://www.spigotmc.org/threads/protocollib-change-player-nametag.301280/
+ * Adaption of FrostedSnowman's Resource at https://www.spigotmc.org/threads/protocollib-change-player-nametag.301280/
  *
  */
 
@@ -64,8 +65,8 @@ class NameTag(private val text: String) {
         Bukkit.getOnlinePlayers().stream().filter { player != it }.filter { constraintPlayers?.contains(it) ?: true }
             .forEach { p: Player ->
                 try {
-                    protocolManager.sendServerPacket(p, destroyEntity)
-                    protocolManager.sendServerPacket(p, namedEntitySpawn)
+                    HookManager.sendPacket(p, destroyEntity)
+                    HookManager.sendPacket(p, namedEntitySpawn)
                 } catch (exception: InvocationTargetException) {
                     exception.printStackTrace()
                 }

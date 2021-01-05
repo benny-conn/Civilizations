@@ -101,29 +101,30 @@ class PlayerListener : Listener {
         if (itemInHand.type != Settings.CLAIM_TOOL) return
         CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
             if (event.action == Action.LEFT_CLICK_BLOCK) {
+                val block = event.clickedBlock!!
                 civPlayer.vertex1 =
-                    Location(player.world, event.clickedBlock!!.x.toDouble(), 0.0, event.clickedBlock!!.z.toDouble())
+                    Location(player.world, block.x.toDouble(), 0.0, block.z.toDouble())
                 Common.tell(
                     player,
                     "&6Set first point to " + civPlayer.vertex1!!.x.toString() + " " + civPlayer.vertex1!!.z
                 )
-                event.isCancelled = true
             }
             if (event.action == Action.RIGHT_CLICK_BLOCK) {
+                val block = event.clickedBlock!!
                 if (event.hand == EquipmentSlot.HAND) {
                     civPlayer.vertex2 = Location(
                         player.world,
-                        event.clickedBlock!!.x.toDouble(),
+                        block.x.toDouble(),
                         256.0,
-                        event.clickedBlock!!.z.toDouble()
+                        block.z.toDouble()
                     )
                     Common.tell(
                         player,
                         "&6Set second point to " + civPlayer.vertex2!!.x.toString() + " " + civPlayer.vertex2!!.z
                     )
-                    event.isCancelled = true
                 }
             }
+            event.isCancelled = true
         }
     }
 
@@ -322,7 +323,7 @@ class PlayerListener : Listener {
     }
 
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW)
     fun onPVP(event: EntityDamageByEntityEvent) {
         LagCatcher.start("pvp")
         try {
@@ -359,6 +360,20 @@ class PlayerListener : Listener {
             }
         } finally {
             LagCatcher.end("pvp")
+        }
+    }
+
+    @EventHandler
+    fun onPlayerDamageEntity(event: EntityDamageByEntityEvent) {
+        LagCatcher.start("entity-damage-by-player")
+        try {
+            val damaged = event.entity
+            val damager = event.damager
+            if (damager !is Player || damaged is Player) return
+            val civ = getCivFromLocation(damaged.location) ?: return
+            event.isCancelled = can(ClaimPermissions.PermType.INTERACT, damager, civ)
+        } finally {
+            LagCatcher.end("entity-damage-by-player")
         }
     }
 

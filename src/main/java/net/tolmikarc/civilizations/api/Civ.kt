@@ -17,11 +17,11 @@ interface Civ {
     var name: String?
     var power: Int
     var leader: CivPlayer?
-    var bank: Bank
+    var bank: CivBank
     var home: Location?
     var claims: MutableSet<Region>
-    var colonies: MutableSet<Colony>
-    var plots: MutableSet<Plot>
+    var colonies: MutableSet<CivColony>
+    var plots: MutableSet<CivPlot>
     var warps: MutableMap<String, Location>
     var idNumber: Int
     var totalBlocksCount: Int
@@ -60,9 +60,9 @@ interface Civ {
     var raid: Raid?
 
 
-    fun addPower(amount: Int)
+    fun addPower(power: Int)
 
-    fun removePower(amount: Int)
+    fun removePower(power: Int)
 
     fun addWarp(name: String, location: Location)
 
@@ -73,9 +73,9 @@ interface Civ {
     fun removeBalance(amount: Double)
 
 
-    fun addPlot(plot: Plot)
+    fun addPlot(plot: CivPlot)
 
-    fun addColony(colony: Colony)
+    fun addColony(colony: CivColony)
 
     fun addClaim(region: Region)
 

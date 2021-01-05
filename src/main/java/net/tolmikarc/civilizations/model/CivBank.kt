@@ -9,7 +9,7 @@ import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
 
-data class Bank(val civilization: Civilization) : ConfigSerializable {
+data class CivBank(val civilization: Civilization) : ConfigSerializable {
 
     var balance: Double = 0.0
 
@@ -35,8 +35,8 @@ data class Bank(val civilization: Civilization) : ConfigSerializable {
 
 
         @JvmStatic
-        fun deserialize(map: SerializedMap): Bank {
-            return Bank(Civilization.fromUUID(map.get("Civilization", UUID::class.java))).apply {
+        fun deserialize(map: SerializedMap): CivBank {
+            return CivBank(Civilization.fromUUID(map.get("Civilization", UUID::class.java))).apply {
                 balance = map.getDouble("Balance")
             }
         }

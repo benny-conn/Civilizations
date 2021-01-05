@@ -4,10 +4,10 @@
 
 package net.tolmikarc.civilizations.db
 
-import net.tolmikarc.civilizations.model.Bank
+import net.tolmikarc.civilizations.model.CivBank
 import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.CivPlot
 import net.tolmikarc.civilizations.model.Civilization
-import net.tolmikarc.civilizations.model.Plot
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.war.RegionDamages
 import org.bukkit.Location
@@ -50,7 +50,7 @@ object CivDatastore : Datastore() {
                     val leader = deserializedCiv.leader
                     val home: Location? = deserializedCiv.home
                     val claims: MutableSet<Region> = deserializedCiv.claims
-                    val plots: MutableSet<Plot> = deserializedCiv.plots
+                    val plots: MutableSet<CivPlot> = deserializedCiv.plots
                     val warps: MutableMap<String, Location> = deserializedCiv.warps
                     val idNumber: Int = deserializedCiv.idNumber
                     val totalBlocksCount: Int = deserializedCiv.totalBlocksCount
@@ -59,7 +59,7 @@ object CivDatastore : Datastore() {
                     val allies: MutableSet<Civilization> = deserializedCiv.allies
                     val enemies: MutableSet<Civilization> = deserializedCiv.enemies
                     val outlaws: MutableSet<CivPlayer> = deserializedCiv.outlaws
-                    val bank: Bank = deserializedCiv.bank
+                    val bank: CivBank = deserializedCiv.bank
                     val banner: ItemStack? = deserializedCiv.banner
                     val book: ItemStack? = deserializedCiv.book
                     val permissions: ClaimPermissions = deserializedCiv.claimPermissions

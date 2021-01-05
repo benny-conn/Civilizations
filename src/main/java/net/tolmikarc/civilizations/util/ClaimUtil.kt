@@ -5,8 +5,8 @@
 package net.tolmikarc.civilizations.util
 
 import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.CivPlot
 import net.tolmikarc.civilizations.model.Civilization
-import net.tolmikarc.civilizations.model.Plot
 import net.tolmikarc.civilizations.util.MathUtil.isPointInRegion
 import net.tolmikarc.civilizations.util.MathUtil.isRegionInRegion
 import org.bukkit.Bukkit
@@ -62,7 +62,7 @@ object ClaimUtil {
     }
 
 
-    fun isLocationInRegion(location: Location): Boolean {
+    fun isLocationInACiv(location: Location): Boolean {
         for (civilization in Civilization.civilizationsMap.values) for (region in civilization.claims) {
             if (isPointInRegion(region, location.blockX, location.blockZ)) return true
         }
@@ -87,12 +87,12 @@ object ClaimUtil {
         return null
     }
 
-    fun getPlotFromLocation(location: Location): Plot? {
+    fun getPlotFromLocation(location: Location): CivPlot? {
         for (civilization in Civilization.civilizationsMap.values) getPlotFromLocation(location, civilization)
         return null
     }
 
-    fun getPlotFromLocation(location: Location, civilization: Civilization): Plot? {
+    fun getPlotFromLocation(location: Location, civilization: Civilization): CivPlot? {
         for (plot in civilization.plots) {
             if (isPointInRegion(plot.region, location.blockX, location.blockZ)) return plot
         }
@@ -120,7 +120,7 @@ object ClaimUtil {
         }
         return null
     }
-    
+
 
     fun regionsInSelection(region: Region, civilization: Civilization): List<Region> {
         val regions: MutableList<Region> = ArrayList()
@@ -142,8 +142,8 @@ object ClaimUtil {
         return regions
     }
 
-    fun plotsInSelection(region: Region?): List<Plot> {
-        val plots: MutableList<Plot> = ArrayList()
+    fun plotsInSelection(region: Region?): List<CivPlot> {
+        val plots: MutableList<CivPlot> = ArrayList()
         for (civilization in Civilization.civilizationsMap.values) for (plot in civilization.plots) {
             if (isRegionInRegion(plot.region, region!!)) plots.add(plot)
         }

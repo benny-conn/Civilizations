@@ -5,14 +5,15 @@
 package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.event.civ.ClaimEvent
+import net.tolmikarc.civilizations.model.CivColony
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.model.Civilization
-import net.tolmikarc.civilizations.model.Colony
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.distanceFromNearestClaim
 import net.tolmikarc.civilizations.util.ClaimUtil.getRegionFromLocation
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationConnected
+import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInACiv
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInRegion
 import net.tolmikarc.civilizations.util.ClaimUtil.isRegionConnected
 import net.tolmikarc.civilizations.util.ClaimUtil.regionsInSelection
@@ -95,7 +96,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
             player.vertex2
         )
         val totalArea = abs(areaBetweenTwoPoints(claim.primary, claim.secondary))
-        val isPointInOtherRegion = isLocationInRegion(player.vertex1!!) || isLocationInRegion(player.vertex2!!)
+        val isPointInOtherRegion = isLocationInACiv(player.vertex1!!) || isLocationInACiv(player.vertex2!!)
         checkBoolean(
             !isPointInOtherRegion,
             "You may not claim a portion of another region. You can use /civ claim visualize to see your current claims."
@@ -153,7 +154,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
                 civilization.colonyCount < maxColonies,
                 "You cannot have more than $maxColonies colonies."
             )
-            val colony = Colony(civilization, civilization.idNumber, getPlayer().location)
+            val colony = CivColony(civilization, civilization.idNumber, getPlayer().location)
             civilization.addColony(colony)
             tellSuccess("${Settings.SECONDARY_COLOR}Claimed colony with id ${Settings.PRIMARY_COLOR}" + civilization.idNumber)
         } else {

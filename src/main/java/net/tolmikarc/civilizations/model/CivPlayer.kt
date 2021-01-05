@@ -29,16 +29,16 @@ data class CivPlayer(val playerUUID: UUID) : CPlayer {
     override var raidBlocksDestroyed = 0
 
 
-    override fun addPower(amount: Int) {
-        power += amount
+    override fun addPower(power: Int) {
+        this.power += power
         queueForSaving()
     }
 
-    override fun removePower(amount: Int) {
-        if (power - amount >= 0)
-            power -= amount
+    override fun removePower(power: Int) {
+        if (this.power - power >= 0)
+            this.power -= power
         else
-            power = 0
+            this.power = 0
         queueForSaving()
     }
 

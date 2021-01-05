@@ -44,6 +44,17 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
 
 
     override fun onStart() {
+        for (player in Bukkit.getOnlinePlayers()) {
+            CivPlayer.fromBukkitPlayer(player).let {
+                if (civBeingRaided.citizens.contains(it)) {
+                    Common.tell(player, "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!")
+                    addPlayerToRaid(player)
+                }
+                if (civRaiding.citizens.contains(it)) {
+                    Common.tell(player, "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!")
+                }
+            }
+        }
         Common.callEvent(RaidBeginEvent(this))
     }
 
@@ -64,6 +75,25 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
     }
 
     override fun onEnd() {
+        for (player in Bukkit.getOnlinePlayers()) {
+            CivPlayer.fromBukkitPlayer(player).let {
+                if (civBeingRaided.citizens.contains(it)) Common.tell(
+                    player,
+                    "${Settings.PRIMARY_COLOR}Raid over!"
+                )
+                if (civRaiding.citizens.contains(it)) Common.tell(
+                    player,
+                    "${Settings.PRIMARY_COLOR}Raid over!"
+                )
+            }
+            for (civPlayer in playersInvolved.keys) {
+                civPlayer.playerName?.let {
+                    Bukkit.getPlayer(civPlayer.playerUUID)?.let { bukkitPlayer -> NameTag.remove(bukkitPlayer) }
+                }
+            }
+            civBeingRaided.raid = null
+            civRaiding.raid = null
+        }
         Common.callEvent(RaidEndEvent(this))
     }
 

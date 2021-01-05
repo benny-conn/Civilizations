@@ -10,9 +10,9 @@ import com.palmergames.bukkit.towny.`object`.*
 import com.palmergames.bukkit.towny.exceptions.EconomyException
 import com.palmergames.bukkit.towny.exceptions.NotRegisteredException
 import com.palmergames.bukkit.towny.exceptions.TownyException
+import net.tolmikarc.civilizations.model.CivColony
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.model.Civilization
-import net.tolmikarc.civilizations.model.Colony
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.permissions.ClaimToggleables
 import net.tolmikarc.civilizations.settings.Settings
@@ -105,7 +105,7 @@ object TownyAdapter {
     private fun getConvertedRegions(town: Town, civ: Civilization): MutableSet<Region> {
         val handledTownBlocks: MutableSet<TownBlock> = HashSet()
         val newRegions: MutableSet<Region> = HashSet()
-        val newColonies: MutableSet<Colony> = HashSet()
+        val newColonies: MutableSet<CivColony> = HashSet()
         var id = 0
         for (townBlock in town.townBlocks) {
             if (townBlock.isOutpost) {
@@ -114,7 +114,7 @@ object TownyAdapter {
                 val z: Int = townBlock.z * 16
                 val y = world?.getHighestBlockYAt(x, z)
                 val colony = y?.let { Location(world, x.toDouble(), it.toDouble(), z.toDouble()) }
-                    ?.let { Colony(civ, civ.idNumber, it) }
+                    ?.let { CivColony(civ, civ.idNumber, it) }
                 if (colony != null) {
                     newColonies.add(colony)
                 }

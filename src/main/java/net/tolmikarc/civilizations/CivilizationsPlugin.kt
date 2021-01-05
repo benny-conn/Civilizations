@@ -44,6 +44,7 @@ class CivilizationsPlugin : SimplePlugin() {
     //  learn about kotlin coroutines
     //  make the conversation canceller a variable
     //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
+    //  COOL MAP SYSTEM WITH REAL MINECRAFT MAPS
     override fun onPluginStart() {
         makeFolders()
         loadDatabase()

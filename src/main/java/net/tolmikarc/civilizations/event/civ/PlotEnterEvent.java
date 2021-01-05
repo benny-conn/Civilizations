@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.event.civ;
 
-import net.tolmikarc.civilizations.model.Plot;
+import net.tolmikarc.civilizations.model.CivPlot;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
@@ -14,12 +14,12 @@ import org.jetbrains.annotations.NotNull;
 public class PlotEnterEvent extends Event implements Cancellable {
 	private static final HandlerList handlers = new HandlerList();
 
-	private final Plot plot;
+	private final CivPlot plot;
 	private final Player player;
 	private boolean cancelled;
 
 
-	public PlotEnterEvent(Plot plot, Player player) {
+	public PlotEnterEvent(CivPlot plot, Player player) {
 		this.plot = plot;
 		this.player = player;
 	}
@@ -29,7 +29,7 @@ public class PlotEnterEvent extends Event implements Cancellable {
 		return player;
 	}
 
-	public Plot getPlot() {
+	public CivPlot getPlot() {
 		return plot;
 	}
 

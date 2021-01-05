@@ -4,8 +4,8 @@
 
 package net.tolmikarc.civilizations.command
 
+import net.tolmikarc.civilizations.model.CivColony
 import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Colony
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -56,7 +56,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
         val civPlayer = CivPlayer.fromBukkitPlayer(player)
         if (civPlayer.civilization != null) {
             val civilization = civPlayer.civilization!!
-            civilization.colonies.forEach(Consumer { colony: Colony -> colonies.add(colony.id.toString()) })
+            civilization.colonies.forEach(Consumer { colony: CivColony -> colonies.add(colony.id.toString()) })
         }
         return if (args.size == 1) colonies else null
     }

@@ -12,7 +12,7 @@ import org.mineacademy.fo.region.Region
 import java.util.*
 import java.util.stream.Collectors
 
-data class Plot(val civ: Civilization, val id: Int, val region: Region) : ConfigSerializable {
+data class CivPlot(val civ: Civilization, val id: Int, val region: Region) : ConfigSerializable {
     var price = 0.0
     lateinit var owner: CivPlayer
     var forSale = false
@@ -42,11 +42,11 @@ data class Plot(val civ: Civilization, val id: Int, val region: Region) : Config
 
     companion object {
         @JvmStatic
-        fun deserialize(map: SerializedMap): Plot {
+        fun deserialize(map: SerializedMap): CivPlot {
             val civ = Civilization.fromUUID(map["Civilization", UUID::class.java])
             val region = map.get("Region", Region::class.java)
             val id = map.getInteger("ID")
-            val plot = Plot(civ, id, region)
+            val plot = CivPlot(civ, id, region)
             val owner = CivPlayer.fromUUID(map["Owner", UUID::class.java])
             val price = map.getInteger("Price")
             val forSale = map.getBoolean("For_Sale")

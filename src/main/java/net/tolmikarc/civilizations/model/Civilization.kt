@@ -35,11 +35,11 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
         }
     override var power = 0
     override var leader: CivPlayer? = null
-    override var bank: Bank = Bank(this)
+    override var bank: CivBank = CivBank(this)
     override var home: Location? = null
     override var claims: MutableSet<Region> = HashSet()
-    override var colonies: MutableSet<Colony> = HashSet()
-    override var plots: MutableSet<Plot> = HashSet()
+    override var colonies: MutableSet<CivColony> = HashSet()
+    override var plots: MutableSet<CivPlot> = HashSet()
     override var warps: MutableMap<String, Location> = LinkedHashMap()
     override var idNumber = 1
     override var totalBlocksCount = 0
@@ -93,16 +93,16 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
     override var claimToggleables = ClaimToggleables()
     override var raid: Raid? = null
 
-    override fun addPower(amount: Int) {
-        power += amount
+    override fun addPower(power: Int) {
+        this.power += power
         queueForSaving()
     }
 
-    override fun removePower(amount: Int) {
-        if (power - amount >= 0)
-            power -= amount
+    override fun removePower(power: Int) {
+        if (this.power - power >= 0)
+            this.power -= power
         else
-            power = 0
+            this.power = 0
         queueForSaving()
     }
 
@@ -136,14 +136,14 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
     }
 
 
-    override fun addPlot(plot: Plot) {
+    override fun addPlot(plot: CivPlot) {
         plot.owner = leader ?: return
         idNumber++
         plots.add(plot)
         saveAsync(this)
     }
 
-    override fun addColony(colony: Colony) {
+    override fun addColony(colony: CivColony) {
         colony.id = idNumber
         idNumber++
         colonies.add(colony)
@@ -378,7 +378,7 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
             }
             val home = map.getLocation("Home")
             val claims = map.getSet("Claims", Region::class.java)
-            val plots = map.getSet("Plots", Plot::class.java)
+            val plots = map.getSet("Plots", CivPlot::class.java)
             val warps: Map<String, Location>? = map.getMap("Warps", String::class.java, Location::class.java)
             val claimNumber = map.getInteger("Claim_Number")
             val totalBlocksCount = map.getInteger("Total_Blocks_Count")
@@ -395,7 +395,7 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
             val outlaws: MutableSet<CivPlayer> =
                 map.getSet("Outlaws", UUID::class.java).stream().filter(playerRemoveFilter).map(CivPlayer::fromUUID)
                     .collect(Collectors.toSet())
-            val bank = map.get("Bank", Bank::class.java)
+            val bank = map.get("Bank", CivBank::class.java)
             val banner = map.getItem("Banner")
             val book = map.getItem("Book")
             val permissions = map.get("Claim_Permissions", ClaimPermissions::class.java)

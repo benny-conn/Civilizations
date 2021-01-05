@@ -6,8 +6,8 @@ package net.tolmikarc.civilizations.util
 
 import lombok.experimental.UtilityClass
 import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.CivPlot
 import net.tolmikarc.civilizations.model.Civilization
-import net.tolmikarc.civilizations.model.Plot
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.permissions.ClaimPermissions.PermType
 import net.tolmikarc.civilizations.settings.Settings
@@ -45,7 +45,7 @@ object PermissionUtil {
         return if (isAdmin(player)) true else civilization.officials.contains(player) || civilization.leader == player
     }
 
-    fun canManagePlot(civ: Civilization, plot: Plot, player: CivPlayer): Boolean {
+    fun canManagePlot(civ: Civilization, plot: CivPlot, player: CivPlayer): Boolean {
         return if (canManageCiv(player, civ)) true else plot.owner != null && plot.owner == player
     }
 }
