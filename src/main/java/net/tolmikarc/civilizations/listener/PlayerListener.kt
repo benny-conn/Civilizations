@@ -5,9 +5,9 @@
 package net.tolmikarc.civilizations.listener
 
 import net.tolmikarc.civilizations.constants.Constants
-import net.tolmikarc.civilizations.event.CivEnterEvent
-import net.tolmikarc.civilizations.event.CivLeaveEvent
-import net.tolmikarc.civilizations.event.PlotEnterEvent
+import net.tolmikarc.civilizations.event.civ.CivEnterEvent
+import net.tolmikarc.civilizations.event.civ.CivLeaveEvent
+import net.tolmikarc.civilizations.event.civ.PlotEnterEvent
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
@@ -16,15 +16,12 @@ import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.getCooldownRemaining
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.hasCooldown
-import net.tolmikarc.civilizations.util.CivUtil.isPlayerOutlaw
 import net.tolmikarc.civilizations.util.ClaimUtil.getCivFromLocation
 import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
 import net.tolmikarc.civilizations.util.PermissionUtil.can
 import net.tolmikarc.civilizations.util.WarUtil.addDamages
 import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
 import net.tolmikarc.civilizations.util.WarUtil.increaseBlocksBroken
-import net.tolmikarc.civilizations.util.WarUtil.isBeingRaided
-import net.tolmikarc.civilizations.util.WarUtil.isPlayerToPlayerRatioValid
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.EntityType
@@ -42,7 +39,6 @@ import org.bukkit.inventory.EquipmentSlot
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.debug.LagCatcher
 import org.mineacademy.fo.remain.CompMetadata
-import org.mineacademy.fo.remain.Remain
 
 class PlayerListener : Listener {
     @EventHandler
@@ -246,15 +242,30 @@ class PlayerListener : Listener {
                 if (civTo == null && civFrom == null) return
                 // are we entering a new civ?
                 if (civTo != null && civTo != civFrom) {
-                    Common.callEvent(CivEnterEvent(civTo, event))
+                    Common.callEvent(
+                        CivEnterEvent(
+                            civTo,
+                            event
+                        )
+                    )
                 } else if (civTo == null && civFrom != null) { // are we leaving the civ?
-                    Common.callEvent(CivLeaveEvent(civFrom, event))
+                    Common.callEvent(
+                        CivLeaveEvent(
+                            civFrom,
+                            event
+                        )
+                    )
                 }
                 val plotTo = getPlotFromLocation(event.to!!)
                 val plotFrom = getPlotFromLocation(event.from)
                 // are we entering a new plot
                 if (plotTo != null && plotTo != plotFrom) {
-                   Common.callEvent(PlotEnterEvent(plotTo, event))
+                    Common.callEvent(
+                        PlotEnterEvent(
+                            plotTo,
+                            event
+                        )
+                    )
                 }
             }
         } finally {
@@ -321,7 +332,7 @@ class PlayerListener : Listener {
                 }
                 return
             }
-            if (!civilization.claimToggleables.pvp) event.isCancelled = true
+            event.isCancelled = !civilization.claimToggleables.pvp
             if (event.isCancelled) {
                 Common.tell(damager, "&cYou cannot PVP here.")
             }

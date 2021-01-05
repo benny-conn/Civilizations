@@ -3,9 +3,9 @@
  */
 package net.tolmikarc.civilizations.listener
 
-import net.tolmikarc.civilizations.event.CivEnterEvent
-import net.tolmikarc.civilizations.event.CivLeaveEvent
-import net.tolmikarc.civilizations.event.PlotEnterEvent
+import net.tolmikarc.civilizations.event.civ.CivEnterEvent
+import net.tolmikarc.civilizations.event.civ.CivLeaveEvent
+import net.tolmikarc.civilizations.event.civ.PlotEnterEvent
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
@@ -15,10 +15,10 @@ import org.bukkit.event.Listener
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.remain.Remain
 
-class CivListener : Listener{
+class CivListener : Listener {
 
     @EventHandler
-    fun onEnterCiv(event: CivEnterEvent){
+    fun onEnterCiv(event: CivEnterEvent) {
         val player = event.player
         val civPlayer = CivPlayer.fromBukkitPlayer(player)
         val playersCiv = civPlayer.civilization
@@ -60,7 +60,7 @@ class CivListener : Listener{
     }
 
     @EventHandler
-    fun onLeaveCiv(event: CivLeaveEvent){
+    fun onLeaveCiv(event: CivLeaveEvent) {
         val player = event.player
         val civPlayer = CivPlayer.fromBukkitPlayer(player)
         // let the player know if we are leaving the civ
@@ -75,7 +75,7 @@ class CivListener : Listener{
     }
 
     @EventHandler
-    fun onEnterPlot(event: PlotEnterEvent){
+    fun onEnterPlot(event: PlotEnterEvent) {
         val plotOwner: CivPlayer = event.plot.owner
         Remain.sendActionBar(
             event.player,
@@ -87,8 +87,6 @@ class CivListener : Listener{
                         else "Unowned" + (if (event.plot.claimToggleables.pvp) " &4&l[PVP]" else "")
         )
     }
-
-
-
+    
 
 }

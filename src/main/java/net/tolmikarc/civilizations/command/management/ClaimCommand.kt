@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.event.civ.ClaimEvent
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.model.Colony
@@ -159,8 +160,9 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
             tellSuccess("${Settings.SECONDARY_COLOR}Claimed region with id ${Settings.PRIMARY_COLOR}" + civilization.idNumber)
         }
         if (civilization.totalClaimCount == 0) civilization.home = getPlayer().location
-        civilization.addClaim(claim)
         HookManager.withdraw(getPlayer(), cost)
+        civilization.addClaim(claim)
+        Common.callEvent(ClaimEvent(civilization, claim, getPlayer()))
     }
 
     override fun tabComplete(): List<String> {

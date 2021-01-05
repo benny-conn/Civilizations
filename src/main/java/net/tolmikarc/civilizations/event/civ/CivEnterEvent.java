@@ -2,7 +2,7 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.event;
+package net.tolmikarc.civilizations.event.civ;
 
 import net.tolmikarc.civilizations.model.Civilization;
 import org.bukkit.entity.Player;

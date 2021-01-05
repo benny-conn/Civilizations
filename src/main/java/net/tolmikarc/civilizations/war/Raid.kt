@@ -4,6 +4,9 @@
 
 package net.tolmikarc.civilizations.war
 
+import net.tolmikarc.civilizations.event.war.PlayerJoinRaidEvent
+import net.tolmikarc.civilizations.event.war.RaidBeginEvent
+import net.tolmikarc.civilizations.event.war.RaidEndEvent
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.packet.NameTag
@@ -36,21 +39,12 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
                 NameTag.of("&c" + player.displayName).applyTo(player, onlinePlayersFromCivs)
             }
         }
+        Common.callEvent(PlayerJoinRaidEvent(this, player))
     }
 
 
     override fun onStart() {
-        for (player in Bukkit.getOnlinePlayers()) {
-            CivPlayer.fromBukkitPlayer(player).let {
-                if (civBeingRaided.citizens.contains(it)) {
-                    Common.tell(player, "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!")
-                    addPlayerToRaid(player)
-                }
-                if (civRaiding.citizens.contains(it)) {
-                    Common.tell(player, "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!")
-                }
-            }
-        }
+        Common.callEvent(RaidBeginEvent(this))
     }
 
     override fun onTick() {
@@ -70,25 +64,7 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
     }
 
     override fun onEnd() {
-        for (player in Bukkit.getOnlinePlayers()) {
-            CivPlayer.fromBukkitPlayer(player).let {
-                if (civBeingRaided.citizens.contains(it)) Common.tell(
-                    player,
-                    "${Settings.PRIMARY_COLOR}Raid over!"
-                )
-                if (civRaiding.citizens.contains(it)) Common.tell(
-                    player,
-                    "${Settings.PRIMARY_COLOR}Raid over!"
-                )
-            }
-            for (civPlayer in playersInvolved.keys) {
-                civPlayer.playerName?.let {
-                    Bukkit.getPlayer(civPlayer.playerUUID)?.let { bukkitPlayer -> NameTag.remove(bukkitPlayer) }
-                }
-            }
-            civBeingRaided.raid = null
-            civRaiding.raid = null
-        }
+        Common.callEvent(RaidEndEvent(this))
     }
 
 

@@ -4,9 +4,11 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.event.civ.DeleteCivEvent
 import net.tolmikarc.civilizations.menu.ConfirmMenu
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.settings.Settings
+import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -28,6 +30,7 @@ class DeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "del
                         civPlayer.queueForSaving()
                     }
                     civ.removeCivilization()
+                    Common.callEvent(DeleteCivEvent(civ, player))
                 }
                 ConfirmMenu(title, info, ::run).displayTo(player)
             }

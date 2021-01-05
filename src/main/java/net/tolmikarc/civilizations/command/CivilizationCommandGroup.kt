@@ -43,6 +43,7 @@ class CivilizationCommandGroup : SimpleCommandGroup() {
         registerSubcommand(ColonyCommand(this))
         registerSubcommand(AllyCommand(this))
         registerSubcommand(PlayerInfoCommand(this))
+        registerSubcommand(TestCommand(this))
     }
 
 

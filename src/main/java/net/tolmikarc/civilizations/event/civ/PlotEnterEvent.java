@@ -2,9 +2,9 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.event;
+package net.tolmikarc.civilizations.event.civ;
 
-import net.tolmikarc.civilizations.model.Civilization;
+import net.tolmikarc.civilizations.model.Plot;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
@@ -12,25 +12,24 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.jetbrains.annotations.NotNull;
 
-public class CivLeaveEvent extends Event implements Cancellable {
+public class PlotEnterEvent extends Event implements Cancellable {
 	private static final HandlerList handlers = new HandlerList();
 
-	private final Civilization civ;
+	private final Plot plot;
 	private final PlayerMoveEvent moveEvent;
 
 
-	public CivLeaveEvent(Civilization civ, PlayerMoveEvent moveEvent){
-		this.civ = civ;
+	public PlotEnterEvent(Plot plot, PlayerMoveEvent moveEvent) {
+		this.plot = plot;
 		this.moveEvent = moveEvent;
 	}
 
-
-	public Player getPlayer(){
+	public Player getPlayer() {
 		return moveEvent.getPlayer();
 	}
 
-	public Civilization getCiv() {
-		return civ;
+	public Plot getPlot() {
+		return plot;
 	}
 
 	public PlayerMoveEvent getMoveEvent() {
@@ -56,4 +55,5 @@ public class CivLeaveEvent extends Event implements Cancellable {
 	public static HandlerList getHandlerList() {
 		return handlers;
 	}
+
 }

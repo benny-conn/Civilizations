@@ -4,9 +4,11 @@
 
 package net.tolmikarc.civilizations.command
 
+import net.tolmikarc.civilizations.event.civ.CreateCivEvent
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.settings.Settings
+import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -28,6 +30,7 @@ class CreateCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "new
                     } ${Settings.SECONDARY_COLOR}to mark two corners and then use " + "${Settings.PRIMARY_COLOR}/civ claim${Settings.SECONDARY_COLOR}. " +
                             "Type " + "${Settings.PRIMARY_COLOR}/civ claim ? ${Settings.SECONDARY_COLOR}for info on claiming"
                 )
+                Common.callEvent(CreateCivEvent(civ, player))
             }
         }
     }

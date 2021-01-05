@@ -4,10 +4,12 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.event.civ.UnclaimEvent
 import net.tolmikarc.civilizations.menu.ConfirmMenu
 import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.ClaimUtil.getRegionFromLocation
+import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -22,6 +24,7 @@ class UnclaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "un
                 fun run() {
                     removeClaim(regionToRemove!!)
                     tellSuccess("&cRemoved region successfully")
+                    Common.callEvent(UnclaimEvent(this, regionToRemove, player))
                 }
 
                 ConfirmMenu(

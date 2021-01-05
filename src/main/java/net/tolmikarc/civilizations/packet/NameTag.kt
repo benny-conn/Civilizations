@@ -11,12 +11,20 @@ import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode
 import com.comphenix.protocol.wrappers.PlayerInfoData
 import com.comphenix.protocol.wrappers.WrappedChatComponent
 import com.comphenix.protocol.wrappers.WrappedGameProfile
-import net.tolmikarc.civilizations.util.NmsUtil.getPlayerInfoDataList
 import org.bukkit.Bukkit
 import org.bukkit.craftbukkit.v1_16_R3.entity.CraftPlayer
 import org.bukkit.entity.Player
 import org.mineacademy.fo.Common
+import org.mineacademy.fo.PlayerUtil
 import java.lang.reflect.InvocationTargetException
+
+
+/**
+ *
+ * Courtesy of FrostedSnowman at https://www.spigotmc.org/threads/protocollib-change-player-nametag.301280/
+ *
+ */
+
 
 class NameTag(private val text: String) {
 
@@ -62,6 +70,8 @@ class NameTag(private val text: String) {
                     exception.printStackTrace()
                 }
             }
+
+
     }
 
 
@@ -119,6 +129,20 @@ class NameTag(private val text: String) {
                 }
         }
 
+        private fun getPlayerInfoData(player: Player): PlayerInfoData {
+            return PlayerInfoData(
+                WrappedGameProfile.fromPlayer(player),
+                PlayerUtil.getPing(player),
+                NativeGameMode.fromBukkit(player.gameMode),
+                WrappedChatComponent.fromText(player.displayName)
+            )
+        }
+
+        fun getPlayerInfoDataList(player: Player): List<PlayerInfoData?> {
+            return listOf(getPlayerInfoData(player))
+        }
 
     }
+
+
 }
