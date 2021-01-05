@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.model
 
+import net.tolmikarc.civilizations.api.Civ
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
@@ -26,37 +27,37 @@ import java.util.stream.Collectors
 import kotlin.collections.HashSet
 import kotlin.collections.set
 
-data class Civilization(val uuid: UUID) : ConfigSerializable {
-    var name: String? = null
+data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
+    override var name: String? = null
         set(value) {
             byName[value?.toLowerCase()] = this
             field = value
         }
-    var power = 0
-    var leader: CivPlayer? = null
-    var bank: Bank = Bank(this)
-    var home: Location? = null
-    var claims: MutableSet<Region> = HashSet()
-    var colonies: MutableSet<Colony> = HashSet()
-    var plots: MutableSet<Plot> = HashSet()
-    var warps: MutableMap<String, Location> = LinkedHashMap()
-    var idNumber = 1
-    var totalBlocksCount = 0
+    override var power = 0
+    override var leader: CivPlayer? = null
+    override var bank: Bank = Bank(this)
+    override var home: Location? = null
+    override var claims: MutableSet<Region> = HashSet()
+    override var colonies: MutableSet<Colony> = HashSet()
+    override var plots: MutableSet<Plot> = HashSet()
+    override var warps: MutableMap<String, Location> = LinkedHashMap()
+    override var idNumber = 1
+    override var totalBlocksCount = 0
 
-    val totalClaimCount
+    override val totalClaimCount
         get() = claims.size
-    val plotCount
+    override val plotCount
         get() = plots.size
-    val colonyCount
+    override val colonyCount
         get() = colonies.size
 
-    var citizens: MutableSet<CivPlayer> = HashSet()
-    var officials: MutableSet<CivPlayer> = HashSet()
-    var outlaws: MutableSet<CivPlayer> = HashSet()
-    var allies: MutableSet<Civilization> = HashSet()
-    var enemies: MutableSet<Civilization> = HashSet()
+    override var citizens: MutableSet<CivPlayer> = HashSet()
+    override var officials: MutableSet<CivPlayer> = HashSet()
+    override var outlaws: MutableSet<CivPlayer> = HashSet()
+    override var allies: MutableSet<Civilization> = HashSet()
+    override var enemies: MutableSet<Civilization> = HashSet()
 
-    val warring: Set<Civilization>
+    override val warring: Set<Civilization>
         get() {
             val set: MutableSet<Civilization> = HashSet()
             for (civ in enemies) {
@@ -66,12 +67,12 @@ data class Civilization(val uuid: UUID) : ConfigSerializable {
             return set
         }
 
-    val citizenCount
+    override val citizenCount
         get() = citizens.size
 
-    var regionDamages: RegionDamages? = null
+    override var regionDamages: RegionDamages? = null
 
-    var banner: ItemStack? = null
+    override var banner: ItemStack? = null
         set(value) {
             val singleBanner = if (value != null) ItemStack(value) else ItemStack(Material.BLUE_BANNER)
             singleBanner.amount = 1
@@ -79,7 +80,7 @@ data class Civilization(val uuid: UUID) : ConfigSerializable {
             field = value
         }
 
-    var book: ItemStack? = null
+    override var book: ItemStack? = null
         set(value) {
             val singleBook = if (value != null) ItemStack(value) else ItemStack(Material.BOOK)
             singleBook.amount = 1
@@ -88,16 +89,16 @@ data class Civilization(val uuid: UUID) : ConfigSerializable {
         }
 
 
-    var claimPermissions = ClaimPermissions()
-    var claimToggleables = ClaimToggleables()
-    var raid: Raid? = null
+    override var claimPermissions = ClaimPermissions()
+    override var claimToggleables = ClaimToggleables()
+    override var raid: Raid? = null
 
-    fun addPower(amount: Int) {
+    override fun addPower(amount: Int) {
         power += amount
         queueForSaving()
     }
 
-    fun removePower(amount: Int) {
+    override fun removePower(amount: Int) {
         if (power - amount >= 0)
             power -= amount
         else
@@ -116,40 +117,40 @@ data class Civilization(val uuid: UUID) : ConfigSerializable {
     }
 
 
-    fun addWarp(name: String, location: Location) {
+    override fun addWarp(name: String, location: Location) {
         warps[name] = location
         saveAsync(this)
     }
 
-    fun removeWarp(warp: String) {
+    override fun removeWarp(warp: String) {
         warps.remove(warp)
         saveAsync(this)
     }
 
-    fun addBalance(amount: Double) {
+    override fun addBalance(amount: Double) {
         bank.addBalance(amount)
     }
 
-    fun removeBalance(amount: Double) {
+    override fun removeBalance(amount: Double) {
         bank.removeBalance(amount)
     }
 
 
-    fun addPlot(plot: Plot) {
+    override fun addPlot(plot: Plot) {
         plot.owner = leader ?: return
         idNumber++
         plots.add(plot)
         saveAsync(this)
     }
 
-    fun addColony(colony: Colony) {
+    override fun addColony(colony: Colony) {
         colony.id = idNumber
         idNumber++
         colonies.add(colony)
         saveAsync(this)
     }
 
-    fun addClaim(region: Region) {
+    override fun addClaim(region: Region) {
         claims.add(region)
         idNumber++
         val amount = net.tolmikarc.civilizations.util.MathUtil.areaBetweenTwoPoints(
@@ -161,7 +162,7 @@ data class Civilization(val uuid: UUID) : ConfigSerializable {
     }
 
 
-    fun removeClaim(region: Region) {
+    override fun removeClaim(region: Region) {
         claims.remove(region)
         val area = net.tolmikarc.civilizations.util.MathUtil.areaBetweenTwoPoints(
             region.primary,
@@ -172,19 +173,19 @@ data class Civilization(val uuid: UUID) : ConfigSerializable {
     }
 
 
-    fun addOfficial(player: CivPlayer) {
+    override fun addOfficial(player: CivPlayer) {
         officials.add(player)
         player.addPower(CivUtil.calculateFormulaForCiv(Settings.POWER_OFFICIAL_FORMULA, this).toInt())
         saveAsync(this)
     }
 
-    fun removeOfficial(player: CivPlayer) {
+    override fun removeOfficial(player: CivPlayer) {
         officials.remove(player)
         player.removePower(CivUtil.calculateFormulaForCiv(Settings.POWER_OFFICIAL_FORMULA, this).toInt())
         saveAsync(this)
     }
 
-    fun addCitizen(player: CivPlayer) {
+    override fun addCitizen(player: CivPlayer) {
         citizens.add(player)
         addPower(Settings.POWER_CITIZENS_WEIGHT)
         if (Settings.ADD_PLAYER_POWER_TO_CIV) {
@@ -194,7 +195,7 @@ data class Civilization(val uuid: UUID) : ConfigSerializable {
         saveAsync(this)
     }
 
-    fun removeCitizen(player: CivPlayer) {
+    override fun removeCitizen(player: CivPlayer) {
         citizens.remove(player)
         removePower(Settings.POWER_CITIZENS_WEIGHT)
         if (Settings.ADD_PLAYER_POWER_TO_CIV) {
@@ -204,38 +205,38 @@ data class Civilization(val uuid: UUID) : ConfigSerializable {
         saveAsync(this)
     }
 
-    fun addAlly(ally: Civilization) {
+    override fun addAlly(ally: Civilization) {
         allies.add(ally)
         saveAsync(this)
     }
 
-    fun removeAlly(ally: Civilization) {
+    override fun removeAlly(ally: Civilization) {
         allies.remove(ally)
         saveAsync(this)
     }
 
-    fun addEnemy(enemy: Civilization) {
+    override fun addEnemy(enemy: Civilization) {
         enemies.add(enemy)
         saveAsync(this)
     }
 
-    fun removeEnemy(enemy: Civilization) {
+    override fun removeEnemy(enemy: Civilization) {
         enemies.remove(enemy)
         saveAsync(this)
     }
 
 
-    fun addOutlaw(player: CivPlayer) {
+    override fun addOutlaw(player: CivPlayer) {
         outlaws.add(player)
         saveAsync(this)
     }
 
-    fun removeOutlaw(player: CivPlayer) {
+    override fun removeOutlaw(player: CivPlayer) {
         outlaws.remove(player)
         saveAsync(this)
     }
 
-    fun removeCivilization() {
+    override fun removeCivilization() {
         for (civ in civilizationsMap.values) {
             civ.allies.remove(this)
             civ.enemies.remove(this)

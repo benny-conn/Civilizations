@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.model
 
+import net.tolmikarc.civilizations.api.CPlayer
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Location
@@ -11,28 +12,29 @@ import org.bukkit.entity.Player
 import org.mineacademy.fo.Common
 import java.util.*
 
-data class CivPlayer(val playerUUID: UUID) {
-    var playerName: String? = null
+data class CivPlayer(val playerUUID: UUID) : CPlayer {
+    override var playerName: String? = null
         set(value) {
             byName[value] = this
             field = value
         }
-    var civilization: Civilization? = null
-    var civilizationInvite: Civilization? = null
+    override var civilization: Civilization? = null
+    override var civilizationInvite: Civilization? = null
     var power = 0
-    var vertex1: Location? = null
-    var vertex2: Location? = null
-    var visualizing = false
-    var flying = false
-    var raidBlocksDestroyed = 0
+    override var vertex1: Location? = null
+    override var vertex2: Location? = null
+    override var completedTutorial: Boolean = false
+    override var visualizing = false
+    override var flying = false
+    override var raidBlocksDestroyed = 0
 
 
-    fun addPower(amount: Int) {
+    override fun addPower(amount: Int) {
         power += amount
         queueForSaving()
     }
 
-    fun removePower(amount: Int) {
+    override fun removePower(amount: Int) {
         if (power - amount >= 0)
             power -= amount
         else
