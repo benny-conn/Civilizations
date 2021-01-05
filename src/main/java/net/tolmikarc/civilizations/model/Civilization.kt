@@ -98,7 +98,10 @@ data class Civilization(val uuid: UUID) : ConfigSerializable {
     }
 
     fun removePower(amount: Int) {
-        power -= amount
+        if (power - amount >= 0)
+            power -= amount
+        else
+            power = 0
         queueForSaving()
     }
 

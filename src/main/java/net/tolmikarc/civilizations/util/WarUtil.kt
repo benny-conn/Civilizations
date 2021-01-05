@@ -96,7 +96,7 @@ object WarUtil {
 
 
     private fun shootBlock(block: Block, velocity: Vector): FallingBlock? {
-        return if (canShootBlock(block)) {
+        return if (cannotShootBlock(block)) {
             null
         } else {
             val falling = Remain.spawnFallingBlock(block.location, block.type)
@@ -106,17 +106,17 @@ object WarUtil {
             falling.velocity = Vector(x, y, z)
             falling.dropItem = false
             block.type = Material.AIR
-            EntityUtil.trackFalling(falling) {
-                falling.location.block.type = Material.AIR
-            }
-            falling
+        EntityUtil.trackFalling(falling) {
+            falling.location.block.type = Material.AIR
+        }
+         falling
         }
     }
 
-    private fun canShootBlock(block: Block): Boolean {
+    private fun cannotShootBlock(block: Block): Boolean {
         val material = block.type
-        return !CompMaterial.isAir(material) && !(material.toString().contains("STEP") && !material.toString()
-            .contains("SLAB") && !BlockUtil.isForBlockSelection(material))
+        return (CompMaterial.isAir(material) || material.toString().contains("STEP") || material.toString()
+            .contains("SLAB")) && !BlockUtil.isForBlockSelection(material)
     }
 
 
