@@ -7,7 +7,7 @@ package net.tolmikarc.civilizations.util
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.CivPlot
+import net.tolmikarc.civilizations.model.Plot
 import net.tolmikarc.civilizations.util.MathUtil.isPointInRegion
 import net.tolmikarc.civilizations.util.MathUtil.isRegionInRegion
 import org.bukkit.Bukkit
@@ -89,12 +89,12 @@ object ClaimUtil {
         return null
     }
 
-    fun getPlotFromLocation(location: Location): CivPlot? {
+    fun getPlotFromLocation(location: Location): Plot? {
         for (civilization in CivManager.all) getPlotFromLocation(location, civilization)
         return null
     }
 
-    fun getPlotFromLocation(location: Location, civilization: Civ): CivPlot? {
+    fun getPlotFromLocation(location: Location, civilization: Civ): Plot? {
         for (plot in civilization.plots) {
             if (isPointInRegion(plot.region, location.blockX, location.blockZ)) return plot
         }
@@ -144,8 +144,8 @@ object ClaimUtil {
         return regions
     }
 
-    fun plotsInSelection(region: Region?): List<CivPlot> {
-        val plots: MutableList<CivPlot> = ArrayList()
+    fun plotsInSelection(region: Region?): List<Plot> {
+        val plots: MutableList<Plot> = ArrayList()
         for (civilization in CivManager.all) for (plot in civilization.plots) {
             if (isRegionInRegion(plot.region, region!!)) plots.add(plot)
         }

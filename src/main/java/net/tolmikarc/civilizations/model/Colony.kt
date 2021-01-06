@@ -11,7 +11,7 @@ import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
 
 
-data class CivColony(val civilization: Civ, var id: Int, val warp: Location) : ConfigSerializable {
+data class Colony(val civilization: Civ, var id: Int, val warp: Location) : ConfigSerializable {
     override fun serialize(): SerializedMap {
         val map = SerializedMap()
         map.put("Civilization", civilization.uuid)
@@ -22,8 +22,8 @@ data class CivColony(val civilization: Civ, var id: Int, val warp: Location) : C
 
     companion object {
         @JvmStatic
-        fun deserialize(map: SerializedMap): CivColony {
-            return CivColony(
+        fun deserialize(map: SerializedMap): Colony {
+            return Colony(
                 CivManager.getByUUID(map["Civilization", UUID::class.java]),
                 map.getInteger("Id"),
                 map.getLocation("Location")

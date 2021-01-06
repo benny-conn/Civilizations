@@ -7,7 +7,7 @@ package net.tolmikarc.civilizations.command.management
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.CivPlot
+import net.tolmikarc.civilizations.model.Plot
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
@@ -49,7 +49,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
     }
 
     private fun addMemberToPlot(player: CPlayer, civilization: Civ) {
-        val plot: CivPlot? = getPlotFromLocation(getPlayer().location, civilization)
+        val plot: Plot? = getPlotFromLocation(getPlayer().location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         checkBoolean(canManagePlot(civilization, plot!!, player), "You must own this plot to add members to it")
         plot.apply {
@@ -62,7 +62,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
     }
 
     private fun setPlotForSale(player: CPlayer, civilization: Civ) {
-        val plot: CivPlot? = getPlotFromLocation(getPlayer().location, civilization)
+        val plot: Plot? = getPlotFromLocation(getPlayer().location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         plot?.apply {
             checkBoolean(canManagePlot(civilization, this, player), "You must own this plot to set it for sale")
@@ -76,7 +76,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
     }
 
     private fun claimPlot(player: CPlayer, civilization: Civ) {
-        val plot: CivPlot? = getPlotFromLocation(getPlayer().location, civilization)
+        val plot: Plot? = getPlotFromLocation(getPlayer().location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         plot?.apply {
             checkBoolean(forSale, "This plot is not for sale")
@@ -91,7 +91,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
     }
 
     private fun adjustPermissions(civPlayer: CPlayer, civilization: Civ) {
-        val plot: CivPlot? = getPlotFromLocation(player.location, civilization)
+        val plot: Plot? = getPlotFromLocation(player.location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         plot?.apply {
             checkBoolean(canManagePlot(civilization, this, civPlayer), "You cannot adjust the perms of this plot")
@@ -130,7 +130,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
                 plotRegion.secondary
             ) == null, "You cannot claim a new plot with overlapping plots already claimed"
         )
-        CivPlot(civilization, civilization.idNumber, plotRegion, civilization.leader!!).apply {
+        Plot(civilization, civilization.idNumber, plotRegion, civilization.leader!!).apply {
             civilization.addPlot(
                 this
             )

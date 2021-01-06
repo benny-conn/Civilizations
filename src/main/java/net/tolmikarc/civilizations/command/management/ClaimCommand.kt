@@ -9,7 +9,7 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.CivColony
+import net.tolmikarc.civilizations.model.Colony
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.distanceFromNearestClaim
@@ -156,7 +156,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
                 civilization.colonyCount < maxColonies,
                 "You cannot have more than $maxColonies colonies."
             )
-            val colony = CivColony(civilization, civilization.idNumber, getPlayer().location)
+            val colony = Colony(civilization, civilization.idNumber, getPlayer().location)
             civilization.addColony(colony)
             tellSuccess("${Settings.SECONDARY_COLOR}Claimed colony with id ${Settings.PRIMARY_COLOR}" + civilization.idNumber)
         } else {

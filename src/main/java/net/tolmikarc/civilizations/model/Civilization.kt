@@ -37,11 +37,11 @@ data class Civilization(override val uuid: UUID) : Civ {
         }
     override var power = 0
     override var leader: CPlayer? = null
-    override var bank: CivBank = CivBank(this)
+    override var bank: Bank = Bank(this)
     override var home: Location? = null
     override var claims: MutableSet<Region> = HashSet()
-    override var colonies: MutableSet<CivColony> = HashSet()
-    override var plots: MutableSet<CivPlot> = HashSet()
+    override var colonies: MutableSet<Colony> = HashSet()
+    override var plots: MutableSet<Plot> = HashSet()
     override var warps: MutableMap<String, Location> = LinkedHashMap()
     override var idNumber = 1
     override var totalBlocksCount = 0
@@ -136,13 +136,13 @@ data class Civilization(override val uuid: UUID) : Civ {
     }
 
 
-    override fun addPlot(plot: CivPlot) {
+    override fun addPlot(plot: Plot) {
         idNumber++
         plots.add(plot)
         CivManager.saveAsync(this)
     }
 
-    override fun addColony(colony: CivColony) {
+    override fun addColony(colony: Colony) {
         colony.id = idNumber
         idNumber++
         colonies.add(colony)
@@ -288,7 +288,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             }
             val home = map.getLocation("Home")
             val claims = map.getSet("Claims", Region::class.java)
-            val plots = map.getSet("Plots", CivPlot::class.java)
+            val plots = map.getSet("Plots", Plot::class.java)
             val warps: Map<String, Location>? = map.getMap("Warps", String::class.java, Location::class.java)
             val claimNumber = map.getInteger("Claim_Number")
             val totalBlocksCount = map.getInteger("Total_Blocks_Count")
@@ -310,7 +310,7 @@ data class Civilization(override val uuid: UUID) : Civ {
                 map.getSet("Outlaws", UUID::class.java).stream().filter(playerRemoveFilter)
                     .map { PlayerManager.getByUUID(it) }
                     .collect(Collectors.toSet())
-            val bank = map.get("Bank", CivBank::class.java)
+            val bank = map.get("Bank", Bank::class.java)
             val banner = map.getItem("Banner")
             val book = map.getItem("Book")
             val permissions = map.get("Claim_Permissions", ClaimPermissions::class.java)

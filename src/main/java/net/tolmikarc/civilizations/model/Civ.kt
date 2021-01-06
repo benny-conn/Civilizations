@@ -17,11 +17,11 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     var name: String?
     var power: Int
     var leader: CPlayer?
-    var bank: CivBank
+    var bank: Bank
     var home: Location?
     var claims: MutableSet<Region>
-    var colonies: MutableSet<CivColony>
-    var plots: MutableSet<CivPlot>
+    var colonies: MutableSet<Colony>
+    var plots: MutableSet<Plot>
     var warps: MutableMap<String, Location>
     var idNumber: Int
     var totalBlocksCount: Int
@@ -73,9 +73,9 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     fun removeBalance(amount: Double)
 
 
-    fun addPlot(plot: CivPlot)
+    fun addPlot(plot: Plot)
 
-    fun addColony(colony: CivColony)
+    fun addColony(colony: Colony)
 
     fun addClaim(region: Region)
 

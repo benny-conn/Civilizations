@@ -48,7 +48,7 @@ object CivDatastore : Datastore() {
                     val leader = deserializedCiv.leader
                     val home: Location? = deserializedCiv.home
                     val claims: MutableSet<Region> = deserializedCiv.claims
-                    val plots: MutableSet<CivPlot> = deserializedCiv.plots
+                    val plots: MutableSet<Plot> = deserializedCiv.plots
                     val warps: MutableMap<String, Location> = deserializedCiv.warps
                     val idNumber: Int = deserializedCiv.idNumber
                     val totalBlocksCount: Int = deserializedCiv.totalBlocksCount
@@ -57,7 +57,7 @@ object CivDatastore : Datastore() {
                     val allies: MutableSet<Civ> = deserializedCiv.allies
                     val enemies: MutableSet<Civ> = deserializedCiv.enemies
                     val outlaws: MutableSet<CPlayer> = deserializedCiv.outlaws
-                    val bank: CivBank = deserializedCiv.bank
+                    val bank: Bank = deserializedCiv.bank
                     val banner: ItemStack? = deserializedCiv.banner
                     val book: ItemStack? = deserializedCiv.book
                     val permissions: ClaimPermissions = deserializedCiv.claimPermissions
