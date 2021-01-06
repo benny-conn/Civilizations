@@ -4,8 +4,9 @@
 
 package net.tolmikarc.civilizations.command
 
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
@@ -16,10 +17,10 @@ import java.util.*
 class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
-            val civilization: Civilization?
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
+            val civilization: Civ?
             if (args.isNotEmpty()) {
-                civilization = Civilization.fromName(args[0])
+                civilization = CivManager.getByName(args[0])
                 checkNotNull(civilization, "Please enter a valid Civilization")
             } else {
                 checkNotNull(
@@ -32,7 +33,7 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
         }
     }
 
-    private fun sendInfo(civilization: Civilization) {
+    private fun sendInfo(civilization: Civ) {
         val permissions = civilization.claimPermissions
         val toggleables = civilization.claimToggleables
         val citizenNames: MutableList<String?> = ArrayList()

@@ -4,7 +4,8 @@
 
 package net.tolmikarc.civilizations.command
 
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -12,15 +13,15 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class PlayerInfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "player") {
     override fun onCommand() {
         checkConsole()
-        val civPlayer: CivPlayer?
+        val civPlayer: CPlayer?
         if (args.isNotEmpty()) {
-            civPlayer = CivPlayer.fromName(args[0])
+            civPlayer = PlayerManager.getByName(args[0])
             checkNotNull(civPlayer, "Please specify a valid player")
-        } else civPlayer = CivPlayer.fromBukkitPlayer(player)
+        } else civPlayer = PlayerManager.fromBukkitPlayer(player)
         civPlayer?.run { sendInfo(this) }
     }
 
-    private fun sendInfo(civPlayer: CivPlayer) {
+    private fun sendInfo(civPlayer: CPlayer) {
         tellNoPrefix(
             "${Settings.PRIMARY_COLOR}============ ${Settings.SECONDARY_COLOR}" + civPlayer.playerName + "${Settings.PRIMARY_COLOR} ============",
             "${Settings.PRIMARY_COLOR}Power: ${Settings.SECONDARY_COLOR}" + civPlayer.power,

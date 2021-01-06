@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Material
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -14,7 +14,7 @@ import org.mineacademy.fo.model.HookManager
 class BookCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "book") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let {
+        PlayerManager.fromBukkitPlayer(player).let {
             checkNotNull(it.civilization, "You must have a Civilization to set a Civilization's Book.")
             it.civilization?.apply {
                 val param = args[0]

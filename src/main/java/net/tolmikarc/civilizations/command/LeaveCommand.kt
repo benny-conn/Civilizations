@@ -4,8 +4,9 @@
 
 package net.tolmikarc.civilizations.command
 
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
-import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -13,7 +14,7 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class LeaveCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "leave") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You do not have a Civilization to leave.")
             val civilization = civPlayer.civilization
             checkBoolean(
@@ -25,8 +26,8 @@ class LeaveCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "leav
                 if (civilization.officials.contains(civPlayer)) civilization.removeOfficial(civPlayer)
                 civilization.removeCitizen(civPlayer)
                 civPlayer.civilization = null
-                civPlayer.queueForSaving()
-                civilization.queueForSaving()
+                PlayerManager.queueForSaving(civPlayer)
+                CivManager.queueForSaving(civilization)
                 tell("&cLeft the Civilization " + civPlayer.civilization)
             }
 

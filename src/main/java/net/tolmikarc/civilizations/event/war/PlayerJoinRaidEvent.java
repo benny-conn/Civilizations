@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.event.war;
 
-import net.tolmikarc.civilizations.model.Civilization;
+import net.tolmikarc.civilizations.model.Civ;
 import net.tolmikarc.civilizations.war.Raid;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -27,12 +27,16 @@ public class PlayerJoinRaidEvent extends Event {
 		return raid;
 	}
 
-	public Civilization getAttacker() {
+	public Civ getAttacker() {
 		return raid.getCivRaiding();
 	}
 
-	public Civilization getDefender() {
+	public Civ getDefender() {
 		return raid.getCivBeingRaided();
+	}
+
+	public Player getPlayer() {
+		return player;
 	}
 
 	@NotNull

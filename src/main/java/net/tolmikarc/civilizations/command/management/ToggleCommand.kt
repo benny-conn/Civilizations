@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -12,7 +12,7 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "toggle") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             civPlayer.civilization?.apply {
                 when (args[0].toLowerCase()) {
                     "fire" -> claimToggleables.fire =

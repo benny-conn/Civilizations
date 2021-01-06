@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.conversation
 
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.MathUtil
 import org.bukkit.conversations.ConversationContext
@@ -13,7 +13,7 @@ import org.bukkit.entity.Player
 import org.mineacademy.fo.conversation.SimplePrompt
 import org.mineacademy.fo.model.HookManager
 
-class DepositPrompt(val civilization: Civilization, val player: Player) : SimplePrompt() {
+class DepositPrompt(val civilization: Civ, val player: Player) : SimplePrompt() {
     override fun acceptValidatedInput(p0: ConversationContext, p1: String): Prompt? {
         val cost = MathUtil.doubleToMoney(p1.toDouble())
         if (HookManager.getBalance(player) - cost < 0) {

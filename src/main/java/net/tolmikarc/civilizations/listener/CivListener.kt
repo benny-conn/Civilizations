@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.listener
 import net.tolmikarc.civilizations.event.civ.CivEnterEvent
 import net.tolmikarc.civilizations.event.civ.CivLeaveEvent
 import net.tolmikarc.civilizations.event.civ.PlotEnterEvent
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import net.tolmikarc.civilizations.util.WarUtil
@@ -20,7 +20,7 @@ class CivListener : Listener {
     @EventHandler
     fun onEnterCiv(event: CivEnterEvent) {
         val player = event.player
-        val civPlayer = CivPlayer.fromBukkitPlayer(player)
+        val civPlayer = PlayerManager.fromBukkitPlayer(player)
         val playersCiv = civPlayer.civilization
         // does the player have a civilization that is raiding the new civ?
         if (WarUtil.isBeingRaided(event.civ, playersCiv)) {
@@ -33,7 +33,7 @@ class CivListener : Listener {
             event.civ.raid!!.addPlayerToRaid(player)
         }
 
-        if (CivUtil.isPlayerOutlaw(CivPlayer.fromBukkitPlayer(player), event.civ)) {
+        if (CivUtil.isPlayerOutlaw(PlayerManager.fromBukkitPlayer(player), event.civ)) {
             // if the settings say no outlaws in, make sure no outlaws come in
             if (Settings.OUTLAW_ENTER_DISABLED) {
                 Common.tell(player, "&4&lWARNING: &cYou are an outlaw in this town and cannot enter.")
@@ -62,7 +62,7 @@ class CivListener : Listener {
     @EventHandler
     fun onLeaveCiv(event: CivLeaveEvent) {
         val player = event.player
-        val civPlayer = CivPlayer.fromBukkitPlayer(player)
+        val civPlayer = PlayerManager.fromBukkitPlayer(player)
         // let the player know if we are leaving the civ
         Remain.sendActionBar(
             player,
@@ -76,17 +76,17 @@ class CivListener : Listener {
 
     @EventHandler
     fun onEnterPlot(event: PlotEnterEvent) {
-        val plotOwner: CivPlayer = event.plot.owner
+        val plotOwner = event.plot.owner
         Remain.sendActionBar(
             event.player,
             if (event.plot.forSale)
                 "${Settings.PRIMARY_COLOR}Plot: ${Settings.SECONDARY_COLOR}" + event.plot.price + (if (event.plot.claimToggleables.pvp) " &4&l[PVP]" else "")
             else
                 "${Settings.PRIMARY_COLOR}Plot: ${Settings.SECONDARY_COLOR}" +
-                        if (plotOwner.playerUUID != event.plot.civ.leader?.playerUUID) plotOwner.playerName
+                        if (plotOwner.uuid != event.plot.civ.leader?.uuid) plotOwner.playerName
                         else "Unowned" + (if (event.plot.claimToggleables.pvp) " &4&l[PVP]" else "")
         )
     }
-    
+
 
 }

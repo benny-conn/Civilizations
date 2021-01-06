@@ -5,8 +5,8 @@
 package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.event.civ.UnclaimEvent
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
-import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.ClaimUtil.getRegionFromLocation
 import org.mineacademy.fo.Common
@@ -16,7 +16,7 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class UnclaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "unclaim") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You do not have a civilization")
             civPlayer.civilization?.apply {
                 val regionToRemove = getRegionFromLocation(player.location, this)

@@ -5,7 +5,7 @@
 package net.tolmikarc.civilizations.listener
 
 import net.tolmikarc.civilizations.constants.Constants
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.ClaimUtil.getCivFromLocation
 import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
@@ -58,7 +58,7 @@ class EntityListener : Listener {
                     Constants.WAR_TNT_TAG
                 )
             ) {
-                val attackingPlayer = CivPlayer.fromUUID(
+                val attackingPlayer = PlayerManager.getByUUID(
                     UUID.fromString(
                         CompMetadata.getMetadata(
                             entity,
@@ -99,7 +99,7 @@ class EntityListener : Listener {
     private fun onPlayerFall(event: EntityDamageEvent) {
         if (event.cause == EntityDamageEvent.DamageCause.FALL && event.entity is Player) {
             val player = event.entity as Player
-            val civPlayer = CivPlayer.fromBukkitPlayer(player)
+            val civPlayer = PlayerManager.fromBukkitPlayer(player)
             if (civPlayer.flying) {
                 event.isCancelled = true
                 civPlayer.flying = false

@@ -4,6 +4,8 @@
 
 package net.tolmikarc.civilizations.model
 
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.permissions.ClaimToggleables
 import org.mineacademy.fo.collection.SerializedMap
@@ -12,18 +14,17 @@ import org.mineacademy.fo.region.Region
 import java.util.*
 import java.util.stream.Collectors
 
-data class CivPlot(val civ: Civilization, val id: Int, val region: Region) : ConfigSerializable {
+data class CivPlot(val civ: Civ, val id: Int, val region: Region, var owner: CPlayer) : ConfigSerializable {
     var price = 0.0
-    lateinit var owner: CivPlayer
     var forSale = false
-    var members: MutableSet<CivPlayer> = HashSet()
+    var members: MutableSet<CPlayer> = HashSet()
     var claimPermissions = ClaimPermissions()
     var claimToggleables = ClaimToggleables()
 
 
-    fun addMember(player: CivPlayer) {
+    fun addMember(player: CPlayer) {
         members.add(player)
-        civ.queueForSaving()
+        CivManager.queueForSaving(civ)
     }
 
     override fun serialize(): SerializedMap {
@@ -31,10 +32,10 @@ data class CivPlot(val civ: Civilization, val id: Int, val region: Region) : Con
         map.put("Civilization", civ.uuid)
         map.put("Region", region)
         map.put("ID", id)
-        map.putIfExist("Owner", owner?.playerUUID)
+        map.put("Owner", owner.uuid)
         map.put("Price", price)
         map.putIfExist("For_Sale", forSale)
-        map.putIfExist("Members", members.stream().map(CivPlayer::playerUUID).collect(Collectors.toSet()))
+        map.putIfExist("Members", members.stream().map { it.uuid }.collect(Collectors.toSet()))
         map.put("Permissions", claimPermissions)
         map.put("Toggleables", claimToggleables)
         return map
@@ -43,18 +44,18 @@ data class CivPlot(val civ: Civilization, val id: Int, val region: Region) : Con
     companion object {
         @JvmStatic
         fun deserialize(map: SerializedMap): CivPlot {
-            val civ = Civilization.fromUUID(map["Civilization", UUID::class.java])
+            val civ = CivManager.getByUUID(map["Civilization", UUID::class.java])
             val region = map.get("Region", Region::class.java)
             val id = map.getInteger("ID")
-            val plot = CivPlot(civ, id, region)
-            val owner = CivPlayer.fromUUID(map["Owner", UUID::class.java])
+            val owner = PlayerManager.getByUUID(map["Owner", UUID::class.java])
+            val plot = CivPlot(civ, id, region, owner)
             val price = map.getInteger("Price")
             val forSale = map.getBoolean("For_Sale")
-            val members: MutableSet<CivPlayer> =
-                map.getSet("Members", UUID::class.java).stream().map(CivPlayer::fromUUID).collect(Collectors.toSet())
+            val members: MutableSet<CPlayer> =
+                map.getSet("Members", UUID::class.java).stream().map { PlayerManager.getByUUID(it) }
+                    .collect(Collectors.toSet())
             val claimPermissions = map.get("Permissions", ClaimPermissions::class.java)
             val claimToggleables = map.get("Toggleables", ClaimToggleables::class.java)
-            if (owner != null) plot.owner = owner
             plot.price = price.toDouble()
             plot.forSale = forSale
             plot.members = members

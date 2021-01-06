@@ -5,8 +5,8 @@
 package net.tolmikarc.civilizations.command
 
 import net.tolmikarc.civilizations.event.civ.CreateCivEvent
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -16,13 +16,13 @@ class CreateCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "new
     override fun onCommand() {
         checkConsole()
         val name = args[0]
-        CivPlayer.fromBukkitPlayer(player).let {
-            checkBoolean(!Civilization.civNames.contains(name), "A Civilization under that name already exists")
+        PlayerManager.fromBukkitPlayer(player).let {
+            checkBoolean(!CivManager.civNames.contains(name), "A Civilization under that name already exists")
             checkBoolean(
                 it.civilization == null,
                 "You cannot create a Civilization if you already have one. Type /civ leave to leave your Civilization"
             )
-            Civilization.createCiv(name, it).also { civ ->
+            CivManager.createCiv(name, it).also { civ ->
                 tellSuccess(
                     "${Settings.SECONDARY_COLOR}Successfully created the Civilization ${Settings.PRIMARY_COLOR}" + civ.name + "${Settings.SECONDARY_COLOR} with you as its leader. " +
                             "To claim land for your Civilization, use a " + "${Settings.PRIMARY_COLOR}${

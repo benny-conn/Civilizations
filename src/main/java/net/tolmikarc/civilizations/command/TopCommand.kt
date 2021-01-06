@@ -4,8 +4,8 @@
 
 package net.tolmikarc.civilizations.command
 
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -25,7 +25,7 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
         val page = if (args.size > 1) args[1].toInt() else 1
         if (!args[0].equals("players", ignoreCase = true)) {
             Common.runLaterAsync {
-                val civilizationsSorted = ArrayList(Civilization.civilizationsMap.values).sortedBy {
+                val civilizationsSorted = ArrayList(CivManager.all).sortedBy {
                     return@sortedBy when (args[0]) {
                         "power" -> it.power
                         "balance" -> it.bank.balance.toInt()
@@ -77,7 +77,7 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
             }
         } else {
             Common.runLaterAsync {
-                val topPlayers = ArrayList(CivPlayer.playerMap.values).sortedBy { it.power }
+                val topPlayers = ArrayList(PlayerManager.cacheMap.values).sortedBy { it.power }
                 val lowerLimit = (page * 10) - 9
                 val upperLimit = page * 10
                 tellNoPrefix("${Settings.PRIMARY_COLOR}======= ${Settings.SECONDARY_COLOR}Top Players ($page) ${Settings.PRIMARY_COLOR}=======")

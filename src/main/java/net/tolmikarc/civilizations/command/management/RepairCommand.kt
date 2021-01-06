@@ -4,8 +4,9 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.PermissionUtil.canManageCiv
 import net.tolmikarc.civilizations.war.RegionDamages
@@ -19,7 +20,7 @@ import java.util.*
 class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "repair") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You must have a Civilization to use this command.")
             civPlayer.civilization?.let { civ ->
                 checkBoolean(canManageCiv(civPlayer, civ), "You are not permitted to perform this command.")
@@ -42,7 +43,7 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
 
     private fun repairDamages(
         damages: RegionDamages,
-        civ: Civilization,
+        civ: Civ,
         locationList: List<Location>,
         percentage: Int
     ) {
@@ -72,7 +73,7 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
             override fun onFinish() {
                 damages.brokenBlocksMap.keys.minus(handledLocations)
                 if (damages.brokenBlocksMap.keys.isEmpty()) civ.regionDamages = null
-                civ.queueForSaving()
+                CivManager.queueForSaving(civ)
                 tellSuccess("Successfully repaired " + handledLocations.size + " blocks for " + cost)
             }
         }.startChain()

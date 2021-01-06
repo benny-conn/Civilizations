@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command
 
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -15,8 +15,8 @@ class InviteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "add
         checkConsole()
         val invitee = findPlayer(args[0], "First argument must be an online player.")
         checkBoolean(invitee != player, "You cannot invite yourself to your Civilization")
-        val senderCache = CivPlayer.fromBukkitPlayer(player)
-        val inviteeCache = CivPlayer.fromBukkitPlayer(invitee)!!
+        val senderCache = PlayerManager.fromBukkitPlayer(player)
+        val inviteeCache = PlayerManager.fromBukkitPlayer(invitee)
         checkNotNull(senderCache.civilization, "You must have a Civilization to invite another player to it.")
         val civilization = senderCache.civilization!!
         checkBoolean(!civilization.outlaws.contains(inviteeCache), "You cannot invite an outlaw of your Civilization.")

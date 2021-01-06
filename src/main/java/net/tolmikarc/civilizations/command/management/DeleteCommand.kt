@@ -5,8 +5,9 @@
 package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.event.civ.DeleteCivEvent
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
-import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -15,7 +16,7 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class DeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "delete") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You do not have a Civilization to delete.")
             civPlayer.civilization?.let { civ ->
                 checkBoolean(civ.leader == civPlayer, "You may not delete a Civilization that is not yours.")
@@ -27,9 +28,9 @@ class DeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "del
                     tell("&cSuccessfully deleted the Civilization " + civPlayer.civilization!!.name)
                     for (citizen in civ.citizens) {
                         citizen.civilization = null
-                        civPlayer.queueForSaving()
+                        PlayerManager.queueForSaving(civPlayer)
                     }
-                    civ.removeCivilization()
+                    CivManager.removeCiv(civ)
                     Common.callEvent(DeleteCivEvent(civ, player))
                 }
                 ConfirmMenu(title, info, ::run).displayTo(player)

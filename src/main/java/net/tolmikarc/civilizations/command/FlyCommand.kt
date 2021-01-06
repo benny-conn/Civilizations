@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command
 
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -14,7 +14,7 @@ class FlyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "fly") 
     override fun onCommand() {
         checkConsole()
         player.allowFlight = true
-        val civPlayer = CivPlayer.fromBukkitPlayer(player).apply {
+        PlayerManager.fromBukkitPlayer(player).apply {
             checkNotNull(civilization, "You must have a Civilization to use this command.")
             flying = !flying
             tellSuccess("${Settings.PRIMARY_COLOR}Enabled flight while you are in your Civilization.")

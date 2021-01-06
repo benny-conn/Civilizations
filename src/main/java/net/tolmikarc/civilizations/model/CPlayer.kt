@@ -1,18 +1,15 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.api
+package net.tolmikarc.civilizations.model
 
-import net.tolmikarc.civilizations.model.Civilization
-import org.bukkit.Location
-
-interface CPlayer {
+interface CPlayer : UniquelyIdentifiable {
 
     var playerName: String?
-    var civilization: Civilization?
-    var civilizationInvite: Civilization?
-    var vertex1: Location?
-    var vertex2: Location?
+    var civilization: Civ?
+    var civilizationInvite: Civ?
+    var power: Int
+    val selection: Selection
     var completedTutorial: Boolean
     var visualizing: Boolean
     var flying: Boolean
@@ -20,4 +17,5 @@ interface CPlayer {
 
     fun addPower(power: Int)
     fun removePower(power: Int)
+    fun addRaidBlocksDestroyed(amount: Int)
 }

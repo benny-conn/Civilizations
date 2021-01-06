@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.PermissionUtil.canManageCiv
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -13,7 +13,7 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class OutlawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "outlaw") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You must have a Civilization to manage it.")
             civPlayer.civilization?.apply {
                 checkBoolean(
@@ -21,7 +21,7 @@ class OutlawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "out
                     "You must be the Leader or an Official of your Civilization to use this command."
                 )
                 val outlaw = findPlayer(args[0], "Specify a valid and online player")
-                CivPlayer.fromBukkitPlayer(outlaw)?.let { civOutlaw ->
+                PlayerManager.fromBukkitPlayer(outlaw).let { civOutlaw ->
                     checkBoolean(!this.citizens.contains(civOutlaw), "You cannot outlaw a player in your town.")
                     if (this.outlaws.contains(civOutlaw)) {
                         this.removeOutlaw(civOutlaw)

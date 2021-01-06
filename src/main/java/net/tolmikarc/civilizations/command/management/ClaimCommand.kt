@@ -5,9 +5,11 @@
 package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.event.civ.ClaimEvent
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.CivColony
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.distanceFromNearestClaim
@@ -31,15 +33,15 @@ import kotlin.math.abs
 class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "claim") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let {
+        PlayerManager.fromBukkitPlayer(player).let {
             checkNotNull(it.civilization, "You do not have a civilization")
             it.civilization?.apply {
                 if (args.isNotEmpty()) {
                     when (args[0].toLowerCase()) {
                         "visualize" -> {
                             if (args.size > 1 && !args[1].equals("here", true))
-                                if (Civilization.fromName(args[1]) != null)
-                                    visualize(it, Civilization.fromName(args[1])!!)
+                                if (CivManager.getByName(args[1]) != null)
+                                    visualize(it, CivManager.getByName(args[1])!!)
                                 else
                                     returnInvalidArgs()
                             else
@@ -58,7 +60,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
         }
     }
 
-    private fun visualize(civPlayer: CivPlayer, civilization: Civilization) {
+    private fun visualize(civPlayer: CPlayer, civilization: Civ) {
         civPlayer.visualizing = !civPlayer.visualizing
         val visualizedRegions: MutableSet<Region> = HashSet()
         if (args.size > 1 && args[1].equals("here", ignoreCase = true)) {
@@ -86,17 +88,17 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
         }
     }
 
-    private fun claim(civilization: Civilization, player: CivPlayer, isColony: Boolean) {
+    private fun claim(civilization: Civ, player: CPlayer, isColony: Boolean) {
         checkBoolean(!player.visualizing, "Stop visualizing before you claim more land.")
-        checkNotNull(player.vertex1, "You do not have both region points set")
-        checkNotNull(player.vertex2, "You do not have both region points set")
+        checkBoolean(player.selection.bothPointsSelected(), "You must have both points selected to claim")
         val claim = Region(
             civilization.uuid.toString() + (if (!isColony) "CLAIM" else "COLONY-CLAIM") + civilization.totalClaimCount,
-            player.vertex1,
-            player.vertex2
+            player.selection.primary,
+            player.selection.secondary
         )
         val totalArea = abs(areaBetweenTwoPoints(claim.primary, claim.secondary))
-        val isPointInOtherRegion = isLocationInACiv(player.vertex1!!) || isLocationInACiv(player.vertex2!!)
+        val isPointInOtherRegion =
+            isLocationInACiv(player.selection.primary!!) || isLocationInACiv(player.selection.secondary!!)
         checkBoolean(
             !isPointInOtherRegion,
             "You may not claim a portion of another region. You can use /civ claim visualize to see your current claims."
@@ -162,6 +164,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
         }
         if (civilization.totalClaimCount == 0) civilization.home = getPlayer().location
         HookManager.withdraw(getPlayer(), cost)
+        player.selection.removeSelection(getPlayer())
         civilization.addClaim(claim)
         Common.callEvent(ClaimEvent(civilization, claim, getPlayer()))
     }

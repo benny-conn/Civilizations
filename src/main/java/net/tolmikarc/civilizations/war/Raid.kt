@@ -7,8 +7,9 @@ package net.tolmikarc.civilizations.war
 import net.tolmikarc.civilizations.event.war.PlayerJoinRaidEvent
 import net.tolmikarc.civilizations.event.war.RaidBeginEvent
 import net.tolmikarc.civilizations.event.war.RaidEndEvent
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.packet.NameTag
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Bukkit
@@ -18,20 +19,20 @@ import org.mineacademy.fo.model.Countdown
 import java.util.*
 import kotlin.collections.ArrayList
 
-class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Countdown(Settings.RAID_LENGTH!!) {
+class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RAID_LENGTH!!) {
 
     // map of players and their lives
-    val playersInvolved: MutableMap<CivPlayer, Int> = HashMap()
+    val playersInvolved: MutableMap<CPlayer, Int> = HashMap()
 
     fun addPlayerToRaid(player: Player) {
-        CivPlayer.fromBukkitPlayer(player).let {
+        PlayerManager.fromBukkitPlayer(player).let {
             playersInvolved.putIfAbsent(it, Settings.RAID_LIVES)
 
             if (Common.doesPluginExist("protocollib")) {
                 val onlinePlayersFromCivs: MutableList<Player> = ArrayList()
                 for (p in Bukkit.getOnlinePlayers()) {
-                    if (civBeingRaided.citizens.contains(CivPlayer.fromBukkitPlayer(p)) || civRaiding.citizens.contains(
-                            CivPlayer.fromBukkitPlayer(p)
+                    if (civBeingRaided.citizens.contains(PlayerManager.fromBukkitPlayer(p)) || civRaiding.citizens.contains(
+                            PlayerManager.fromBukkitPlayer(p)
                         )
                     )
                         onlinePlayersFromCivs.add(p)
@@ -45,7 +46,7 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
 
     override fun onStart() {
         for (player in Bukkit.getOnlinePlayers()) {
-            CivPlayer.fromBukkitPlayer(player).let {
+            PlayerManager.fromBukkitPlayer(player).let {
                 if (civBeingRaided.citizens.contains(it)) {
                     Common.tell(player, "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!")
                     addPlayerToRaid(player)
@@ -61,7 +62,7 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
     override fun onTick() {
         if (timeLeft % 120 == 0)
             for (player in Bukkit.getOnlinePlayers()) {
-                CivPlayer.fromBukkitPlayer(player).let {
+                PlayerManager.fromBukkitPlayer(player).let {
                     if (civBeingRaided.citizens.contains(it)) Common.tell(
                         player,
                         "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!"
@@ -76,7 +77,7 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
 
     override fun onEnd() {
         for (player in Bukkit.getOnlinePlayers()) {
-            CivPlayer.fromBukkitPlayer(player).let {
+            PlayerManager.fromBukkitPlayer(player).let {
                 if (civBeingRaided.citizens.contains(it)) Common.tell(
                     player,
                     "${Settings.PRIMARY_COLOR}Raid over!"
@@ -88,7 +89,7 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
             }
             for (civPlayer in playersInvolved.keys) {
                 civPlayer.playerName?.let {
-                    Bukkit.getPlayer(civPlayer.playerUUID)?.let { bukkitPlayer -> NameTag.remove(bukkitPlayer) }
+                    Bukkit.getPlayer(civPlayer.uuid)?.let { bukkitPlayer -> NameTag.remove(bukkitPlayer) }
                 }
             }
             civBeingRaided.raid = null

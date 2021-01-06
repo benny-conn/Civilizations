@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.hook
 
 import net.tolmikarc.civilizations.CivilizationsPlugin
 import net.tolmikarc.civilizations.constants.Constants
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Civ
 
 object DynmapHook {
     private val dynmapHook
@@ -14,7 +14,7 @@ object DynmapHook {
     private val markerApi
         get() = dynmapHook?.markerAPI
 
-    fun doDynmapStuffWithCiv(civilization: Civilization) {
+    fun doDynmapStuffWithCiv(civilization: Civ) {
         val xcorners = DoubleArray(2).apply {
             this[0] = civilization.home?.x!!
             this[1] = civilization.home!!.x + 10
@@ -23,9 +23,9 @@ object DynmapHook {
             this[0] = civilization.home?.z!!
             this[1] = civilization.home!!.z + 10
         }
-        var markertset =
+        val markertset =
             markerApi!!.createMarkerSet(Constants.DYNMAP_ID, civilization.name, markerApi!!.markerIcons, false)
-        var areaMarker = markertset.createAreaMarker(
+        val areaMarker = markertset.createAreaMarker(
             Constants.DYNMAP_ID, civilization.name, true,
             civilization.home!!.world.toString(),
             xcorners, zcorners, false

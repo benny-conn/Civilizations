@@ -10,8 +10,10 @@ import com.palmergames.bukkit.towny.`object`.*
 import com.palmergames.bukkit.towny.exceptions.EconomyException
 import com.palmergames.bukkit.towny.exceptions.NotRegisteredException
 import com.palmergames.bukkit.towny.exceptions.TownyException
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.CivColony
-import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.permissions.ClaimToggleables
@@ -30,13 +32,13 @@ object TownyAdapter {
 
     // TODO handle settings adjustment to account for the amount of claims and land that there are
     //  convert outlaws enemies and allies from the nations of each town
-    private val convertedTowns: MutableMap<Town, Civilization> = HashMap<Town, Civilization>()
+    private val convertedTowns: MutableMap<Town, Civ> = HashMap()
 
     fun adaptEnemiesAndAllies() {
         for (town in convertedTowns.keys) {
             try {
-                val allies: MutableSet<Civilization> = HashSet()
-                val enemies: MutableSet<Civilization> = HashSet()
+                val allies: MutableSet<Civ> = HashSet()
+                val enemies: MutableSet<Civ> = HashSet()
                 if (town.hasNation()) {
                     val nation: Nation = town.nation
                     nation.allies.forEach(Consumer { nationAlly: Nation ->
@@ -71,7 +73,7 @@ object TownyAdapter {
     }
 
 
-    fun convertTownToCiv(town: Town, deleteAfterConversion: Boolean): Civilization {
+    fun convertTownToCiv(town: Town, deleteAfterConversion: Boolean): Civ {
         val civ = Civilization(town.getUUID())
         civ.name = town.name
         try {
@@ -84,9 +86,10 @@ object TownyAdapter {
         } catch (e: TownyException) {
             Common.error(e, "Unable to convert town spawn for town " + town.name)
         }
-        val newCivMembers: MutableSet<CivPlayer> = HashSet()
+        val newCivMembers: MutableSet<CPlayer> = HashSet()
         for (resident in town.residents) {
-            val cache: CivPlayer = CivPlayer.fromUUID(resident.uuid) ?: CivPlayer.initializeCivPlayer(resident.uuid)
+            val cache: CPlayer =
+                PlayerManager.getByUUID(resident.uuid)
             newCivMembers.add(cache)
             cache.civilization = civ
         }
@@ -96,13 +99,13 @@ object TownyAdapter {
         civ.idNumber = newRegions.size + 1
         civ.claimPermissions = convertPermissions(town)
         civ.claimToggleables = convertToggleables(town)
-        TODO("figure out how to make the power calculated")
         convertedTowns[town] = civ
         if (deleteAfterConversion) TownyUniverse.getInstance().dataSource.removeTown(town)
         return civ
+        TODO("figure out how to make the power calculated")
     }
 
-    private fun getConvertedRegions(town: Town, civ: Civilization): MutableSet<Region> {
+    private fun getConvertedRegions(town: Town, civ: Civ): MutableSet<Region> {
         val handledTownBlocks: MutableSet<TownBlock> = HashSet()
         val newRegions: MutableSet<Region> = HashSet()
         val newColonies: MutableSet<CivColony> = HashSet()

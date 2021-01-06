@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command
 
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -14,7 +14,7 @@ import java.util.*
 class WarpsCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warps") {
     override fun onCommand() {
         checkConsole()
-        val civPlayer = CivPlayer.fromBukkitPlayer(player).run {
+        val civPlayer = PlayerManager.fromBukkitPlayer(player).run {
             checkNotNull(civilization, "You do not have a Civilization")
             val warpNames: List<String> = ArrayList(civilization!!.warps.keys)
             val warpNamesCombined = Common.join(warpNames, ", ")

@@ -4,8 +4,9 @@
 
 package net.tolmikarc.civilizations.db
 
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.collection.SerializedMap
@@ -23,12 +24,12 @@ object PlayerDatastore : Datastore() {
         removeOldEntries()
     }
 
-    fun load(cache: CivPlayer) {
+    fun load(cache: CPlayer) {
         try {
-            if (!isStored(cache.playerUUID)) {
+            if (!isStored(cache.uuid)) {
                 return
             }
-            val results: ResultSet? = query("SELECT * FROM {table} WHERE uuid='" + cache.playerUUID + "'")
+            val results: ResultSet? = query("SELECT * FROM {table} WHERE uuid='" + cache.uuid + "'")
             if (results != null) {
                 if (results.next()) {
                     Debugger.debug("sql", "Loading data for player: ${results.getString("Name")}")
@@ -36,7 +37,7 @@ object PlayerDatastore : Datastore() {
                     val civUUIDAsString = results.getString("Civilization")
                     val civUUID = if (civUUIDAsString != null) UUID.fromString(civUUIDAsString) else null
                     val civilization =
-                        if (civUUID?.let { CivDatastore.isStored(it) } == true) Civilization.fromUUID(civUUID) else null
+                        if (civUUID?.let { CivDatastore.isStored(it) } == true) CivManager.getByUUID(civUUID) else null
                     val raidBlocks = results.getInt("RaidBlocks")
                     if (name != null) cache.playerName = name
                     if (civilization != null) cache.civilization = civilization
@@ -47,11 +48,11 @@ object PlayerDatastore : Datastore() {
 
         } catch (e: SQLException) {
             e.printStackTrace()
-            Common.error(e, "Could not load data for CivPlayer: " + cache.playerUUID)
+            Common.error(e, "Could not load data for CivPlayer: " + cache.uuid)
         }
     }
 
-    fun save(cache: CivPlayer) {
+    fun save(cache: CPlayer) {
         try {
             val map = SerializedMap().apply {
                 put("Name", cache.playerName)
@@ -61,11 +62,11 @@ object PlayerDatastore : Datastore() {
                 put("Updated", System.currentTimeMillis())
                 Debugger.debug("sql", "Creating Map: ${toJson()}")
             }
-            if (isStored(cache.playerUUID)) {
-                update(map, cache.playerUUID)
+            if (isStored(cache.uuid)) {
+                update(map, cache.uuid)
                 Debugger.debug("sql", "Updating ${map.toJson()}")
             } else {
-                map.put("uuid", cache.playerUUID)
+                map.put("uuid", cache.uuid)
                 insert(map)
                 Debugger.debug("sql", "Inserting ${map.toJson()}")
             }
@@ -82,7 +83,7 @@ object PlayerDatastore : Datastore() {
             if (results != null) {
                 while (results.next()) {
                     val uuid = UUID.fromString(results.getString("UUID"))
-                    CivPlayer.initialLoadFromDatabase(uuid)
+                    PlayerManager.getByUUID(uuid)
                 }
                 results.close()
             }

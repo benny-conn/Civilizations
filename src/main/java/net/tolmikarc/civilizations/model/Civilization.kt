@@ -4,9 +4,9 @@
 
 package net.tolmikarc.civilizations.model
 
-import net.tolmikarc.civilizations.api.Civ
-import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.permissions.ClaimToggleables
 import net.tolmikarc.civilizations.settings.Settings
@@ -16,9 +16,7 @@ import net.tolmikarc.civilizations.war.RegionDamages
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
-import org.mineacademy.fo.Common
 import org.mineacademy.fo.collection.SerializedMap
-import org.mineacademy.fo.model.ConfigSerializable
 import org.mineacademy.fo.region.Region
 import java.sql.SQLException
 import java.util.*
@@ -27,14 +25,18 @@ import java.util.stream.Collectors
 import kotlin.collections.HashSet
 import kotlin.collections.set
 
-data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
+data class Civilization(override val uuid: UUID) : Civ {
+
+
     override var name: String? = null
         set(value) {
-            byName[value?.toLowerCase()] = this
+            if (value != null) {
+                CivManager.byName[value.toLowerCase()] = this
+            }
             field = value
         }
     override var power = 0
-    override var leader: CivPlayer? = null
+    override var leader: CPlayer? = null
     override var bank: CivBank = CivBank(this)
     override var home: Location? = null
     override var claims: MutableSet<Region> = HashSet()
@@ -51,15 +53,15 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
     override val colonyCount
         get() = colonies.size
 
-    override var citizens: MutableSet<CivPlayer> = HashSet()
-    override var officials: MutableSet<CivPlayer> = HashSet()
-    override var outlaws: MutableSet<CivPlayer> = HashSet()
-    override var allies: MutableSet<Civilization> = HashSet()
-    override var enemies: MutableSet<Civilization> = HashSet()
+    override var citizens: MutableSet<CPlayer> = HashSet()
+    override var officials: MutableSet<CPlayer> = HashSet()
+    override var outlaws: MutableSet<CPlayer> = HashSet()
+    override var allies: MutableSet<Civ> = HashSet()
+    override var enemies: MutableSet<Civ> = HashSet()
 
-    override val warring: Set<Civilization>
+    override val warring: Set<Civ>
         get() {
-            val set: MutableSet<Civilization> = HashSet()
+            val set: MutableSet<Civ> = HashSet()
             for (civ in enemies) {
                 if (civ.enemies.contains(this))
                     set.add(civ)
@@ -76,7 +78,6 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
         set(value) {
             val singleBanner = if (value != null) ItemStack(value) else ItemStack(Material.BLUE_BANNER)
             singleBanner.amount = 1
-            saveAsync(this)
             field = value
         }
 
@@ -84,7 +85,6 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
         set(value) {
             val singleBook = if (value != null) ItemStack(value) else ItemStack(Material.BOOK)
             singleBook.amount = 1
-            saveAsync(this)
             field = value
         }
 
@@ -95,7 +95,7 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
 
     override fun addPower(power: Int) {
         this.power += power
-        queueForSaving()
+        CivManager.queueForSaving(this)
     }
 
     override fun removePower(power: Int) {
@@ -103,7 +103,7 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
             this.power -= power
         else
             this.power = 0
-        queueForSaving()
+        CivManager.queueForSaving(this)
     }
 
     private fun addTotalBlocks(amount: Int) {
@@ -119,12 +119,12 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
 
     override fun addWarp(name: String, location: Location) {
         warps[name] = location
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
     override fun removeWarp(warp: String) {
         warps.remove(warp)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
     override fun addBalance(amount: Double) {
@@ -137,17 +137,16 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
 
 
     override fun addPlot(plot: CivPlot) {
-        plot.owner = leader ?: return
         idNumber++
         plots.add(plot)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
     override fun addColony(colony: CivColony) {
         colony.id = idNumber
         idNumber++
         colonies.add(colony)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
     override fun addClaim(region: Region) {
@@ -158,7 +157,7 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
             region.secondary
         )
         addTotalBlocks(amount)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
 
@@ -169,94 +168,80 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
             region.secondary
         )
         removeTotalBlocks(area)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
 
-    override fun addOfficial(player: CivPlayer) {
+    override fun addOfficial(player: CPlayer) {
         officials.add(player)
         player.addPower(CivUtil.calculateFormulaForCiv(Settings.POWER_OFFICIAL_FORMULA, this).toInt())
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
-    override fun removeOfficial(player: CivPlayer) {
+    override fun removeOfficial(player: CPlayer) {
         officials.remove(player)
         player.removePower(CivUtil.calculateFormulaForCiv(Settings.POWER_OFFICIAL_FORMULA, this).toInt())
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
-    override fun addCitizen(player: CivPlayer) {
+    override fun addCitizen(player: CPlayer) {
         citizens.add(player)
         addPower(Settings.POWER_CITIZENS_WEIGHT)
         if (Settings.ADD_PLAYER_POWER_TO_CIV) {
             addPower(player.power)
         }
         player.addPower(CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, this).toInt())
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
-    override fun removeCitizen(player: CivPlayer) {
+    override fun removeCitizen(player: CPlayer) {
         citizens.remove(player)
         removePower(Settings.POWER_CITIZENS_WEIGHT)
         if (Settings.ADD_PLAYER_POWER_TO_CIV) {
             removePower(player.power)
         }
         player.removePower(CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, this).toInt())
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
-    override fun addAlly(ally: Civilization) {
+    override fun addAlly(ally: Civ) {
         allies.add(ally)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
-    override fun removeAlly(ally: Civilization) {
+    override fun removeAlly(ally: Civ) {
         allies.remove(ally)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
-    override fun addEnemy(enemy: Civilization) {
+    override fun addEnemy(enemy: Civ) {
         enemies.add(enemy)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
-    override fun removeEnemy(enemy: Civilization) {
+    override fun removeEnemy(enemy: Civ) {
         enemies.remove(enemy)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
 
-    override fun addOutlaw(player: CivPlayer) {
+    override fun addOutlaw(player: CPlayer) {
         outlaws.add(player)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
-    override fun removeOutlaw(player: CivPlayer) {
+    override fun removeOutlaw(player: CPlayer) {
         outlaws.remove(player)
-        saveAsync(this)
+        CivManager.saveAsync(this)
     }
 
-    override fun removeCivilization() {
-        for (civ in civilizationsMap.values) {
-            civ.allies.remove(this)
-            civ.enemies.remove(this)
-        }
-        civilizationsMap.remove(uuid)
-        QUEUED_FOR_SAVING.remove(this)
-        byName.remove(name)
-        CivDatastore.delete(uuid)
-    }
-
-    fun queueForSaving() {
-        QUEUED_FOR_SAVING.add(this)
-    }
 
     override fun serialize(): SerializedMap {
         val map = SerializedMap()
         map.putIfExist("UUID", uuid)
         map.putIfExist("Name", name)
         map.putIfExist("Power", power)
-        map.putIfExist("Leader", leader?.playerUUID)
+        map.putIfExist("Leader", leader?.uuid)
         map.putIfExist("Home", home)
         map.putIfExist("Claims", claims)
         map.putIfExist("Plots", plots)
@@ -267,15 +252,15 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
         map.putIfExist("Plot_Count", plotCount)
         map.putIfExist(
             "Officials",
-            officials.stream().map { obj: CivPlayer -> obj.playerUUID }.collect(Collectors.toSet())
+            officials.stream().map { it.uuid }.collect(Collectors.toSet())
         )
         map.putIfExist(
             "Citizens",
-            citizens.stream().map { obj: CivPlayer -> obj.playerUUID }.collect(Collectors.toSet())
+            citizens.stream().map { it.uuid }.collect(Collectors.toSet())
         )
-        map.putIfExist("Allies", allies.stream().map { obj: Civilization -> obj.uuid }.collect(Collectors.toSet()))
-        map.putIfExist("Enemies", enemies.stream().map { obj: Civilization -> obj.uuid }.collect(Collectors.toSet()))
-        map.putIfExist("Outlaws", outlaws.stream().map { obj: CivPlayer -> obj.playerUUID }.collect(Collectors.toSet()))
+        map.putIfExist("Allies", allies.stream().map { it.uuid }.collect(Collectors.toSet()))
+        map.putIfExist("Enemies", enemies.stream().map { it.uuid }.collect(Collectors.toSet()))
+        map.putIfExist("Outlaws", outlaws.stream().map { it.uuid }.collect(Collectors.toSet()))
         map.putIfExist("Bank", bank)
         map.putIfExist("Banner", banner)
         map.putIfExist("Book", book)
@@ -286,92 +271,17 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
     }
 
     companion object {
-        private val QUEUED_FOR_SAVING: MutableSet<Civilization> = HashSet()
-        val civilizationsMap: MutableMap<UUID, Civilization> = HashMap()
-        private val byName: MutableMap<String?, Civilization> = HashMap()
-
-        private fun initializeCiv(uuid: UUID): Civilization {
-            val civilization = Civilization(uuid)
-            civilizationsMap[uuid] = civilization
-            return civilization
-        }
-
-        fun createCiv(name: String, player: CivPlayer): Civilization {
-            val uuid = UUID.randomUUID()
-            val civilization = initializeCiv(uuid)
-            civilization.name = name
-            civilization.leader = player
-            civilization.addCitizen(player)
-            player.civilization = civilization
-            player.power += CivUtil.calculateFormulaForCiv(Settings.POWER_LEADER_FORMULA, civilization).toInt()
-            player.power += CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, civilization).toInt()
-            byName[name] = civilization
-            QUEUED_FOR_SAVING.add(civilization)
-            return civilization
-        }
-
-
-        fun createCiv(civilization: Civilization): Civilization {
-            civilizationsMap[civilization.uuid] = civilization
-            byName[civilization.name] = civilization
-            QUEUED_FOR_SAVING.add(civilization)
-            return civilization
-        }
-
-
-        fun fromUUID(uuid: UUID): Civilization {
-            var civilization = civilizationsMap[uuid]
-            if (civilization == null) {
-                civilization = initializeCiv(uuid)
-                loadAsync(civilization)
-            }
-            return civilization
-        }
-
-
-        fun fromName(name: String): Civilization? {
-            return byName[name.toLowerCase()]
-        }
-
-
-        val civNames: MutableSet<String?>
-            get() = byName.keys
-
-        private fun load(civ: Civilization) {
-            CivDatastore.load(civ)
-        }
-
-        private fun loadAsync(civ: Civilization) {
-            Common.runLaterAsync { load(civ) }
-        }
-
-        private fun save(civilization: Civilization) {
-            CivDatastore.save(civilization)
-        }
-
-
-        fun saveAsync(civilization: Civilization) {
-            Common.runLaterAsync { save(civilization) }
-        }
-
-
-        fun saveQueuedForSaving() {
-            for (civilization in QUEUED_FOR_SAVING) {
-                save(civilization)
-            }
-        }
-
         @JvmStatic
         fun deserialize(map: SerializedMap): Civilization {
             val uuid = map.get("UUID", UUID::class.java)
             val cache = Civilization(uuid)
             val name = map.getString("Name")
             val power = map.getInteger("Power")
-            var leader: CivPlayer? = null
+            var leader: CPlayer? = null
             try {
                 leader =
                     if (PlayerDatastore.isStored(map.get("Leader", UUID::class.java)))
-                        CivPlayer.fromUUID(map.get("Leader", UUID::class.java))
+                        PlayerManager.getByUUID(map.get("Leader", UUID::class.java))
                     else null
             } catch (e: SQLException) {
                 e.printStackTrace()
@@ -382,18 +292,23 @@ data class Civilization(val uuid: UUID) : ConfigSerializable, Civ {
             val warps: Map<String, Location>? = map.getMap("Warps", String::class.java, Location::class.java)
             val claimNumber = map.getInteger("Claim_Number")
             val totalBlocksCount = map.getInteger("Total_Blocks_Count")
-            val officials: MutableSet<CivPlayer> =
-                map.getSet("Officials", UUID::class.java).stream().filter(playerRemoveFilter).map(CivPlayer::fromUUID)
+            val officials: MutableSet<CPlayer> =
+                map.getSet("Officials", UUID::class.java).stream().filter(playerRemoveFilter)
+                    .map { PlayerManager.getByUUID(it) }
                     .collect(Collectors.toSet())
-            val citizens: MutableSet<CivPlayer> =
-                map.getSet("Citizens", UUID::class.java).stream().filter(playerRemoveFilter).map(CivPlayer::fromUUID)
+            val citizens: MutableSet<CPlayer> =
+                map.getSet("Citizens", UUID::class.java).stream().filter(playerRemoveFilter)
+                    .map { PlayerManager.getByUUID(it) }
                     .collect(Collectors.toSet())
-            val allies: MutableSet<Civilization> =
-                map.getSet("Allies", UUID::class.java).stream().map(::fromUUID).collect(Collectors.toSet())
-            val enemies: MutableSet<Civilization> =
-                map.getSet("Enemies", UUID::class.java).stream().map(::fromUUID).collect(Collectors.toSet())
-            val outlaws: MutableSet<CivPlayer> =
-                map.getSet("Outlaws", UUID::class.java).stream().filter(playerRemoveFilter).map(CivPlayer::fromUUID)
+            val allies: MutableSet<Civ> =
+                map.getSet("Allies", UUID::class.java).stream().map { CivManager.getByUUID(it) }
+                    .collect(Collectors.toSet())
+            val enemies: MutableSet<Civ> =
+                map.getSet("Enemies", UUID::class.java).stream().map { CivManager.getByUUID(it) }
+                    .collect(Collectors.toSet())
+            val outlaws: MutableSet<CPlayer> =
+                map.getSet("Outlaws", UUID::class.java).stream().filter(playerRemoveFilter)
+                    .map { PlayerManager.getByUUID(it) }
                     .collect(Collectors.toSet())
             val bank = map.get("Bank", CivBank::class.java)
             val banner = map.getItem("Banner")

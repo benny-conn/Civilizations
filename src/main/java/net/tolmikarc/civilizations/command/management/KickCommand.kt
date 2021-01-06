@@ -4,8 +4,9 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.PermissionUtil.canManageCiv
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -14,7 +15,7 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class KickCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "kick") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You must have a Civilization to manage it.")
             civPlayer.civilization?.apply {
                 checkBoolean(
@@ -22,12 +23,12 @@ class KickCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "kick"
                     "You must be the Leader or an Official of your Civilization to use this command."
                 )
                 checkBoolean(!args[0].equals(player.name, ignoreCase = true), "You cannot kick yourself")
-                CivPlayer.fromName(args[0])?.let { kicked -> executeCommand(this, kicked) }
+                PlayerManager.getByName(args[0])?.let { kicked -> executeCommand(this, kicked) }
             }
         }
     }
 
-    private fun executeCommand(civilization: Civilization, kickedCache: CivPlayer) {
+    private fun executeCommand(civilization: Civ, kickedCache: CPlayer) {
         checkNotNull(kickedCache, "Specify a valid player")
         checkBoolean(civilization.citizens.contains(kickedCache), "This player is not in your town.")
         civilization.removeCitizen(kickedCache)

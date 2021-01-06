@@ -4,8 +4,10 @@
 
 package net.tolmikarc.civilizations.util
 
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.war.RegionDamages
 import org.bukkit.Material
@@ -21,21 +23,21 @@ import org.mineacademy.fo.remain.Remain
 
 object WarUtil {
 
-    fun canAttackCivilization(player: CivPlayer, civBeingRaided: Civilization): Boolean {
+    fun canAttackCivilization(player: CPlayer, civBeingRaided: Civ): Boolean {
         return isPlayerRaiding(player, civBeingRaided) && isPlayerLivesValid(
             player,
             civBeingRaided
         )
     }
 
-    fun isPlayerToPlayerRatioValid(attacked: Civilization, attacker: Civilization?): Boolean {
+    fun isPlayerToPlayerRatioValid(attacked: Civ, attacker: Civ?): Boolean {
         return ClaimUtil.playersInCivClaims(attacked, attacked) / ClaimUtil.playersInCivClaims(
             attacked,
             attacker
         ) >= Settings.RAID_RATIO_MAX_IN_RAID!!
     }
 
-    private fun isPlayerRaiding(player: CivPlayer, attackedCiv: Civilization): Boolean {
+    private fun isPlayerRaiding(player: CPlayer, attackedCiv: Civ): Boolean {
         val attackingCiv = player.civilization ?: return false
         val raid = attackedCiv.raid ?: return false
         return raid.playersInvolved.containsKey(player) && isBeingRaided(attackedCiv, attackingCiv)
@@ -43,27 +45,27 @@ object WarUtil {
 
 
     // checks if the attacking civ is attacking the attacked civ
-    fun isBeingRaided(attackedCiv: Civilization?, attackingCiv: Civilization?): Boolean {
+    fun isBeingRaided(attackedCiv: Civ?, attackingCiv: Civ?): Boolean {
         if (attackedCiv == null || attackingCiv == null) return false
         val raid = attackedCiv.raid ?: return false
         return raid.civBeingRaided == attackedCiv && raid.civRaiding == attackingCiv
     }
 
-    fun isInRaid(civilization: Civilization): Boolean {
+    fun isInRaid(civilization: Civ): Boolean {
         return civilization.raid != null
     }
 
-    private fun getRaidLives(player: CivPlayer, civilization: Civilization): Int? {
+    private fun getRaidLives(player: CPlayer, civilization: Civ): Int? {
         if (civilization.raid != null) if (civilization.raid!!.playersInvolved.containsKey(player)) return civilization.raid!!.playersInvolved[player]
         return 0
     }
 
-    private fun isPlayerLivesValid(player: CivPlayer, civInRaid: Civilization): Boolean {
+    private fun isPlayerLivesValid(player: CPlayer, civInRaid: Civ): Boolean {
         return if (Settings.RAID_LIVES == -1) true else getRaidLives(player, civInRaid)!! >= 0
     }
 
-    fun isPlayerAtWar(player: Player, civ: Civilization): Boolean {
-        val cache = CivPlayer.fromBukkitPlayer(player)
+    fun isPlayerAtWar(player: Player, civ: Civ): Boolean {
+        val cache = PlayerManager.fromBukkitPlayer(player)
         val playerCiv = cache.civilization
         if (playerCiv != null) {
             return civ.warring.contains(playerCiv) || playerCiv.warring.contains(civ)
@@ -71,18 +73,17 @@ object WarUtil {
         return false
     }
 
-    fun addDamages(attackedCiv: Civilization, attackingCiv: Civilization, block: Block) {
-        if (attackedCiv.regionDamages == null) attackedCiv.regionDamages = RegionDamages(attackedCiv.uuid)
+    fun addDamages(attackedCiv: Civ, attackingCiv: Civ, block: Block) {
+        if (attackedCiv.regionDamages == null) attackedCiv.regionDamages = RegionDamages()
         attackedCiv.regionDamages?.brokenBlocksMap?.set(block.location, block.blockData.asString)
         block.type = Material.AIR
         attackedCiv.removePower(Settings.POWER_RAID_BLOCK)
         attackingCiv.addPower(Settings.POWER_BLOCKS_WEIGHT)
-        attackedCiv.queueForSaving()
-        attackingCiv.queueForSaving()
+        CivManager.queueForSaving(attackedCiv, attackingCiv)
     }
 
-    fun shootBlockAndAddDamages(attackedCiv: Civilization, attackingCiv: Civilization, block: Block) {
-        if (attackedCiv.regionDamages == null) attackedCiv.regionDamages = RegionDamages(attackedCiv.uuid)
+    fun shootBlockAndAddDamages(attackedCiv: Civ, attackingCiv: Civ, block: Block) {
+        if (attackedCiv.regionDamages == null) attackedCiv.regionDamages = RegionDamages()
         attackedCiv.regionDamages?.brokenBlocksMap?.set(block.location, block.blockData.asString)
         shootBlock(
             block,
@@ -90,8 +91,7 @@ object WarUtil {
         )
         attackedCiv.removePower(Settings.POWER_RAID_BLOCK)
         attackingCiv.addPower(Settings.POWER_BLOCKS_WEIGHT)
-        attackedCiv.queueForSaving()
-        attackingCiv.queueForSaving()
+        CivManager.queueForSaving(attackedCiv, attackingCiv)
     }
 
 
@@ -106,10 +106,10 @@ object WarUtil {
             falling.velocity = Vector(x, y, z)
             falling.dropItem = false
             block.type = Material.AIR
-        EntityUtil.trackFalling(falling) {
-            falling.location.block.type = Material.AIR
-        }
-         falling
+            EntityUtil.trackFalling(falling) {
+                falling.location.block.type = Material.AIR
+            }
+            falling
         }
     }
 
@@ -120,7 +120,7 @@ object WarUtil {
     }
 
 
-    fun increaseBlocksBroken(cache: CivPlayer) {
+    fun increaseBlocksBroken(cache: CPlayer) {
         cache.addRaidBlocksDestroyed(1)
     }
 }

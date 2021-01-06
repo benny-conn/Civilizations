@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.util
 
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Civ
 import org.bukkit.Location
 import org.mineacademy.fo.MathUtil
 import org.mineacademy.fo.region.Region
@@ -22,7 +22,7 @@ object MathUtil {
         return df.format(dubble).toDouble()
     }
 
-    fun replaceVariablesAndCalculateFormula(formula: String, civilization: Civilization, region: Region?): Double {
+    fun replaceVariablesAndCalculateFormula(formula: String, civilization: Civ, region: Region?): Double {
         var replacedVariables = formula
             .replace("{total_claims}", civilization.totalClaimCount.toString())
             .replace("{total_area}", civilization.totalBlocksCount.toString())

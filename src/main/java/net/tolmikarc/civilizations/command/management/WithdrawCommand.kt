@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.MathUtil.doubleToMoney
 import net.tolmikarc.civilizations.util.MathUtil.isDouble
@@ -16,7 +16,7 @@ import org.mineacademy.fo.model.HookManager
 class WithdrawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "withdraw") {
     override fun onCommand() {
         checkConsole()
-        val civPlayer = CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You must have a civilization to put money into")
             civPlayer.civilization?.apply {
                 checkBoolean(

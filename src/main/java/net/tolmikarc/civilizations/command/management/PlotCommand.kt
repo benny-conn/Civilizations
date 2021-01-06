@@ -4,9 +4,10 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.CivPlot
-import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
@@ -29,7 +30,7 @@ import java.util.*
 class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You do not have a civilization")
             civPlayer.civilization?.apply {
                 if (args.isNotEmpty())
@@ -42,25 +43,25 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
                         "forsale" -> setPlotForSale(civPlayer, this)
                         "add" -> addMemberToPlot(civPlayer, this)
                     }
-                queueForSaving()
+                PlayerManager.queueForSaving(civPlayer)
             }
         }
     }
 
-    private fun addMemberToPlot(player: CivPlayer, civilization: Civilization) {
+    private fun addMemberToPlot(player: CPlayer, civilization: Civ) {
         val plot: CivPlot? = getPlotFromLocation(getPlayer().location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         checkBoolean(canManagePlot(civilization, plot!!, player), "You must own this plot to add members to it")
         plot.apply {
             checkBoolean(args.size > 1, "Please specify who you would like to add to your plot.")
             val newPlayer = findPlayer(args[0], "Specify a valid and online player")
-            val civNewPlayer = CivPlayer.fromBukkitPlayer(newPlayer)
-            addMember(civNewPlayer!!)
+            val civNewPlayer = PlayerManager.fromBukkitPlayer(newPlayer)
+            addMember(civNewPlayer)
             tellSuccess("${Settings.PRIMARY_COLOR}Added ${Settings.SECONDARY_COLOR}" + newPlayer.displayName + "${Settings.PRIMARY_COLOR} to your plot")
         }
     }
 
-    private fun setPlotForSale(player: CivPlayer, civilization: Civilization) {
+    private fun setPlotForSale(player: CPlayer, civilization: Civ) {
         val plot: CivPlot? = getPlotFromLocation(getPlayer().location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         plot?.apply {
@@ -74,7 +75,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
         }
     }
 
-    private fun claimPlot(player: CivPlayer, civilization: Civilization) {
+    private fun claimPlot(player: CPlayer, civilization: Civ) {
         val plot: CivPlot? = getPlotFromLocation(getPlayer().location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         plot?.apply {
@@ -89,7 +90,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
         }
     }
 
-    private fun adjustPermissions(civPlayer: CivPlayer, civilization: Civilization) {
+    private fun adjustPermissions(civPlayer: CPlayer, civilization: Civ) {
         val plot: CivPlot? = getPlotFromLocation(player.location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         plot?.apply {
@@ -113,12 +114,11 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
         }
     }
 
-    private fun definePlot(player: CivPlayer, civilization: Civilization) {
-        checkNotNull(player.vertex1, "You do not have both region points set")
-        checkNotNull(player.vertex2, "You do not have both region points set")
+    private fun definePlot(player: CPlayer, civilization: Civ) {
+        checkBoolean(player.selection.bothPointsSelected(), "You must have both points selected to claim")
         val maxPlots = calculateFormulaForCiv(Settings.MAX_PLOTS_FORMULA, civilization)
         checkBoolean(civilization.plotCount.toDouble() < maxPlots, "You cannot define more than $maxPlots total plots.")
-        val plotRegion = Region(civilization.plotCount.toString(), player.vertex1, player.vertex2)
+        val plotRegion = Region(civilization.plotCount.toString(), player.selection.primary, player.selection.secondary)
         checkBoolean(
             isLocationInCiv(plotRegion.primary, civilization) && isLocationInCiv(
                 plotRegion.secondary,
@@ -130,11 +130,15 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
                 plotRegion.secondary
             ) == null, "You cannot claim a new plot with overlapping plots already claimed"
         )
-        CivPlot(civilization, civilization.idNumber, plotRegion).apply { civilization.addPlot(this) }
+        CivPlot(civilization, civilization.idNumber, plotRegion, civilization.leader!!).apply {
+            civilization.addPlot(
+                this
+            )
+        }
             .also { tellSuccess("${Settings.PRIMARY_COLOR}Successfully defined new plot with id ${Settings.SECONDARY_COLOR}" + civilization.plotCount) }
     }
 
-    private fun visualize(player: CivPlayer, civilization: Civilization) {
+    private fun visualize(player: CPlayer, civilization: Civ) {
         player.visualizing = !player.visualizing
         val visualizedRegions: MutableSet<Region> = HashSet()
         if (args.size > 1) {
@@ -164,7 +168,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
         }
     }
 
-    fun isLocationConnected(location: Location, civilization: Civilization, excludedRegion: Region): Boolean {
+    fun isLocationConnected(location: Location, civilization: Civ, excludedRegion: Region): Boolean {
         for (plot in civilization.plots) {
             if (plot.region == excludedRegion) continue
             if (plot.region.boundingBox.contains(location)) return true

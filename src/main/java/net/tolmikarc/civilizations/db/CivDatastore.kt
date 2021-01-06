@@ -4,10 +4,8 @@
 
 package net.tolmikarc.civilizations.db
 
-import net.tolmikarc.civilizations.model.CivBank
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.CivPlot
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.model.*
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.war.RegionDamages
 import org.bukkit.Location
@@ -27,10 +25,10 @@ object CivDatastore : Datastore() {
         removeOldEntries()
     }
 
-    fun load(civ: Civilization) {
+    fun load(civ: Civ) {
         try {
             if (!isStored(civ.uuid)) {
-                civ.removeCivilization()
+                CivManager.removeCiv(civ)
                 return
             }
             val results: ResultSet? = query("SELECT * FROM {table} WHERE uuid='" + civ.uuid + "'")
@@ -42,7 +40,7 @@ object CivDatastore : Datastore() {
                     if (data.isEmpty) return
                     val deserializedCiv = Civilization.deserialize(data)
                     if (deserializedCiv.citizens.isEmpty()) {
-                        civ.removeCivilization()
+                        CivManager.removeCiv(civ)
                         return
                     }
                     val name: String? = deserializedCiv.name
@@ -54,11 +52,11 @@ object CivDatastore : Datastore() {
                     val warps: MutableMap<String, Location> = deserializedCiv.warps
                     val idNumber: Int = deserializedCiv.idNumber
                     val totalBlocksCount: Int = deserializedCiv.totalBlocksCount
-                    val officials: MutableSet<CivPlayer> = deserializedCiv.officials
-                    val citizens: MutableSet<CivPlayer> = deserializedCiv.citizens
-                    val allies: MutableSet<Civilization> = deserializedCiv.allies
-                    val enemies: MutableSet<Civilization> = deserializedCiv.enemies
-                    val outlaws: MutableSet<CivPlayer> = deserializedCiv.outlaws
+                    val officials: MutableSet<CPlayer> = deserializedCiv.officials
+                    val citizens: MutableSet<CPlayer> = deserializedCiv.citizens
+                    val allies: MutableSet<Civ> = deserializedCiv.allies
+                    val enemies: MutableSet<Civ> = deserializedCiv.enemies
+                    val outlaws: MutableSet<CPlayer> = deserializedCiv.outlaws
                     val bank: CivBank = deserializedCiv.bank
                     val banner: ItemStack? = deserializedCiv.banner
                     val book: ItemStack? = deserializedCiv.book
@@ -88,7 +86,7 @@ object CivDatastore : Datastore() {
                         this.claimToggleables = toggleables
                         if (regionDamages != null) this.regionDamages = regionDamages
                     }
-                } else civ.removeCivilization()
+                } else CivManager.removeCiv(civ)
                 results.close()
             }
 
@@ -97,7 +95,7 @@ object CivDatastore : Datastore() {
         }
     }
 
-    fun save(cache: Civilization) {
+    fun save(cache: Civ) {
         try {
             val map: SerializedMap = SerializedMap().apply {
                 put("Name", cache.name)

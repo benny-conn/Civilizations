@@ -5,9 +5,10 @@
 package net.tolmikarc.civilizations.util
 
 import lombok.experimental.UtilityClass
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.CivPlot
-import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.permissions.ClaimPermissions.PermType
 import net.tolmikarc.civilizations.settings.Settings
@@ -16,9 +17,9 @@ import org.bukkit.entity.Player
 
 @UtilityClass
 object PermissionUtil {
-    fun can(permType: PermType, player: Player, civilization: Civilization): Boolean {
+    fun can(permType: PermType, player: Player, civilization: Civ): Boolean {
         val claimPermissions = civilization.claimPermissions
-        val civPlayer = CivPlayer.fromBukkitPlayer(player)
+        val civPlayer = PlayerManager.fromBukkitPlayer(player)
         if (isAdmin(civPlayer)) return true
         if (Settings.OUTLAW_PERMISSIONS_DISABLED) if (CivUtil.isPlayerOutlaw(civPlayer, civilization)) return false
         if (civilization.leader == civPlayer) return true
@@ -36,16 +37,16 @@ object PermissionUtil {
         }
     }
 
-    fun isAdmin(player: CivPlayer): Boolean {
-        return if (Bukkit.getPlayer(player.playerUUID) != null) Bukkit.getPlayer(player.playerUUID)!!
+    fun isAdmin(player: CPlayer): Boolean {
+        return if (Bukkit.getPlayer(player.uuid) != null) Bukkit.getPlayer(player.uuid)!!
             .hasPermission("civilizations.admin") else false
     }
 
-    fun canManageCiv(player: CivPlayer, civilization: Civilization): Boolean {
+    fun canManageCiv(player: CPlayer, civilization: Civ): Boolean {
         return if (isAdmin(player)) true else civilization.officials.contains(player) || civilization.leader == player
     }
 
-    fun canManagePlot(civ: Civilization, plot: CivPlot, player: CivPlayer): Boolean {
-        return if (canManageCiv(player, civ)) true else plot.owner != null && plot.owner == player
+    fun canManagePlot(civ: Civ, plot: CivPlot, player: CPlayer): Boolean {
+        return if (canManageCiv(player, civ)) true else plot.owner == player
     }
 }

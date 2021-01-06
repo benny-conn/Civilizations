@@ -4,8 +4,8 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -22,10 +22,10 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class RaidCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "raid") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You must have a civilization to Raid another.")
             civPlayer.civilization?.apply {
-                val enemyCiv = Civilization.fromName(args[0])
+                val enemyCiv = CivManager.getByName(args[0])
                 checkNotNull(enemyCiv, "Please specify a valid Civilization")
                 checkBoolean(!isInRaid(enemyCiv!!), "This civilization is already in a Raid")
                 checkBoolean(isPlayerAtWar(player, enemyCiv), "You must first be at war to raid an enemy")

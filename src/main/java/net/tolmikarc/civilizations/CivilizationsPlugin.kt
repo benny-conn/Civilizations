@@ -11,8 +11,8 @@ import net.tolmikarc.civilizations.listener.CivListener
 import net.tolmikarc.civilizations.listener.EntityListener
 import net.tolmikarc.civilizations.listener.PlayerListener
 import net.tolmikarc.civilizations.listener.WorldListener
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
@@ -54,7 +54,7 @@ class CivilizationsPlugin : SimplePlugin() {
         registerAllTasks()
         Common.ADD_TELL_PREFIX = true
         Common.log("Civilizations by Tolmikarc up and running!")
-        for (civ in Civilization.civilizationsMap.values) {
+        for (civ in CivManager.all) {
             civ.home?.let {
                 net.tolmikarc.civilizations.hook.DynmapHook.doDynmapStuffWithCiv(civ)
             }
@@ -64,8 +64,8 @@ class CivilizationsPlugin : SimplePlugin() {
     override fun onPluginStop() {
         cleanUpExtraWarBlocks()
         Common.log("Saving Data and Closing Datastore Connections")
-        CivPlayer.saveQueuedForSaving()
-        Civilization.saveQueuedForSaving()
+        PlayerManager.saveQueuedForSaving()
+        CivManager.saveQueuedForSaving()
         CivDatastore.close()
         PlayerDatastore.close()
 
@@ -90,11 +90,12 @@ class CivilizationsPlugin : SimplePlugin() {
 
     private fun registerAllPlaceholders() {
         HookManager.addPlaceholder("civilization") { player: Player ->
-            val cache = CivPlayer.fromBukkitPlayer(player)
+            val cache = PlayerManager.fromBukkitPlayer(player)
             if (cache.civilization != null) return@addPlaceholder cache.civilization!!.name
             ""
         }
     }
+
 
     private fun registerAllCommands() {
         registerCommands("civilizations|civ", CivilizationCommandGroup())
@@ -169,7 +170,7 @@ class CivilizationsPlugin : SimplePlugin() {
     }
 
     private fun cleanUpExtraWarBlocks() {
-        for (civilization in Civilization.civilizationsMap.values) {
+        for (civilization in CivManager.all) {
             civilization.regionDamages?.let {
                 for (block in it.cleanUpSet) {
                     block.type = Material.AIR

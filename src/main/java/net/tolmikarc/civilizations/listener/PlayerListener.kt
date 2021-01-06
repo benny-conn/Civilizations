@@ -8,8 +8,9 @@ import net.tolmikarc.civilizations.constants.Constants
 import net.tolmikarc.civilizations.event.civ.CivEnterEvent
 import net.tolmikarc.civilizations.event.civ.CivLeaveEvent
 import net.tolmikarc.civilizations.event.civ.PlotEnterEvent
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.Selection
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
@@ -44,23 +45,23 @@ class PlayerListener : Listener {
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent) {
         val player = event.player
-        val civPlayer = CivPlayer.fromBukkitPlayer(player)
+        val civPlayer = PlayerManager.fromBukkitPlayer(player)
         civPlayer.playerName = player.name
-        civPlayer.queueForSaving()
+        PlayerManager.queueForSaving(civPlayer)
         if (civPlayer.civilization != null) {
-            val civ: Civilization = civPlayer.civilization!!
-            civ.queueForSaving()
+            val civ = civPlayer.civilization!!
+            CivManager.queueForSaving(civ)
         }
     }
 
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
         val player = event.player
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
-            CivPlayer.saveAsync(civPlayer)
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
+            PlayerManager.saveAsync(civPlayer)
             if (civPlayer.civilization != null) {
-                val civ: Civilization = civPlayer.civilization!!
-                Civilization.saveAsync(civ)
+                val civ = civPlayer.civilization!!
+                CivManager.saveAsync(civ)
             }
         }
     }
@@ -69,12 +70,12 @@ class PlayerListener : Listener {
     fun onDeath(event: PlayerDeathEvent) {
         val player = event.entity
         val killer = player.killer
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             if (civPlayer.civilization == null) return
-            val civilization: Civilization = civPlayer.civilization!!
+            val civilization = civPlayer.civilization!!
             civilization.raid?.let { raid ->
                 killer?.let { killer ->
-                    CivPlayer.fromBukkitPlayer(killer).addPower(Settings.POWER_PVP_TRANSACTION)
+                    PlayerManager.fromBukkitPlayer(killer).addPower(Settings.POWER_PVP_TRANSACTION)
                 }
                 civPlayer.removePower(Settings.POWER_PVP_TRANSACTION)
                 if (!raid.playersInvolved.containsKey(civPlayer)) return
@@ -89,7 +90,7 @@ class PlayerListener : Listener {
     @EventHandler(priority = EventPriority.LOW)
     fun onPlayerRespawn(event: PlayerRespawnEvent) {
         if (Settings.RESPAWN_CIV) {
-            val player = CivPlayer.fromBukkitPlayer(event.player)
+            val player = PlayerManager.fromBukkitPlayer(event.player)
             player.civilization?.home?.let { event.respawnLocation = it }
         }
     }
@@ -99,28 +100,22 @@ class PlayerListener : Listener {
         val player = event.player
         val itemInHand = player.inventory.itemInMainHand
         if (itemInHand.type != Settings.CLAIM_TOOL) return
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             if (event.action == Action.LEFT_CLICK_BLOCK) {
                 val block = event.clickedBlock!!
-                civPlayer.vertex1 =
-                    Location(player.world, block.x.toDouble(), 0.0, block.z.toDouble())
+                civPlayer.selection.select(block, player, Selection.ClickType.LEFT)
                 Common.tell(
                     player,
-                    "&6Set first point to " + civPlayer.vertex1!!.x.toString() + " " + civPlayer.vertex1!!.z
+                    "&6Set first point to " + civPlayer.selection.primary!!.x.toString() + " " + civPlayer.selection.primary!!.z.toString()
                 )
             }
             if (event.action == Action.RIGHT_CLICK_BLOCK) {
                 val block = event.clickedBlock!!
                 if (event.hand == EquipmentSlot.HAND) {
-                    civPlayer.vertex2 = Location(
-                        player.world,
-                        block.x.toDouble(),
-                        256.0,
-                        block.z.toDouble()
-                    )
+                    civPlayer.selection.select(block, player, Selection.ClickType.RIGHT)
                     Common.tell(
                         player,
-                        "&6Set second point to " + civPlayer.vertex2!!.x.toString() + " " + civPlayer.vertex2!!.z
+                        "&6Set second point to " + civPlayer.selection.secondary!!.x.toString() + " " + civPlayer.selection.secondary!!.z.toString()
                     )
                 }
             }
@@ -159,7 +154,7 @@ class PlayerListener : Listener {
         LagCatcher.start("block-break")
         try {
             val player = event.player
-            CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+            PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
                 val block = event.block
                 val civilization = getCivFromLocation(block.location) ?: return
                 // if a player is raiding he can break
@@ -192,19 +187,19 @@ class PlayerListener : Listener {
         try {
             val player = event.player
             val block = event.block
-            CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+            PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
                 val civilization = getCivFromLocation(block.location) ?: return
                 // if a player can attack (is in a raid currently and valid player proportions) then let him place tnt
                 if (canAttackCivilization(civPlayer, civilization)) {
                     if (Settings.RAID_TNT_COOLDOWN != -1) {
                         if (block.type == Material.TNT) {
                             // make sure player doesnt have a tnt cooldown
-                            if (hasCooldown(civPlayer.playerUUID, CooldownTask.CooldownType.TNT)) {
+                            if (hasCooldown(civPlayer.uuid, CooldownTask.CooldownType.TNT)) {
                                 event.isCancelled = true
                                 Common.tell(
                                     player,
                                     "Please wait " + getCooldownRemaining(
-                                        civPlayer.playerUUID,
+                                        civPlayer.uuid,
                                         CooldownTask.CooldownType.TNT
                                     ) + " settings before using TNT again"
                                 )
@@ -330,8 +325,8 @@ class PlayerListener : Listener {
             val damaged = event.entity
             val damager = event.damager
             if (damaged !is Player || damager !is Player) return
-            val civDamaged = CivPlayer.fromBukkitPlayer(damaged)
-            val civDamager = CivPlayer.fromBukkitPlayer(damager)
+            val civDamaged = PlayerManager.fromBukkitPlayer(damaged)
+            val civDamager = PlayerManager.fromBukkitPlayer(damager)
             val location = damaged.getLocation()
             val civilization = getCivFromLocation(location) ?: return
             if (civilization.citizens.contains(civDamaged)) {

@@ -4,8 +4,8 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -13,10 +13,10 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class AllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let {
+        PlayerManager.fromBukkitPlayer(player).let {
             checkNotNull(it.civilization, "You do not have a Civilization")
             val civilization = it.civilization
-            val allyCiv = Civilization.fromName(args[1])
+            val allyCiv = CivManager.getByName(args[1])
             checkNotNull(allyCiv, "Please specify a valid enemy Civilization")
             checkBoolean(allyCiv != civilization, "You cannot ally yourself")
             when {

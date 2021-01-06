@@ -10,7 +10,8 @@ import com.massivecraft.factions.Faction
 import com.massivecraft.factions.perms.PermissibleAction
 import com.massivecraft.factions.perms.Relation
 import com.massivecraft.factions.perms.Role
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import org.bukkit.Location
@@ -22,19 +23,18 @@ import java.util.*
 import java.util.stream.Collectors
 
 object FactionsUUIDAdapter {
-    private val convertedFactions: MutableMap<Faction, Civilization> = HashMap()
+    private val convertedFactions: MutableMap<Faction, Civ> = HashMap()
 
-    fun convertFactionToCiv(faction: Faction, deleteAfterConversion: Boolean): Civilization {
+    fun convertFactionToCiv(faction: Faction, deleteAfterConversion: Boolean): Civ {
         val civ = Civilization(UUID.randomUUID())
         civ.name = faction.tag
-        civ.leader = CivPlayer.fromUUID(faction.getFPlayersWhereRole(Role.ADMIN)[0].player.uniqueId)
-            ?: CivPlayer.initializeCivPlayer(faction.getFPlayersWhereRole(Role.ADMIN)[0].player.uniqueId)
+        civ.leader = PlayerManager.getByUUID(faction.getFPlayersWhereRole(Role.ADMIN)[0].player.uniqueId)
         civ.claimPermissions = convertPermissions(faction)
         civ.claims = getConvertedRegions(faction, civ)
         civ.officials = faction.getFPlayersWhereRole(Role.COLEADER).stream()
-            .map { fPlayer: FPlayer -> CivPlayer.fromUUID(fPlayer.player.uniqueId) }.collect(Collectors.toSet())
+            .map { fPlayer: FPlayer -> PlayerManager.getByUUID(fPlayer.player.uniqueId) }.collect(Collectors.toSet())
         civ.citizens =
-            (faction.fPlayers.stream().map { fPlayer: FPlayer -> CivPlayer.fromUUID(fPlayer.player.uniqueId) }
+            (faction.fPlayers.stream().map { fPlayer: FPlayer -> PlayerManager.getByUUID(fPlayer.player.uniqueId) }
                 .collect(Collectors.toSet()))
         civ.idNumber = civ.totalClaimCount + 1
         civ.power = faction.power.toInt()
@@ -49,7 +49,7 @@ object FactionsUUIDAdapter {
         return civ
     }
 
-    private fun getConvertedRegions(faction: Faction, civ: Civilization): MutableSet<Region> {
+    private fun getConvertedRegions(faction: Faction, civ: Civ): MutableSet<Region> {
         val handledFactionLocations: MutableSet<FLocation> = HashSet()
         val newRegions: MutableSet<Region> = HashSet()
         var id = 0

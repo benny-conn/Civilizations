@@ -4,8 +4,8 @@
 
 package net.tolmikarc.civilizations.command
 
+import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CivColony
-import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -21,7 +21,7 @@ import java.util.function.Consumer
 class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "colony") {
     override fun onCommand() {
         checkConsole()
-        CivPlayer.fromBukkitPlayer(player).let { civPlayer ->
+        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You do not have a Civilization")
             civPlayer.civilization?.let { civ ->
                 if (args[0].equals("?", ignoreCase = true)) {
@@ -39,21 +39,21 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
                 }
                 checkNotNull(location, "There is no Colony with the specified ID $id")
                 checkBoolean(
-                    !hasCooldown(civPlayer.playerUUID, CooldownTask.CooldownType.TELEPORT),
+                    !hasCooldown(civPlayer.uuid, CooldownTask.CooldownType.TELEPORT),
                     "Please wait " + getCooldownRemaining(
-                        civPlayer.playerUUID,
+                        civPlayer.uuid,
                         CooldownTask.CooldownType.TELEPORT
                     ) + " seconds before teleporting again."
                 )
                 player.teleport(location!!)
-                addCooldownTimer(civPlayer.playerUUID, CooldownTask.CooldownType.TELEPORT)
+                addCooldownTimer(civPlayer.uuid, CooldownTask.CooldownType.TELEPORT)
             }
         }
     }
 
     override fun tabComplete(): List<String>? {
         val colonies: MutableList<String> = ArrayList()
-        val civPlayer = CivPlayer.fromBukkitPlayer(player)
+        val civPlayer = PlayerManager.fromBukkitPlayer(player)
         if (civPlayer.civilization != null) {
             val civilization = civPlayer.civilization!!
             civilization.colonies.forEach(Consumer { colony: CivColony -> colonies.add(colony.id.toString()) })

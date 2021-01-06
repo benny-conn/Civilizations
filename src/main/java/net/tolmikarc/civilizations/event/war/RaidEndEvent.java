@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.event.war;
 
-import net.tolmikarc.civilizations.model.Civilization;
+import net.tolmikarc.civilizations.model.Civ;
 import net.tolmikarc.civilizations.war.Raid;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -24,11 +24,11 @@ public class RaidEndEvent extends Event {
 		return raid;
 	}
 
-	public Civilization getAttacker() {
+	public Civ getAttacker() {
 		return raid.getCivRaiding();
 	}
 
-	public Civilization getDefender() {
+	public Civ getDefender() {
 		return raid.getCivBeingRaided();
 	}
 

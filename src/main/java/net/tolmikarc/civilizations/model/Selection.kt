@@ -3,27 +3,46 @@
  */
 package net.tolmikarc.civilizations.model
 
+import org.bukkit.Bukkit
 import org.bukkit.Location
-import org.mineacademy.fo.collection.SerializedMap
-import org.mineacademy.fo.model.ConfigSerializable
+import org.bukkit.Material
+import org.bukkit.block.Block
+import org.bukkit.entity.Player
 
-class Selection : ConfigSerializable {
-    val primary: Location? = null
-    val secondary: Location? = null
-    val blockAtPrimary
-        get() = primary?.block
-    val blockAtSecondary
-        get() = secondary?.block
+class Selection() {
+    var primary: Location? = null
+        private set
+    var secondary: Location? = null
+        private set
 
-
-    override fun serialize(): SerializedMap {
-        TODO("Not yet implemented")
-    }
-
-    companion object {
-        @JvmStatic
-        fun deserialize(map: SerializedMap): Selection {
-            TODO("Not yet implemented")
+    fun select(block: Block, player: Player, clickType: ClickType) {
+        when (clickType) {
+            ClickType.LEFT -> {
+                primary = block.location
+                player.sendBlockChange(block.location, Bukkit.createBlockData(Material.DIAMOND_BLOCK))
+            }
+            ClickType.RIGHT -> {
+                secondary = block.location
+                player.sendBlockChange(block.location, Bukkit.createBlockData(Material.DIAMOND_BLOCK))
+            }
         }
     }
+
+    fun removeSelection(player: Player) {
+        if (primary != null && secondary != null) {
+            player.sendBlockChange(primary!!, Bukkit.createBlockData(primary!!.block.type))
+            player.sendBlockChange(secondary!!, Bukkit.createBlockData(secondary!!.block.type))
+            primary = null
+            secondary = null
+        }
+    }
+
+    fun bothPointsSelected(): Boolean {
+        return primary != null && secondary != null
+    }
+
+    enum class ClickType {
+        LEFT, RIGHT
+    }
+
 }

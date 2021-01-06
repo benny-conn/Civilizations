@@ -6,8 +6,9 @@ package net.tolmikarc.civilizations.menu
 
 import net.tolmikarc.civilizations.conversation.DepositPrompt
 import net.tolmikarc.civilizations.conversation.WithdrawPrompt
-import net.tolmikarc.civilizations.model.CivPlayer
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Bukkit
@@ -27,7 +28,7 @@ import org.mineacademy.fo.model.HookManager
 import org.mineacademy.fo.remain.CompMaterial
 import kotlin.math.roundToInt
 
-class CivilizationMenu(civ: Civilization) : Menu() {
+class CivilizationMenu(civ: Civ) : Menu() {
     private val infoButton: Button
     private val emptyButton: Button.DummyButton =
         Button.makeDummy(ItemCreator.of(CompMaterial.GRAY_STAINED_GLASS_PANE).name(" "))
@@ -50,7 +51,7 @@ class CivilizationMenu(civ: Civilization) : Menu() {
         }
     }
 
-    inner class PermissionsMenu(val civilization: Civilization) : Menu(this@CivilizationMenu) {
+    inner class PermissionsMenu(val civilization: Civ) : Menu(this@CivilizationMenu) {
         override fun getItemAt(slot: Int): ItemStack {
             return super.getItemAt(slot)
         }
@@ -61,7 +62,7 @@ class CivilizationMenu(civ: Civilization) : Menu() {
     }
 
 
-    inner class ToggleMenu(val civilization: Civilization) : Menu(this@CivilizationMenu) {
+    inner class ToggleMenu(val civilization: Civ) : Menu(this@CivilizationMenu) {
         private val pvp: Button
         private val mobs: Button
         private val explosions: Button
@@ -183,7 +184,7 @@ class CivilizationMenu(civ: Civilization) : Menu() {
     }
 
 
-    inner class EconomyMenu(val civilization: Civilization) : Menu(this@CivilizationMenu) {
+    inner class EconomyMenu(val civilization: Civ) : Menu(this@CivilizationMenu) {
         private val balanceButton: Button
         private val depositButton: Button
         private val withdrawButton: Button
@@ -245,14 +246,14 @@ class CivilizationMenu(civ: Civilization) : Menu() {
     }
 
 
-    inner class CitizensMenu(val civilization: Civilization) :
-        MenuPagged<CivPlayer>(this@CivilizationMenu, civilization.citizens) {
-        override fun convertToItemStack(civPlayer: CivPlayer): ItemStack {
+    inner class CitizensMenu(val civilization: Civ) :
+        MenuPagged<CPlayer>(this@CivilizationMenu, civilization.citizens) {
+        override fun convertToItemStack(civPlayer: CPlayer): ItemStack {
             val skull = ItemStack(Material.PLAYER_HEAD, 1)
             val skullMeta = skull.itemMeta as SkullMeta
-            skullMeta.owningPlayer = Bukkit.getPlayer(civPlayer.playerUUID)
+            skullMeta.owningPlayer = Bukkit.getPlayer(civPlayer.uuid)
             skullMeta.setDisplayName("${ChatColor.YELLOW}${ChatColor.BOLD}${skullMeta.owningPlayer?.name}")
-            if (civilization.leader?.playerUUID == civPlayer.playerUUID) {
+            if (civilization.leader?.uuid == civPlayer.uuid) {
                 val skullLore: MutableList<String> = ArrayList()
                 skullLore.add("")
                 skullLore.add("${ChatColor.RED}${ChatColor.BOLD}Leader")
@@ -268,15 +269,15 @@ class CivilizationMenu(civ: Civilization) : Menu() {
             return skull
         }
 
-        override fun onPageClick(p0: Player, p1: CivPlayer, p2: ClickType) {
-            if (p1 != CivPlayer.fromBukkitPlayer(p0))
+        override fun onPageClick(p0: Player, p1: CPlayer, p2: ClickType) {
+            if (p1 != PlayerManager.fromBukkitPlayer(p0))
                 PlayerMenu(civilization, p1).displayTo(p0)
         }
 
     }
 
 
-    inner class InfoMenu(civilization: Civilization) : Menu(this@CivilizationMenu) {
+    inner class InfoMenu(civilization: Civ) : Menu(this@CivilizationMenu) {
         private val homeButton: Button
         private val leaderButton: Button
         private val statsButton: Button
@@ -421,7 +422,7 @@ class CivilizationMenu(civ: Civilization) : Menu() {
         }
     }
 
-    inner class ItemMenu(civilization: Civilization) : Menu(this@CivilizationMenu) {
+    inner class ItemMenu(civilization: Civ) : Menu(this@CivilizationMenu) {
         private val getBookButton: Button
         private val getBannerButton: Button
 
@@ -501,7 +502,7 @@ class CivilizationMenu(civ: Civilization) : Menu() {
         }
     }
 
-    inner class PlayerMenu(val civilization: Civilization, val civPlayer: CivPlayer) : Menu(this@CivilizationMenu) {
+    inner class PlayerMenu(val civilization: Civ, val civPlayer: CPlayer) : Menu(this@CivilizationMenu) {
         private val groupChangeButton: Button
         private val kickButton: Button
 
@@ -548,7 +549,7 @@ class CivilizationMenu(civ: Civilization) : Menu() {
                     fun kickPlayer() {
                         civilization.removeCitizen(civPlayer)
                         civPlayer.civilization = null
-                        Bukkit.getPlayer(civPlayer.playerUUID)
+                        Bukkit.getPlayer(civPlayer.uuid)
                             ?.let { Common.tell(it, "&cYou have been kicked from your Civilization") }
                         tell("${Settings.PRIMARY_COLOR}Successfully kicked${Settings.SECONDARY_COLOR} ${civPlayer.playerName}")
                     }
@@ -572,7 +573,7 @@ class CivilizationMenu(civ: Civilization) : Menu() {
         }
     }
 
-    inner class InviteMenu(val civilization: Civilization) :
+    inner class InviteMenu(val civilization: Civ) :
         MenuPagged<Player>(this@CivilizationMenu, Bukkit.getOnlinePlayers()) {
         override fun convertToItemStack(player: Player): ItemStack? {
             if (player == viewer)
@@ -591,7 +592,7 @@ class CivilizationMenu(civ: Civilization) : Menu() {
 
         override fun onPageClick(p0: Player, p1: Player, p2: ClickType?) {
             p0.closeInventory()
-            val civPlayer = CivPlayer.fromBukkitPlayer(p1)
+            val civPlayer = PlayerManager.fromBukkitPlayer(p1)
             civPlayer.civilizationInvite = civilization
             Common.tell(
                 p1,

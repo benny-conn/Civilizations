@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.event.civ;
 
-import net.tolmikarc.civilizations.model.Civilization;
+import net.tolmikarc.civilizations.model.Civ;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -13,11 +13,11 @@ import org.jetbrains.annotations.NotNull;
 public class DeleteCivEvent extends Event {
 	private static final HandlerList handlers = new HandlerList();
 
-	private final Civilization civ;
+	private final Civ civ;
 	private final Player player;
 
 
-	public DeleteCivEvent(Civilization civ, Player player) {
+	public DeleteCivEvent(Civ civ, Player player) {
 		this.civ = civ;
 		this.player = player;
 	}
@@ -26,8 +26,8 @@ public class DeleteCivEvent extends Event {
 		return player;
 	}
 
-	
-	public Civilization getCiv() {
+
+	public Civ getCiv() {
 		return civ;
 	}
 
