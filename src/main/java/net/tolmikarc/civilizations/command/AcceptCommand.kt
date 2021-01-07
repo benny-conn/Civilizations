@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command
 
-import net.tolmikarc.civilizations.event.civ.JoinCivEvent
+import net.tolmikarc.civilizations.event.JoinCivEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common

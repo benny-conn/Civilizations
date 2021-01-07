@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.event.civ.UnclaimEvent
+import net.tolmikarc.civilizations.event.UnclaimEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
 import net.tolmikarc.civilizations.settings.Settings
@@ -24,7 +24,13 @@ class UnclaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "un
                 fun run() {
                     removeClaim(regionToRemove!!)
                     tellSuccess("&cRemoved region successfully")
-                    Common.callEvent(UnclaimEvent(this, regionToRemove, player))
+                    Common.callEvent(
+                        UnclaimEvent(
+                            this,
+                            regionToRemove,
+                            player
+                        )
+                    )
                 }
 
                 ConfirmMenu(

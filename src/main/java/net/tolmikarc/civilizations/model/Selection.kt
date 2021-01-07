@@ -8,6 +8,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.entity.Player
+import org.mineacademy.fo.Common
 
 class Selection() {
     var primary: Location? = null
@@ -19,12 +20,13 @@ class Selection() {
         when (clickType) {
             ClickType.LEFT -> {
                 primary = block.location
-                player.sendBlockChange(block.location, Bukkit.createBlockData(Material.DIAMOND_BLOCK))
             }
             ClickType.RIGHT -> {
                 secondary = block.location
-                player.sendBlockChange(block.location, Bukkit.createBlockData(Material.DIAMOND_BLOCK))
             }
+        }
+        Common.runLaterAsync(20) {
+            player.sendBlockChange(block.location, Bukkit.createBlockData(Material.DIAMOND_BLOCK))
         }
     }
 

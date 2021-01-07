@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command
 
+import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Colony
 import net.tolmikarc.civilizations.settings.Settings
@@ -45,7 +46,12 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
                         CooldownTask.CooldownType.TELEPORT
                     ) + " seconds before teleporting again."
                 )
-                player.teleport(location!!)
+                PaperLib.teleportAsync(player, location!!).thenAccept {
+                    if (it)
+                        tellSuccess("Teleported to Colony!")
+                    else
+                        tellError("Failed to teleport to Colony!")
+                }
                 addCooldownTimer(civPlayer.uuid, CooldownTask.CooldownType.TELEPORT)
             }
         }

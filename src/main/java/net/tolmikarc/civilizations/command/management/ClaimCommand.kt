@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.event.civ.ClaimEvent
+import net.tolmikarc.civilizations.event.ClaimEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
@@ -166,7 +166,13 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
         HookManager.withdraw(getPlayer(), cost)
         player.selection.removeSelection(getPlayer())
         civilization.addClaim(claim)
-        Common.callEvent(ClaimEvent(civilization, claim, getPlayer()))
+        Common.callEvent(
+            ClaimEvent(
+                civilization,
+                claim,
+                getPlayer()
+            )
+        )
     }
 
     override fun tabComplete(): List<String> {

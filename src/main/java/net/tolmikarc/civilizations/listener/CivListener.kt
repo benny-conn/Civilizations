@@ -3,9 +3,9 @@
  */
 package net.tolmikarc.civilizations.listener
 
-import net.tolmikarc.civilizations.event.civ.CivEnterEvent
-import net.tolmikarc.civilizations.event.civ.CivLeaveEvent
-import net.tolmikarc.civilizations.event.civ.PlotEnterEvent
+import net.tolmikarc.civilizations.event.CivEnterEvent
+import net.tolmikarc.civilizations.event.CivLeaveEvent
+import net.tolmikarc.civilizations.event.PlotEnterEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil

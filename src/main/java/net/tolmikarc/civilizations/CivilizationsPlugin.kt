@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations
 
+import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.command.CivilizationCommandGroup
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
@@ -59,6 +60,7 @@ class CivilizationsPlugin : SimplePlugin() {
                 net.tolmikarc.civilizations.hook.DynmapHook.doDynmapStuffWithCiv(civ)
             }
         }
+        PaperLib.suggestPaper(this)
     }
 
     override fun onPluginStop() {

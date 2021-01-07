@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command
 
+import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
@@ -33,7 +34,12 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home"
                         CooldownTask.CooldownType.TELEPORT
                     ) + " seconds before teleporting again."
                 )
-                player.teleport(civilization.home!!)
+                PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
+                    if (it)
+                        tellSuccess("Teleported to Civ Home!")
+                    else
+                        tellError("Failed to teleport to Civ Home!")
+                }
                 addCooldownTimer(civPlayer.uuid, CooldownTask.CooldownType.TELEPORT)
             }
         }

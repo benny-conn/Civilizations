@@ -4,9 +4,9 @@
 
 package net.tolmikarc.civilizations.war
 
-import net.tolmikarc.civilizations.event.war.PlayerJoinRaidEvent
-import net.tolmikarc.civilizations.event.war.RaidBeginEvent
-import net.tolmikarc.civilizations.event.war.RaidEndEvent
+import net.tolmikarc.civilizations.event.PlayerJoinRaidEvent
+import net.tolmikarc.civilizations.event.RaidBeginEvent
+import net.tolmikarc.civilizations.event.RaidEndEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ

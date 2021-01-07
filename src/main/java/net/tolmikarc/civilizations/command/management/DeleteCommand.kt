@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.event.civ.DeleteCivEvent
+import net.tolmikarc.civilizations.event.DeleteCivEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu

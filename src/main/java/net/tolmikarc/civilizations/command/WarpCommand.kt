@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command
 
+import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
@@ -28,7 +29,12 @@ class WarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp"
                     CooldownTask.CooldownType.TELEPORT
                 ) + " seconds before teleporting again."
             )
-            player.teleport(warp!!)
+            PaperLib.teleportAsync(player, warp!!).thenAccept {
+                if (it)
+                    tellSuccess("Teleported to Warp!")
+                else
+                    tellError("Failed to teleport to Warp!")
+            }
             addCooldownTimer(uuid, CooldownTask.CooldownType.TELEPORT)
         }
     }
@@ -42,7 +48,6 @@ class WarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp"
             }
             return if (args.size == 1) warps else super.tabComplete()
         }
-        return super.tabComplete()
     }
 
     init {

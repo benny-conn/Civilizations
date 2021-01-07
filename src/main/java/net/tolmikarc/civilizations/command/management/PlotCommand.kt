@@ -16,7 +16,7 @@ import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.plotsInSelection
 import net.tolmikarc.civilizations.util.MathUtil.doubleToMoney
 import net.tolmikarc.civilizations.util.MathUtil.isDouble
-import net.tolmikarc.civilizations.util.PermissionUtil.canManagePlot
+import net.tolmikarc.civilizations.util.PermissionChecker.canManagePlot
 import org.bukkit.Location
 import org.bukkit.scheduler.BukkitRunnable
 import org.mineacademy.fo.Common

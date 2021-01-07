@@ -5,9 +5,9 @@
 package net.tolmikarc.civilizations.listener
 
 import net.tolmikarc.civilizations.constants.Constants
-import net.tolmikarc.civilizations.event.civ.CivEnterEvent
-import net.tolmikarc.civilizations.event.civ.CivLeaveEvent
-import net.tolmikarc.civilizations.event.civ.PlotEnterEvent
+import net.tolmikarc.civilizations.event.CivEnterEvent
+import net.tolmikarc.civilizations.event.CivLeaveEvent
+import net.tolmikarc.civilizations.event.PlotEnterEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Selection
@@ -19,7 +19,7 @@ import net.tolmikarc.civilizations.task.CooldownTask.Companion.getCooldownRemain
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.hasCooldown
 import net.tolmikarc.civilizations.util.ClaimUtil.getCivFromLocation
 import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
-import net.tolmikarc.civilizations.util.PermissionUtil.can
+import net.tolmikarc.civilizations.util.PermissionChecker.can
 import net.tolmikarc.civilizations.util.WarUtil.addDamages
 import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
 import net.tolmikarc.civilizations.util.WarUtil.increaseBlocksBroken

@@ -16,7 +16,7 @@ import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 
 @UtilityClass
-object PermissionUtil {
+object PermissionChecker {
     fun can(permType: PermType, player: Player, civilization: Civ): Boolean {
         val claimPermissions = civilization.claimPermissions
         val civPlayer = PlayerManager.fromBukkitPlayer(player)

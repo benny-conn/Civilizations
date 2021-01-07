@@ -8,7 +8,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
-import net.tolmikarc.civilizations.util.PermissionUtil.canManageCiv
+import net.tolmikarc.civilizations.util.PermissionChecker.canManageCiv
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 

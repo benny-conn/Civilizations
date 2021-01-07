@@ -8,7 +8,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.MathUtil.doubleToMoney
 import net.tolmikarc.civilizations.util.MathUtil.isDouble
-import net.tolmikarc.civilizations.util.PermissionUtil.canManageCiv
+import net.tolmikarc.civilizations.util.PermissionChecker.canManageCiv
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import org.mineacademy.fo.model.HookManager
