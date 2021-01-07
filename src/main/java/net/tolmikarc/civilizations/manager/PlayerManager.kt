@@ -3,11 +3,12 @@
  */
 package net.tolmikarc.civilizations.manager
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.CivPlayer
 import org.bukkit.entity.Player
-import org.mineacademy.fo.Common
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -37,15 +38,16 @@ object PlayerManager : Manager<CPlayer> {
     }
 
     override fun saveAsync(saved: CPlayer) {
-        Common.runLaterAsync { save(saved) }
+        GlobalScope.launch { save(saved) }
     }
 
     override fun load(loaded: CPlayer) {
         PlayerDatastore.load(loaded)
     }
 
+
     override fun loadAsync(loaded: CPlayer) {
-        Common.runLaterAsync { load(loaded) }
+        GlobalScope.launch { load(loaded) }
     }
 
     override fun queueForSaving(vararg queued: CPlayer) {

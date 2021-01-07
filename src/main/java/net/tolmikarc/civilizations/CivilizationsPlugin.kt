@@ -5,6 +5,8 @@
 package net.tolmikarc.civilizations
 
 import io.papermc.lib.PaperLib
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import net.tolmikarc.civilizations.command.CivilizationCommandGroup
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
@@ -61,6 +63,9 @@ class CivilizationsPlugin : SimplePlugin() {
             }
         }
         PaperLib.suggestPaper(this)
+        Common.runLater(10) {
+            //  seedDatabase()
+        }
     }
 
     override fun onPluginStop() {
@@ -111,6 +116,7 @@ class CivilizationsPlugin : SimplePlugin() {
     }
 
     private fun loadDatabase() {
+
         when {
             Settings.DB_TYPE.equals("sqlite", ignoreCase = true) -> {
                 val playerFile = File(dataFolder, "players.db")
@@ -184,6 +190,17 @@ class CivilizationsPlugin : SimplePlugin() {
     private fun makeFolders() {
         val regionsFolder = File(dataFolder, "regions" + File.separator)
         if (!regionsFolder.exists()) regionsFolder.mkdirs()
+    }
+
+    private fun seedDatabase() {
+        GlobalScope.launch {
+            repeat(100000)
+            {
+                val p = PlayerManager.initialize(UUID.randomUUID()).apply { playerName = UUID.randomUUID().toString() }
+                PlayerManager.saveAsync(p)
+                println("ADDED PLAYER")
+            }
+        }
     }
 
     companion object {
