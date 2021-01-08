@@ -4,11 +4,11 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
-import net.tolmikarc.civilizations.util.PermissionChecker.canManageCiv
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 

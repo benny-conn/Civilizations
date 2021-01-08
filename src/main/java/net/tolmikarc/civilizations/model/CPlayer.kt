@@ -13,6 +13,7 @@ interface CPlayer : UniquelyIdentifiable {
     var completedTutorial: Boolean
     var visualizing: Boolean
     var flying: Boolean
+    var mapping: Boolean
     var raidBlocksDestroyed: Int
 
     fun addPower(power: Int)

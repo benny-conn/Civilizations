@@ -59,7 +59,7 @@ class CivilizationsPlugin : SimplePlugin() {
         Common.log("Civilizations by Tolmikarc up and running!")
         for (civ in CivManager.all) {
             civ.home?.let {
-                net.tolmikarc.civilizations.hook.DynmapHook.doDynmapStuffWithCiv(civ)
+                DynmapHook.doDynmapStuffWithCiv(civ)
             }
         }
         PaperLib.suggestPaper(this)

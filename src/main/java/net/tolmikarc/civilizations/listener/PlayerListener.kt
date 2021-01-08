@@ -4,6 +4,8 @@
 
 package net.tolmikarc.civilizations.listener
 
+import net.tolmikarc.civilizations.MapDrawer
+import net.tolmikarc.civilizations.PermissionChecker.can
 import net.tolmikarc.civilizations.constants.Constants
 import net.tolmikarc.civilizations.event.CivEnterEvent
 import net.tolmikarc.civilizations.event.CivLeaveEvent
@@ -19,7 +21,6 @@ import net.tolmikarc.civilizations.task.CooldownTask.Companion.getCooldownRemain
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.hasCooldown
 import net.tolmikarc.civilizations.util.ClaimUtil.getCivFromLocation
 import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
-import net.tolmikarc.civilizations.util.PermissionChecker.can
 import net.tolmikarc.civilizations.util.WarUtil.addDamages
 import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
 import net.tolmikarc.civilizations.util.WarUtil.increaseBlocksBroken
@@ -36,9 +37,11 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.*
+import org.bukkit.event.server.MapInitializeEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.debug.LagCatcher
+import org.mineacademy.fo.region.Region
 import org.mineacademy.fo.remain.CompMetadata
 
 class PlayerListener : Listener {
@@ -366,10 +369,24 @@ class PlayerListener : Listener {
             val damager = event.damager
             if (damager !is Player || damaged is Player) return
             val civ = getCivFromLocation(damaged.location) ?: return
-            event.isCancelled = can(ClaimPermissions.PermType.INTERACT, damager, civ)
+            event.isCancelled = !can(ClaimPermissions.PermType.INTERACT, damager, civ)
         } finally {
             LagCatcher.end("entity-damage-by-player")
         }
+    }
+
+    @EventHandler
+    fun onMap(event: MapInitializeEvent) {
+        val map = event.map
+        Common.log("${map.centerX} ${map.centerZ}")
+        val region = Region(
+            Location(map.world, (map.centerX - 64).toDouble(), 1.0, (map.centerZ - 64).toDouble()), Location(
+                map.world,
+                (map.centerX + 64).toDouble(), 1.0, (map.centerZ + 64).toDouble()
+            )
+        )
+        map.addRenderer(MapDrawer(region))
+        TODO("Figure out how to make this only render certain maps")
     }
 
 }

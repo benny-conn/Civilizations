@@ -2,7 +2,7 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.util
+package net.tolmikarc.civilizations
 
 import lombok.experimental.UtilityClass
 import net.tolmikarc.civilizations.manager.PlayerManager
@@ -12,6 +12,8 @@ import net.tolmikarc.civilizations.model.Plot
 import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.permissions.ClaimPermissions.PermType
 import net.tolmikarc.civilizations.settings.Settings
+import net.tolmikarc.civilizations.util.CivUtil
+import net.tolmikarc.civilizations.util.ClaimUtil
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 

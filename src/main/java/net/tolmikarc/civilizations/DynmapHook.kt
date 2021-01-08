@@ -2,9 +2,8 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.hook
+package net.tolmikarc.civilizations
 
-import net.tolmikarc.civilizations.CivilizationsPlugin
 import net.tolmikarc.civilizations.constants.Constants
 import net.tolmikarc.civilizations.model.Civ
 

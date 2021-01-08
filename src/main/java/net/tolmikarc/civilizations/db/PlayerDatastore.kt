@@ -4,8 +4,7 @@
 
 package net.tolmikarc.civilizations.db
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
@@ -58,7 +57,7 @@ object PlayerDatastore : Datastore() {
         try {
             val map = SerializedMap().apply {
                 put("Name", cache.playerName)
-                if (cache.civilization != null) put("Civilization", cache.civilization!!.uuid)
+                cache.civilization?.let { put("Civilization", it.uuid) }
                 put("Power", cache.power)
                 put("RaidBlocks", cache.raidBlocksDestroyed)
                 put("Updated", System.currentTimeMillis())
@@ -79,10 +78,8 @@ object PlayerDatastore : Datastore() {
     }
 
     fun loadAll() {
-
         Common.log("Loading Data from Datastores")
-        TODO("figure out how to make this not global scope maybe by using suspend functions and runBlocking once or something")
-        GlobalScope.launch {
+        AsyncEnvironment.run {
             try {
                 val results: ResultSet? = query("SELECT * FROM {table}")
                 if (results != null) {
@@ -91,15 +88,12 @@ object PlayerDatastore : Datastore() {
                         PlayerManager.getByUUID(uuid)
                     }
                     results.close()
-                    Common.log("Finished Loading Data from Datastores")
                 }
             } catch (e: SQLException) {
                 e.printStackTrace()
                 Common.logFramed(true, "Could not load all caches. Disabling plugin")
             }
         }
-
-
     }
 
     override val expirationDays: Int

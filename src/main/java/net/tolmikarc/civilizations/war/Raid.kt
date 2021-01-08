@@ -4,13 +4,13 @@
 
 package net.tolmikarc.civilizations.war
 
+import net.tolmikarc.civilizations.NameTag
 import net.tolmikarc.civilizations.event.PlayerJoinRaidEvent
 import net.tolmikarc.civilizations.event.RaidBeginEvent
 import net.tolmikarc.civilizations.event.RaidEndEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.packet.NameTag
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player

@@ -4,10 +4,10 @@
 
 package net.tolmikarc.civilizations.command
 
+import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
-import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -24,7 +24,7 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
         }
         val page = if (args.size > 1) args[1].toInt() else 1
         if (!args[0].equals("players", ignoreCase = true)) {
-            Common.runLaterAsync {
+            AsyncEnvironment.run {
                 val civilizationsSorted = ArrayList(CivManager.all).sortedBy {
                     return@sortedBy when (args[0]) {
                         "power" -> it.power
@@ -76,7 +76,7 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                 }
             }
         } else {
-            Common.runLaterAsync {
+            AsyncEnvironment.run {
                 val topPlayers = ArrayList(PlayerManager.cacheMap.values).sortedBy { it.power }
                 val lowerLimit = (page * 10) - 9
                 val upperLimit = page * 10

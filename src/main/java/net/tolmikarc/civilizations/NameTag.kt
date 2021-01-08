@@ -2,7 +2,7 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.packet
+package net.tolmikarc.civilizations
 
 import com.comphenix.protocol.PacketType
 import com.comphenix.protocol.ProtocolLibrary

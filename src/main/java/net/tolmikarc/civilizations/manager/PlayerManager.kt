@@ -3,8 +3,7 @@
  */
 package net.tolmikarc.civilizations.manager
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.CivPlayer
@@ -38,7 +37,7 @@ object PlayerManager : Manager<CPlayer> {
     }
 
     override fun saveAsync(saved: CPlayer) {
-        GlobalScope.launch { save(saved) }
+        AsyncEnvironment.run { save(saved) }
     }
 
     override fun load(loaded: CPlayer) {
@@ -47,7 +46,7 @@ object PlayerManager : Manager<CPlayer> {
 
 
     override fun loadAsync(loaded: CPlayer) {
-        GlobalScope.launch { load(loaded) }
+        AsyncEnvironment.run { load(loaded) }
     }
 
     override fun queueForSaving(vararg queued: CPlayer) {

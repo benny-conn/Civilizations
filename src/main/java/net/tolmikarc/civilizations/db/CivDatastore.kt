@@ -34,7 +34,6 @@ object CivDatastore : Datastore() {
             val results: ResultSet? = query("SELECT * FROM {table} WHERE uuid='" + civ.uuid + "'")
             if (results != null) {
                 if (results.next()) {
-                    Debugger.debug("sql", "Loading data for civ: ${results.getString("Name")}")
                     val dataRaw = results.getString("Data")
                     val data = SerializedMap.fromJson(dataRaw)
                     if (data.isEmpty) return
@@ -44,8 +43,10 @@ object CivDatastore : Datastore() {
                         return
                     }
                     val name: String? = deserializedCiv.name
+                    Debugger.debug("sql", "Loading data for civ: $name")
                     val power: Int = deserializedCiv.power
                     val leader = deserializedCiv.leader
+                    TODO("SOMETHING WRONG HERE WITH CLAIMS NOT BEING ABLE TO LOAD FROM DB ON STARTUP")
                     val home: Location? = deserializedCiv.home
                     val claims: MutableSet<Region> = deserializedCiv.claims
                     val plots: MutableSet<Plot> = deserializedCiv.plots
@@ -102,12 +103,14 @@ object CivDatastore : Datastore() {
                 put("Data", cache)
                 put("Updated", System.currentTimeMillis())
             }
+            Debugger.debug("sql", "Creating Map: ${map.toJson()}")
             if (isStored(cache.uuid)) {
                 update(map, cache.uuid)
+                Debugger.debug("sql", "Updating Map: ${map.toJson()}")
             } else {
                 map.put("uuid", cache.uuid)
                 insert(map)
-
+                Debugger.debug("sql", "Inserting Map: ${map.toJson()}")
             }
         } catch (e: SQLException) {
             Common.error(e, "Error saving Civ: " + cache.name)

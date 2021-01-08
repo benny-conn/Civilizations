@@ -101,4 +101,5 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     fun addOutlaw(player: CPlayer)
 
     fun removeOutlaw(player: CPlayer)
+    
 }

@@ -9,6 +9,9 @@ import org.mineacademy.fo.command.SimpleSubCommand
 
 class TestCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "test") {
     override fun onCommand() {
-        tell(net.tolmikarc.civilizations.manager.PlayerManager.all.size.toString())
+        
+
     }
+
+
 }

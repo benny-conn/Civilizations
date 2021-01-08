@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker.canManagePlot
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
@@ -16,7 +17,6 @@ import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.plotsInSelection
 import net.tolmikarc.civilizations.util.MathUtil.doubleToMoney
 import net.tolmikarc.civilizations.util.MathUtil.isDouble
-import net.tolmikarc.civilizations.util.PermissionChecker.canManagePlot
 import org.bukkit.Location
 import org.bukkit.scheduler.BukkitRunnable
 import org.mineacademy.fo.Common
