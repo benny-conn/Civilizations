@@ -5,15 +5,18 @@
 package net.tolmikarc.civilizations.db
 
 import net.tolmikarc.civilizations.manager.CivManager
-import net.tolmikarc.civilizations.model.*
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.impl.Bank
+import net.tolmikarc.civilizations.model.impl.Civilization
+import net.tolmikarc.civilizations.model.impl.Claim
+import net.tolmikarc.civilizations.model.impl.Plot
 import net.tolmikarc.civilizations.war.RegionDamages
 import org.bukkit.Location
 import org.bukkit.inventory.ItemStack
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.debug.Debugger
-import org.mineacademy.fo.region.Region
 import java.sql.ResultSet
 import java.sql.SQLException
 
@@ -35,6 +38,7 @@ object CivDatastore : Datastore() {
             if (results != null) {
                 if (results.next()) {
                     val dataRaw = results.getString("Data")
+                    println(dataRaw)
                     val data = SerializedMap.fromJson(dataRaw)
                     if (data.isEmpty) return
                     val deserializedCiv = Civilization.deserialize(data)
@@ -46,14 +50,13 @@ object CivDatastore : Datastore() {
                     Debugger.debug("sql", "Loading data for civ: $name")
                     val power: Int = deserializedCiv.power
                     val leader = deserializedCiv.leader
-                    TODO("SOMETHING WRONG HERE WITH CLAIMS NOT BEING ABLE TO LOAD FROM DB ON STARTUP")
                     val home: Location? = deserializedCiv.home
-                    val claims: MutableSet<Region> = deserializedCiv.claims
+                    val claims: MutableSet<Claim> = deserializedCiv.claims
+
                     val plots: MutableSet<Plot> = deserializedCiv.plots
                     val warps: MutableMap<String, Location> = deserializedCiv.warps
                     val idNumber: Int = deserializedCiv.idNumber
                     val totalBlocksCount: Int = deserializedCiv.totalBlocksCount
-                    val officials: MutableSet<CPlayer> = deserializedCiv.officials
                     val citizens: MutableSet<CPlayer> = deserializedCiv.citizens
                     val allies: MutableSet<Civ> = deserializedCiv.allies
                     val enemies: MutableSet<Civ> = deserializedCiv.enemies
@@ -61,7 +64,7 @@ object CivDatastore : Datastore() {
                     val bank: Bank = deserializedCiv.bank
                     val banner: ItemStack? = deserializedCiv.banner
                     val book: ItemStack? = deserializedCiv.book
-                    val permissions: ClaimPermissions = deserializedCiv.claimPermissions
+                    val permissions = deserializedCiv.permissionGroups
                     val toggleables = deserializedCiv.claimToggleables
                     val regionDamages: RegionDamages? = deserializedCiv.regionDamages
 
@@ -70,25 +73,25 @@ object CivDatastore : Datastore() {
                         this.power = power
                         this.leader = leader
                         if (home != null) this.home = home
-                        this.claims = claims
-                        this.plots = plots
+                        println("$home AGAIN")
+                        this.claims.addAll(claims)
+                        println("$claims again")
+                        this.plots.addAll(plots)
                         this.warps = warps
                         this.idNumber = idNumber
                         this.totalBlocksCount = totalBlocksCount
-                        this.officials = officials
-                        this.citizens = citizens
-                        this.allies = allies
-                        this.enemies = enemies
-                        this.outlaws = outlaws
+                        this.citizens.addAll(citizens)
+                        this.allies.addAll(allies)
+                        this.enemies.addAll(enemies)
+                        this.outlaws.addAll(outlaws)
                         this.bank = bank
                         if (banner != null) this.banner = banner
                         if (book != null) this.book = book
-                        this.claimPermissions = permissions
+                        this.permissionGroups = permissions
                         this.claimToggleables = toggleables
                         if (regionDamages != null) this.regionDamages = regionDamages
                     }
                 } else CivManager.removeCiv(civ)
-                results.close()
             }
 
         } catch (e: SQLException) {

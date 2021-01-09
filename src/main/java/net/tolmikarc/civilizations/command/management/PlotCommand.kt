@@ -8,8 +8,8 @@ import net.tolmikarc.civilizations.PermissionChecker.canManagePlot
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.Plot
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
+import net.tolmikarc.civilizations.model.impl.Claim
+import net.tolmikarc.civilizations.model.impl.Plot
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
@@ -23,7 +23,6 @@ import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import org.mineacademy.fo.model.HookManager
-import org.mineacademy.fo.region.Region
 import org.mineacademy.fo.remain.CompParticle
 import java.util.*
 
@@ -37,8 +36,8 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
                     when (args[0].toLowerCase()) {
                         "visualize" -> visualize(civPlayer, this)
                         "define" -> definePlot(civPlayer, this)
-                        "perms" -> adjustPermissions(civPlayer, this)
-                        "permissions" -> adjustPermissions(civPlayer, this)
+//                        "perms" -> adjustPermissions(civPlayer, this)
+//                        "permissions" -> adjustPermissions(civPlayer, this)
                         "claim" -> claimPlot(civPlayer, this)
                         "forsale" -> setPlotForSale(civPlayer, this)
                         "add" -> addMemberToPlot(civPlayer, this)
@@ -90,35 +89,35 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
         }
     }
 
-    private fun adjustPermissions(civPlayer: CPlayer, civilization: Civ) {
-        val plot: Plot? = getPlotFromLocation(player.location, civilization)
-        checkNotNull(plot, "There is no plot at your location")
-        plot?.apply {
-            checkBoolean(canManagePlot(civilization, this, civPlayer), "You cannot adjust the perms of this plot")
-            val permissions: ClaimPermissions = claimPermissions
-            if (args.size == 2) {
-                if (args[1].equals("?", ignoreCase = true)) {
-                    tell(
-                        "${Settings.PRIMARY_COLOR}Valid Groups: ${Settings.SECONDARY_COLOR}Outsider, Member, Ally, Official",
-                        "${Settings.PRIMARY_COLOR}Valid Permissions: ${Settings.SECONDARY_COLOR}Build, Break, Switch, Interact",
-                        "${Settings.PRIMARY_COLOR}Valid values: ${Settings.SECONDARY_COLOR}True, False"
-                    )
-                } else returnInvalidArgs()
-            }
-            if (args.size == 4) {
-                checkBoolean(permissions.adjustPerm(args[0], args[1], args[2]), "<permission | ?> <group> <value>")
-                tellSuccess("${Settings.PRIMARY_COLOR}Successfully updated Plot Permissions")
-                return
-            }
-            returnInvalidArgs()
-        }
-    }
+//    private fun adjustPermissions(civPlayer: CPlayer, civilization: Civ) {
+//        val plot: Plot? = getPlotFromLocation(player.location, civilization)
+//        checkNotNull(plot, "There is no plot at your location")
+//        plot?.apply {
+//            checkBoolean(canManagePlot(civilization, this, civPlayer), "You cannot adjust the perms of this plot")
+//            val permissions: ClaimPermissions = claimPermissions
+//            if (args.size == 2) {
+//                if (args[1].equals("?", ignoreCase = true)) {
+//                    tell(
+//                        "${Settings.PRIMARY_COLOR}Valid Groups: ${Settings.SECONDARY_COLOR}Outsider, Member, Ally, Official",
+//                        "${Settings.PRIMARY_COLOR}Valid Permissions: ${Settings.SECONDARY_COLOR}Build, Break, Switch, Interact",
+//                        "${Settings.PRIMARY_COLOR}Valid values: ${Settings.SECONDARY_COLOR}True, False"
+//                    )
+//                } else returnInvalidArgs()
+//            }
+//            if (args.size == 4) {
+//                checkBoolean(permissions.adjustPerm(args[0], args[1], args[2]), "<permission | ?> <group> <value>")
+//                tellSuccess("${Settings.PRIMARY_COLOR}Successfully updated Plot Permissions")
+//                return
+//            }
+//            returnInvalidArgs()
+//        }
+//    }
 
     private fun definePlot(player: CPlayer, civilization: Civ) {
         checkBoolean(player.selection.bothPointsSelected(), "You must have both points selected to claim")
         val maxPlots = calculateFormulaForCiv(Settings.MAX_PLOTS_FORMULA, civilization)
         checkBoolean(civilization.plotCount.toDouble() < maxPlots, "You cannot define more than $maxPlots total plots.")
-        val plotRegion = Region(civilization.plotCount.toString(), player.selection.primary, player.selection.secondary)
+        val plotRegion = Claim(civilization.plotCount, player.selection.primary!!, player.selection.secondary!!)
         checkBoolean(
             isLocationInCiv(plotRegion.primary, civilization) && isLocationInCiv(
                 plotRegion.secondary,
@@ -140,7 +139,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
 
     private fun visualize(player: CPlayer, civilization: Civ) {
         player.visualizing = !player.visualizing
-        val visualizedRegions: MutableSet<Region> = HashSet()
+        val visualizedRegions: MutableSet<Claim> = HashSet()
         if (args.size > 1) {
             checkBoolean(args[1].equals("here", ignoreCase = true), usageMessage)
             val plotHere = getPlotFromLocation(getPlayer().location, civilization)
@@ -168,7 +167,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
         }
     }
 
-    fun isLocationConnected(location: Location, civilization: Civ, excludedRegion: Region): Boolean {
+    fun isLocationConnected(location: Location, civilization: Civ, excludedRegion: Claim): Boolean {
         for (plot in civilization.plots) {
             if (plot.region == excludedRegion) continue
             if (plot.region.boundingBox.contains(location)) return true
@@ -177,21 +176,21 @@ class PlotCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot"
     }
 
     override fun tabComplete(): List<String> {
-        if (args.size == 1) return listOf("define", "claim", "visualize", "forsale", "add", "perms")
+        if (args.size == 1) return listOf("define", "claim", "visualize", "forsale", "add")
         if (args.size == 2) if (args[0].equals("add", ignoreCase = true)) return super.tabComplete()
 
-        if (args[0].equals("perms", ignoreCase = true))
-            when (args.size) {
-                3 -> return listOf("outsider", "member", "ally", "official")
-                4 -> return listOf("break", "build", "switch", "interact")
-                5 -> return listOf("true", "false")
-            }
+//        if (args[0].equals("perms", ignoreCase = true))
+//            when (args.size) {
+//                3 -> return listOf("outsider", "member", "ally", "official")
+//                4 -> return listOf("break", "build", "switch", "interact")
+//                5 -> return listOf("true", "false")
+//            }
         return super.tabComplete()
     }
 
     init {
         minArguments = 1
-        usage = "<define | perms | claim | add | forsale | visualize> [...]"
+        usage = "<define | claim | add | forsale | visualize> [...]"
         if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 }

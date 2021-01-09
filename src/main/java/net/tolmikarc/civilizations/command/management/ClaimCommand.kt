@@ -9,7 +9,8 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.Colony
+import net.tolmikarc.civilizations.model.impl.Claim
+import net.tolmikarc.civilizations.model.impl.Colony
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.distanceFromNearestClaim
@@ -25,7 +26,6 @@ import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import org.mineacademy.fo.model.HookManager
-import org.mineacademy.fo.region.Region
 import org.mineacademy.fo.remain.CompParticle
 import java.util.*
 import kotlin.math.abs
@@ -62,7 +62,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
 
     private fun visualize(civPlayer: CPlayer, civilization: Civ) {
         civPlayer.visualizing = !civPlayer.visualizing
-        val visualizedRegions: MutableSet<Region> = HashSet()
+        val visualizedRegions: MutableSet<Claim> = HashSet()
         if (args.size > 1 && args[1].equals("here", ignoreCase = true)) {
             getRegionFromLocation(player.location)?.let { visualizedRegions.add(it) }
 
@@ -91,10 +91,10 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
     private fun claim(civilization: Civ, player: CPlayer, isColony: Boolean) {
         checkBoolean(!player.visualizing, "Stop visualizing before you claim more land.")
         checkBoolean(player.selection.bothPointsSelected(), "You must have both points selected to claim")
-        val claim = Region(
-            civilization.uuid.toString() + (if (!isColony) "CLAIM" else "COLONY-CLAIM") + civilization.totalClaimCount,
-            player.selection.primary,
-            player.selection.secondary
+        val claim = Claim(
+            civilization.totalClaimCount,
+            player.selection.primary!!,
+            player.selection.secondary!!
         )
         val totalArea = abs(areaBetweenTwoPoints(claim.primary, claim.secondary))
         val isPointInOtherRegion =
@@ -120,7 +120,6 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
             distanceFromNearestClaim(claim.center) > Settings.MIN_DISTANCE_FROM_NEAREST_CLAIM,
             "You cannot claim so close to another Civilization's home"
         )
-        val cost = calculateFormulaForCiv(Settings.COST_FORMULA, civilization, claim).toDouble()
         if (civilization.totalClaimCount > 0 && !isColony) checkBoolean(
             isRegionConnected(claim, civilization),
             "Claim must be connected to existing claim."
@@ -129,9 +128,10 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
             regionsInSelection(claim).isEmpty(),
             "You cannot claim with another claimed region inside of your selection."
         )
+        val cost = calculateFormulaForCiv(Settings.COST_FORMULA, civilization, claim)
         checkBoolean(
             HookManager.getBalance(getPlayer()) - cost > 0,
-            "You do not have enough money to claim this amount of land."
+            "You do not have enough money to claim this amount of land. Required cost: $cost"
         )
         checkBoolean(
             isLocationInRegion(getPlayer().location, claim),

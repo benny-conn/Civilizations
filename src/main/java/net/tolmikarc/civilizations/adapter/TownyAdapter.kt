@@ -6,23 +6,26 @@ package net.tolmikarc.civilizations.adapter
 
 import com.palmergames.bukkit.towny.TownySettings
 import com.palmergames.bukkit.towny.TownyUniverse
-import com.palmergames.bukkit.towny.`object`.*
+import com.palmergames.bukkit.towny.`object`.Nation
+import com.palmergames.bukkit.towny.`object`.Town
+import com.palmergames.bukkit.towny.`object`.TownBlock
+import com.palmergames.bukkit.towny.`object`.WorldCoord
 import com.palmergames.bukkit.towny.exceptions.EconomyException
 import com.palmergames.bukkit.towny.exceptions.NotRegisteredException
 import com.palmergames.bukkit.towny.exceptions.TownyException
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.Civilization
-import net.tolmikarc.civilizations.model.Colony
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
+import net.tolmikarc.civilizations.model.impl.Civilization
+import net.tolmikarc.civilizations.model.impl.Claim
+import net.tolmikarc.civilizations.model.impl.Colony
 import net.tolmikarc.civilizations.permissions.ClaimToggleables
+import net.tolmikarc.civilizations.permissions.PermissionGroups
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.World
 import org.mineacademy.fo.Common
-import org.mineacademy.fo.region.Region
 import java.util.*
 import java.util.function.Consumer
 import kotlin.collections.HashSet
@@ -59,8 +62,8 @@ object TownyAdapter {
                             }
                         })
                     })
-                    convertedTowns[town]?.allies = allies
-                    convertedTowns[town]?.enemies = enemies
+                    convertedTowns[town]?.allies?.addAll(allies)
+                    convertedTowns[town]?.enemies?.addAll(enemies)
                 }
             } catch (e: NotRegisteredException) {
                 Common.log(town.name + " does not have a nation and therefore has no enemies or allies")
@@ -93,11 +96,10 @@ object TownyAdapter {
             newCivMembers.add(cache)
             cache.civilization = civ
         }
-        civ.citizens = newCivMembers
+        civ.citizens.addAll(newCivMembers)
         val newRegions = getConvertedRegions(town, civ)
-        civ.claims = newRegions
+        civ.claims.addAll(newRegions)
         civ.idNumber = newRegions.size + 1
-        civ.claimPermissions = convertPermissions(town)
         civ.claimToggleables = convertToggleables(town)
         convertedTowns[town] = civ
         if (deleteAfterConversion) TownyUniverse.getInstance().dataSource.removeTown(town)
@@ -105,9 +107,9 @@ object TownyAdapter {
         TODO("figure out how to make the power calculated")
     }
 
-    private fun getConvertedRegions(town: Town, civ: Civ): MutableSet<Region> {
+    private fun getConvertedRegions(town: Town, civ: Civ): MutableSet<Claim> {
         val handledTownBlocks: MutableSet<TownBlock> = HashSet()
-        val newRegions: MutableSet<Region> = HashSet()
+        val newRegions: MutableSet<Claim> = HashSet()
         val newColonies: MutableSet<Colony> = HashSet()
         var id = 0
         for (townBlock in town.townBlocks) {
@@ -152,8 +154,8 @@ object TownyAdapter {
                 handledTownBlocks.addAll(handledTownBlocksMovingRight)
             }
             lowestLocation = townBlock.worldCoord
-            val newRegion = Region(
-                civ.uuid.toString() + "CLAIM" + id,
+            val newRegion = Claim(
+                id,
                 Location(
                     lowestLocation.bukkitWorld,
                     (lowestLocation.x * 16).toDouble(),
@@ -170,47 +172,12 @@ object TownyAdapter {
             newRegions.add(newRegion)
             id++
         }
-        civ.colonies = (newColonies)
+        civ.colonies.addAll(newColonies)
         return newRegions
     }
 
-    private fun convertPermissions(town: Town): ClaimPermissions {
-        val permissions = ClaimPermissions()
-        val perms: Array<BooleanArray> = permissions.permissions
-        perms[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.BUILD.id] =
-            town.permissions.getOutsiderPerm(TownyPermission.ActionType.BUILD)
-        perms[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.BREAK.id] =
-            town.permissions.getOutsiderPerm(TownyPermission.ActionType.DESTROY)
-        perms[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.SWITCH.id] =
-            town.permissions.getOutsiderPerm(TownyPermission.ActionType.SWITCH)
-        perms[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.INTERACT.id] =
-            town.permissions.getOutsiderPerm(TownyPermission.ActionType.ITEM_USE)
-        perms[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.BUILD.id] =
-            town.permissions.getResidentPerm(TownyPermission.ActionType.BUILD)
-        perms[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.BREAK.id] =
-            town.permissions.getResidentPerm(TownyPermission.ActionType.DESTROY)
-        perms[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.SWITCH.id] =
-            town.permissions.getResidentPerm(TownyPermission.ActionType.SWITCH)
-        perms[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.INTERACT.id] =
-            town.permissions.getResidentPerm(TownyPermission.ActionType.ITEM_USE)
-        perms[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.BUILD.id] =
-            town.permissions.getResidentPerm(TownyPermission.ActionType.BUILD)
-        perms[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.BREAK.id] =
-            town.permissions.getResidentPerm(TownyPermission.ActionType.DESTROY)
-        perms[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.SWITCH.id] =
-            town.permissions.getResidentPerm(TownyPermission.ActionType.SWITCH)
-        perms[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.INTERACT.id] =
-            town.permissions.getResidentPerm(TownyPermission.ActionType.ITEM_USE)
-        perms[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.BUILD.id] =
-            town.permissions.getAllyPerm(TownyPermission.ActionType.BUILD)
-        perms[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.BREAK.id] =
-            town.permissions.getAllyPerm(TownyPermission.ActionType.DESTROY)
-        perms[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.SWITCH.id] =
-            town.permissions.getAllyPerm(TownyPermission.ActionType.SWITCH)
-        perms[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.INTERACT.id] =
-            town.permissions.getAllyPerm(TownyPermission.ActionType.ITEM_USE)
-        permissions.permissions = (perms)
-        return permissions
+    private fun convertPermissions(town: Town): PermissionGroups {
+        TODO()
     }
 
     private fun convertToggleables(town: Town): ClaimToggleables {

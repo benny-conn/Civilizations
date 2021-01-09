@@ -2,13 +2,15 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.model
+package net.tolmikarc.civilizations.model.impl
 
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
+import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.permissions.ClaimToggleables
+import net.tolmikarc.civilizations.permissions.PermissionGroups
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import net.tolmikarc.civilizations.war.Raid
@@ -17,7 +19,6 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.mineacademy.fo.collection.SerializedMap
-import org.mineacademy.fo.region.Region
 import java.sql.SQLException
 import java.util.*
 import java.util.function.Predicate
@@ -39,9 +40,9 @@ data class Civilization(override val uuid: UUID) : Civ {
     override var leader: CPlayer? = null
     override var bank: Bank = Bank(this)
     override var home: Location? = null
-    override var claims: MutableSet<Region> = HashSet()
-    override var colonies: MutableSet<Colony> = HashSet()
-    override var plots: MutableSet<Plot> = HashSet()
+    override val claims: MutableSet<Claim> = HashSet()
+    override val colonies: MutableSet<Colony> = HashSet()
+    override val plots: MutableSet<Plot> = HashSet()
     override var warps: MutableMap<String, Location> = LinkedHashMap()
     override var idNumber = 1
     override var totalBlocksCount = 0
@@ -53,11 +54,10 @@ data class Civilization(override val uuid: UUID) : Civ {
     override val colonyCount
         get() = colonies.size
 
-    override var citizens: MutableSet<CPlayer> = HashSet()
-    override var officials: MutableSet<CPlayer> = HashSet()
-    override var outlaws: MutableSet<CPlayer> = HashSet()
-    override var allies: MutableSet<Civ> = HashSet()
-    override var enemies: MutableSet<Civ> = HashSet()
+    override val citizens: MutableSet<CPlayer> = HashSet()
+    override val outlaws: MutableSet<CPlayer> = HashSet()
+    override val allies: MutableSet<Civ> = HashSet()
+    override val enemies: MutableSet<Civ> = HashSet()
 
     override val warring: Set<Civ>
         get() {
@@ -89,7 +89,7 @@ data class Civilization(override val uuid: UUID) : Civ {
         }
 
 
-    override var claimPermissions = ClaimPermissions()
+    override var permissionGroups: PermissionGroups = PermissionGroups(this)
     override var claimToggleables = ClaimToggleables()
     override var raid: Raid? = null
 
@@ -149,43 +149,32 @@ data class Civilization(override val uuid: UUID) : Civ {
         CivManager.saveAsync(this)
     }
 
-    override fun addClaim(region: Region) {
-        claims.add(region)
+    override fun addClaim(claim: Claim) {
+        claims.add(claim)
         idNumber++
         val amount = net.tolmikarc.civilizations.util.MathUtil.areaBetweenTwoPoints(
-            region.primary,
-            region.secondary
+            claim.primary,
+            claim.secondary
         )
         addTotalBlocks(amount)
         CivManager.saveAsync(this)
     }
 
 
-    override fun removeClaim(region: Region) {
-        claims.remove(region)
+    override fun removeClaim(claim: Claim) {
+        claims.remove(claim)
         val area = net.tolmikarc.civilizations.util.MathUtil.areaBetweenTwoPoints(
-            region.primary,
-            region.secondary
+            claim.primary,
+            claim.secondary
         )
         removeTotalBlocks(area)
         CivManager.saveAsync(this)
     }
 
 
-    override fun addOfficial(player: CPlayer) {
-        officials.add(player)
-        player.addPower(CivUtil.calculateFormulaForCiv(Settings.POWER_OFFICIAL_FORMULA, this).toInt())
-        CivManager.saveAsync(this)
-    }
-
-    override fun removeOfficial(player: CPlayer) {
-        officials.remove(player)
-        player.removePower(CivUtil.calculateFormulaForCiv(Settings.POWER_OFFICIAL_FORMULA, this).toInt())
-        CivManager.saveAsync(this)
-    }
-
     override fun addCitizen(player: CPlayer) {
         citizens.add(player)
+        permissionGroups.setPlayerGroup(player, permissionGroups.defaultGroup)
         addPower(Settings.POWER_CITIZENS_WEIGHT)
         if (Settings.ADD_PLAYER_POWER_TO_CIV) {
             addPower(player.power)
@@ -196,6 +185,7 @@ data class Civilization(override val uuid: UUID) : Civ {
 
     override fun removeCitizen(player: CPlayer) {
         citizens.remove(player)
+        permissionGroups.playerGroupMap.remove(player)
         removePower(Settings.POWER_CITIZENS_WEIGHT)
         if (Settings.ADD_PLAYER_POWER_TO_CIV) {
             removePower(player.power)
@@ -243,17 +233,13 @@ data class Civilization(override val uuid: UUID) : Civ {
         map.putIfExist("Power", power)
         map.putIfExist("Leader", leader?.uuid)
         map.putIfExist("Home", home)
-        map.putIfExist("Claims", claims)
+        map.putIfExist("Claims", claims.map { it.serialize() })
         map.putIfExist("Plots", plots)
         map.putIfExist("Warps", warps)
         map.putIfExist("Claim_Number", idNumber)
         map.putIfExist("Total_Claim_Count", totalClaimCount)
         map.putIfExist("Total_Blocks_Count", totalBlocksCount)
         map.putIfExist("Plot_Count", plotCount)
-        map.putIfExist(
-            "Officials",
-            officials.stream().map { it.uuid }.collect(Collectors.toSet())
-        )
         map.putIfExist(
             "Citizens",
             citizens.stream().map { it.uuid }.collect(Collectors.toSet())
@@ -264,7 +250,7 @@ data class Civilization(override val uuid: UUID) : Civ {
         map.putIfExist("Bank", bank)
         map.putIfExist("Banner", banner)
         map.putIfExist("Book", book)
-        map.putIfExist("Claim_Permissions", claimPermissions)
+        map.putIfExist("Groups", permissionGroups)
         map.putIfExist("Claim_Toggleables", claimToggleables)
         map.putIfExist("Region_Damages", regionDamages)
         return map
@@ -287,15 +273,11 @@ data class Civilization(override val uuid: UUID) : Civ {
                 e.printStackTrace()
             }
             val home = map.getLocation("Home")
-            val claims = map.getSet("Claims", Region::class.java)
+            val claims = map.getSet("Claims", Claim::class.java)
             val plots = map.getSet("Plots", Plot::class.java)
             val warps: Map<String, Location>? = map.getMap("Warps", String::class.java, Location::class.java)
             val claimNumber = map.getInteger("Claim_Number")
             val totalBlocksCount = map.getInteger("Total_Blocks_Count")
-            val officials: MutableSet<CPlayer> =
-                map.getSet("Officials", UUID::class.java).stream().filter(playerRemoveFilter)
-                    .map { PlayerManager.getByUUID(it) }
-                    .collect(Collectors.toSet())
             val citizens: MutableSet<CPlayer> =
                 map.getSet("Citizens", UUID::class.java).stream().filter(playerRemoveFilter)
                     .map { PlayerManager.getByUUID(it) }
@@ -313,7 +295,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             val bank = map.get("Bank", Bank::class.java)
             val banner = map.getItem("Banner")
             val book = map.getItem("Book")
-            val permissions = map.get("Claim_Permissions", ClaimPermissions::class.java)
+            val groups = map.get("Groups", PermissionGroups::class.java)
             val toggleables = map.get("Claim_Toggleables", ClaimToggleables::class.java)
             val regionDamages = map.get("Region_Damages", RegionDamages::class.java)
             cache.name = name
@@ -321,20 +303,19 @@ data class Civilization(override val uuid: UUID) : Civ {
             if (leader == null) leader = citizens.iterator().next()
             cache.leader = leader
             if (home != null) cache.home = home
-            if (claims != null) cache.claims = claims
-            if (plots != null) cache.plots = plots
+            if (claims != null) cache.claims.addAll(claims)
+            if (plots != null) cache.plots.addAll(plots)
             if (warps != null) cache.warps = warps as MutableMap<String, Location>
             if (claimNumber != null) cache.idNumber = claimNumber
             if (totalBlocksCount != null) cache.totalBlocksCount = totalBlocksCount
-            cache.officials = officials
-            cache.citizens = citizens
-            cache.allies = allies
-            cache.enemies = enemies
-            cache.outlaws = outlaws
+            cache.citizens.addAll(citizens)
+            cache.allies.addAll(allies)
+            cache.enemies.addAll(enemies)
+            cache.outlaws.addAll(outlaws)
             if (bank != null) cache.bank = bank
             if (banner != null) cache.banner = banner
             if (book != null) cache.book = book
-            if (permissions != null) cache.claimPermissions = permissions
+            if (groups != null) cache.permissionGroups = groups
             if (toggleables != null) cache.claimToggleables = toggleables
             if (regionDamages != null) cache.regionDamages = regionDamages
             return cache

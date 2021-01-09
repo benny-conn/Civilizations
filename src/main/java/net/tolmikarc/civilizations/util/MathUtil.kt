@@ -5,9 +5,9 @@
 package net.tolmikarc.civilizations.util
 
 import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.impl.Claim
 import org.bukkit.Location
 import org.mineacademy.fo.MathUtil
-import org.mineacademy.fo.region.Region
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.util.regex.Pattern
@@ -22,7 +22,7 @@ object MathUtil {
         return df.format(dubble).toDouble()
     }
 
-    fun replaceVariablesAndCalculateFormula(formula: String, civilization: Civ, region: Region?): Double {
+    fun replaceVariablesAndCalculateFormula(formula: String, civilization: Civ, region: Claim?): Double {
         var replacedVariables = formula
             .replace("{total_claims}", civilization.totalClaimCount.toString())
             .replace("{total_area}", civilization.totalBlocksCount.toString())
@@ -86,7 +86,7 @@ object MathUtil {
         return x in xBL..xTR && y in yBL..yTR
     }
 
-    fun isPointInRegion(region: Region, x: Int, y: Int): Boolean {
+    fun isPointInRegion(region: Claim, x: Int, y: Int): Boolean {
         return isPointInRegion(
             region.primary.blockX,
             region.primary.blockZ,
@@ -97,7 +97,7 @@ object MathUtil {
         )
     }
 
-    fun isRegionInRegion(regionBig: Region, regionSmall: Region): Boolean {
+    fun isRegionInRegion(regionBig: Claim, regionSmall: Claim): Boolean {
         val xBL = regionBig.primary.blockX.coerceAtMost(regionBig.secondary.blockX)
         val xTR = regionBig.primary.blockX.coerceAtLeast(regionBig.secondary.blockX)
         val yBL = regionBig.primary.blockZ.coerceAtMost(regionBig.secondary.blockZ)

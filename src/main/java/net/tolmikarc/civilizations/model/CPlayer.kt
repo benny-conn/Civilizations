@@ -3,6 +3,8 @@
  */
 package net.tolmikarc.civilizations.model
 
+import net.tolmikarc.civilizations.model.impl.Selection
+
 interface CPlayer : UniquelyIdentifiable {
 
     var playerName: String?

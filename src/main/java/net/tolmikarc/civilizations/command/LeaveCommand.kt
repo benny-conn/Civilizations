@@ -23,7 +23,6 @@ class LeaveCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "leav
             )
 
             fun run() {
-                if (civilization.officials.contains(civPlayer)) civilization.removeOfficial(civPlayer)
                 civilization.removeCitizen(civPlayer)
                 civPlayer.civilization = null
                 PlayerManager.queueForSaving(civPlayer)

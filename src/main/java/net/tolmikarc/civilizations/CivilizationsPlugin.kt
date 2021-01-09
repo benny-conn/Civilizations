@@ -48,6 +48,8 @@ class CivilizationsPlugin : SimplePlugin() {
     //  make the conversation canceller a variable
     //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
     //  COOL MAP SYSTEM WITH REAL MINECRAFT MAPS
+    //  WG integration
+    //
     override fun onPluginStart() {
         makeFolders()
         loadDatabase()
@@ -147,7 +149,9 @@ class CivilizationsPlugin : SimplePlugin() {
                     "",
                     "civ_civs"
                 )
-                PlayerDatastore.loadAll()
+                Common.runLaterAsync {
+                    PlayerDatastore.loadAll()
+                }
                 return
             }
             Settings.DB_TYPE.equals("mysql", ignoreCase = true) -> {

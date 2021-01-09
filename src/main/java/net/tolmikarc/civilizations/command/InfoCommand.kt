@@ -7,7 +7,7 @@ package net.tolmikarc.civilizations.command
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
+import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -34,10 +34,9 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
     }
 
     private fun sendInfo(civilization: Civ) {
-        val permissions = civilization.claimPermissions
+        val permissions = civilization.permissionGroups
         val toggleables = civilization.claimToggleables
         val citizenNames: MutableList<String?> = ArrayList()
-        val officialNames: MutableList<String?> = ArrayList()
         val canBuild: MutableList<String> = ArrayList()
         val canBreak: MutableList<String> = ArrayList()
         val canSwitch: MutableList<String> = ArrayList()
@@ -48,9 +47,6 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
         for (player in civilization.citizens) {
             citizenNames.add(player.playerName)
         }
-        for (player in civilization.officials) {
-            officialNames.add(player.playerName)
-        }
         for (enemy in civilization.enemies) {
             enemies.add(enemy.name)
         }
@@ -60,64 +56,21 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
         for (outlaw in civilization.outlaws) {
             outlaws.add(outlaw.playerName)
         }
-        if (permissions.permissions[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.BUILD.id]) canBuild.add(
-            "Member"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.BUILD.id]) canBuild.add(
-            "Ally"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.BUILD.id]) canBuild.add(
-            "Official"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.BUILD.id]) canBuild.add(
-            "Outsider"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.BREAK.id]) canBreak.add(
-            "Member"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.BREAK.id]) canBreak.add(
-            "Ally"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.BREAK.id]) canBreak.add(
-            "Official"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.BREAK.id]) canBreak.add(
-            "Outsider"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.SWITCH.id]) canSwitch.add(
-            "Member"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.SWITCH.id]) canSwitch.add(
-            "Ally"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.SWITCH.id]) canSwitch.add(
-            "Official"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.SWITCH.id]) canSwitch.add(
-            "Outsider"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.INTERACT.id]) canInteract.add(
-            "Member"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.INTERACT.id]) canInteract.add(
-            "Ally"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.INTERACT.id]) canInteract.add(
-            "Official"
-        )
-        if (permissions.permissions[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.INTERACT.id]) canInteract.add(
-            "Outsider"
-        )
-        if (officialNames.isEmpty()) officialNames.add("None")
+        
+        canBuild.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.BUILD) }.map { it.name }
+            .toMutableList())
+        canBreak.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.BREAK) }.map { it.name }
+            .toMutableList())
+        canSwitch.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.SWITCH) }.map { it.name }
+            .toMutableList())
+        canInteract.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.INTERACT) }
+            .map { it.name }.toMutableList())
+
         tellNoPrefix(
             "${Settings.PRIMARY_COLOR}============ ${Settings.SECONDARY_COLOR}" + civilization.name + "${Settings.PRIMARY_COLOR} ============",
             "" + if (Settings.SHOW_COORDS_IN_INFO && civilization.home != null) "${Settings.PRIMARY_COLOR}Home: ${Settings.SECONDARY_COLOR}" + civilization.home!!.blockX + ", " + civilization.home!!.blockZ else "",
             "${Settings.PRIMARY_COLOR}Leader: ${Settings.SECONDARY_COLOR}" + (civilization.leader?.playerName
                 ?: "None"),
-            "${Settings.PRIMARY_COLOR}Officials: ${Settings.SECONDARY_COLOR}" + Common.join(
-                officialNames,
-                ", "
-            ),
             "${Settings.PRIMARY_COLOR}Citizens: ${Settings.SECONDARY_COLOR}" + Common.join(
                 citizenNames,
                 ", "

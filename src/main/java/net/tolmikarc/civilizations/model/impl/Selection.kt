@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.model
+package net.tolmikarc.civilizations.model.impl
 
 import org.bukkit.Bukkit
 import org.bukkit.Location

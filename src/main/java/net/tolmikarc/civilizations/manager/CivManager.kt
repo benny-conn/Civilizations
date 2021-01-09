@@ -7,7 +7,7 @@ import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.impl.Civilization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import java.util.*

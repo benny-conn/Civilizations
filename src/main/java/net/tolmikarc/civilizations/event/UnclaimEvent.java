@@ -4,21 +4,21 @@
 package net.tolmikarc.civilizations.event;
 
 import net.tolmikarc.civilizations.model.Civ;
+import net.tolmikarc.civilizations.model.impl.Claim;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
-import org.mineacademy.fo.region.Region;
 
 public class UnclaimEvent extends Event {
 	private static final HandlerList handlers = new HandlerList();
 
 	private final Civ civ;
-	private final Region claim;
+	private final Claim claim;
 	private final Player player;
 
 
-	public UnclaimEvent(Civ civ, Region claim, Player player) {
+	public UnclaimEvent(Civ civ, Claim claim, Player player) {
 		this.civ = civ;
 		this.claim = claim;
 		this.player = player;
@@ -29,7 +29,7 @@ public class UnclaimEvent extends Event {
 	}
 
 
-	public Region getClaim() {
+	public Claim getClaim() {
 		return claim;
 	}
 

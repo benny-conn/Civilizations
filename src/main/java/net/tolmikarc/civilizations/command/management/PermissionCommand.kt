@@ -5,7 +5,9 @@
 package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Settings
+import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -15,20 +17,26 @@ class PermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You do not have a Civilization to manage")
             civPlayer.civilization?.apply {
-                val permissions = this.claimPermissions
+                val permissions = this.permissionGroups
                 if (args.size == 1) {
                     if (args[0].equals("options", ignoreCase = true)) {
                         tell(
-                            "${Settings.PRIMARY_COLOR}Valid Groups: ${Settings.SECONDARY_COLOR}Outsider, Member, Ally, Official",
+                            "${Settings.PRIMARY_COLOR}Valid Groups: ${Settings.SECONDARY_COLOR}${
+                                Common.join(
+                                    permissionGroups.groups.map { it.name },
+                                    ", "
+                                )
+                            }",
                             "${Settings.PRIMARY_COLOR}Valid Permissions: ${Settings.SECONDARY_COLOR}Build, Break, Switch, Interact",
                             "${Settings.PRIMARY_COLOR}Valid values: ${Settings.SECONDARY_COLOR}True, False"
                         )
                     } else returnInvalidArgs()
                 }
                 if (args.size == 3) {
-                    if (permissions.adjustPerm(args[0], args[1], args[2])) {
-                        tellSuccess("${Settings.PRIMARY_COLOR}Successfully updated Civ Permissions")
-                    } else returnInvalidArgs()
+                    val group = permissionGroups.getGroupByName(args[0])
+                    if (group == null) returnInvalidArgs()
+                    group?.adjust(PermissionType.valueOf(args[1].toUpperCase()), args[2].toBoolean())
+                    tellSuccess("${Settings.PRIMARY_COLOR}Successfully updated Civ Permissions")
                 } else
                     returnInvalidArgs()
             }

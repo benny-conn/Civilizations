@@ -9,7 +9,6 @@ import net.tolmikarc.civilizations.conversation.WithdrawPrompt
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
@@ -259,12 +258,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
                 skullLore.add("${ChatColor.RED}${ChatColor.BOLD}Leader")
                 skullMeta.lore = skullLore
             }
-            if (civilization.officials.contains(civPlayer)) {
-                val skullLore: MutableList<String> = ArrayList()
-                skullLore.add("")
-                skullLore.add("${ChatColor.GOLD}${ChatColor.BOLD}Official")
-                skullMeta.lore = skullLore
-            }
+            TODO("groups")
             skull.itemMeta = skullMeta
             return skull
         }
@@ -360,32 +354,9 @@ class CivilizationMenu(civ: Civ) : Menu() {
                 }
 
                 override fun getItem(): ItemStack {
+                    TODO("make this better")
                     return ItemCreator.of(
                         CompMaterial.STONE_PICKAXE, "&4&lPermissions", "",
-                        "Build: ${
-                            Common.join(
-                                civilization.claimPermissions.getPermGroups(ClaimPermissions.PermType.BUILD),
-                                ", "
-                            )
-                        }",
-                        "Break: ${
-                            Common.join(
-                                civilization.claimPermissions.getPermGroups(ClaimPermissions.PermType.BREAK),
-                                ", "
-                            )
-                        }",
-                        "Switch: ${
-                            Common.join(
-                                civilization.claimPermissions.getPermGroups(ClaimPermissions.PermType.SWITCH),
-                                ", "
-                            )
-                        }",
-                        "Interact: ${
-                            Common.join(
-                                civilization.claimPermissions.getPermGroups(ClaimPermissions.PermType.INTERACT),
-                                ", "
-                            )
-                        }", "",
                         "Click to adjust permissions!"
                     ).build().make()
                 }
@@ -519,28 +490,17 @@ class CivilizationMenu(civ: Civ) : Menu() {
             size = 9
             setInfo("Manage a specific player in your Civilization")
             groupChangeButton = object : Button() {
-                val isOfficial = civilization.officials.contains(civPlayer)
                 override fun onClickedInMenu(p0: Player, p1: Menu, p2: ClickType) {
                     fun groupChangePlayer() {
-                        if (isOfficial)
-                            civilization.officials.remove(civPlayer)
-                        else
-                            civilization.officials.add(civPlayer)
+                        TODO()
                     }
                     p0.closeInventory()
-                    ConfirmMenu(
-                        if (isOfficial) "&4Demote player?" else "&2Promote player?",
-                        "Adjust a players official status",
-                        ::groupChangePlayer
-                    )
                 }
 
                 override fun getItem(): ItemStack {
                     return ItemCreator.of(
                         CompMaterial.END_CRYSTAL,
-                        "&9&lAdjust Official Status",
-                        "",
-                        "Current Status: $isOfficial"
+                        "TODO"
                     ).build().make()
                 }
             }

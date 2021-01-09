@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.manager
 import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.impl.CivPlayer
 import org.bukkit.entity.Player
 import java.util.*
 import kotlin.collections.HashMap

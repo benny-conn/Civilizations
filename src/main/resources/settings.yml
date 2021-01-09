@@ -159,6 +159,33 @@ Outlaw:
   # will outlaws be unable to teleport or walk into a civilization where they are outlawed
   Enter_Disabled: false
 Permissions:
+  Groups:
+    Default:
+      Name: Member
+      Build: true
+      Break: true
+      Switch: true
+      Interact: true
+    Outsider:
+      Name: Outsider
+      Build: true
+      Break: true
+      Switch: true
+      Interact: true
+    Ally:
+      Name: Ally
+      Build: true
+      Break: true
+      Switch: true
+      Interact: true
+    Enemy:
+      Name: Enemy
+      Build: true
+      Break: true
+      Switch: true
+      Interact: true
+
+
   Defaults:
     Outsider:
       Build: false

@@ -3,14 +3,17 @@
  */
 package net.tolmikarc.civilizations.model
 
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
+import net.tolmikarc.civilizations.model.impl.Bank
+import net.tolmikarc.civilizations.model.impl.Claim
+import net.tolmikarc.civilizations.model.impl.Colony
+import net.tolmikarc.civilizations.model.impl.Plot
 import net.tolmikarc.civilizations.permissions.ClaimToggleables
+import net.tolmikarc.civilizations.permissions.PermissionGroups
 import net.tolmikarc.civilizations.war.Raid
 import net.tolmikarc.civilizations.war.RegionDamages
 import org.bukkit.Location
 import org.bukkit.inventory.ItemStack
 import org.mineacademy.fo.model.ConfigSerializable
-import org.mineacademy.fo.region.Region
 
 interface Civ : UniquelyIdentifiable, ConfigSerializable {
 
@@ -19,9 +22,9 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     var leader: CPlayer?
     var bank: Bank
     var home: Location?
-    var claims: MutableSet<Region>
-    var colonies: MutableSet<Colony>
-    var plots: MutableSet<Plot>
+    val claims: MutableSet<Claim>
+    val colonies: MutableSet<Colony>
+    val plots: MutableSet<Plot>
     var warps: MutableMap<String, Location>
     var idNumber: Int
     var totalBlocksCount: Int
@@ -33,11 +36,10 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     val colonyCount
         get() = colonies.size
 
-    var citizens: MutableSet<CPlayer>
-    var officials: MutableSet<CPlayer>
-    var outlaws: MutableSet<CPlayer>
-    var allies: MutableSet<Civ>
-    var enemies: MutableSet<Civ>
+    val citizens: MutableSet<CPlayer>
+    val outlaws: MutableSet<CPlayer>
+    val allies: MutableSet<Civ>
+    val enemies: MutableSet<Civ>
 
     val warring: Set<Civ>
         get() {
@@ -55,7 +57,7 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     var regionDamages: RegionDamages?
     var banner: ItemStack?
     var book: ItemStack?
-    var claimPermissions: ClaimPermissions
+    var permissionGroups: PermissionGroups
     var claimToggleables: ClaimToggleables
     var raid: Raid?
 
@@ -77,13 +79,10 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
 
     fun addColony(colony: Colony)
 
-    fun addClaim(region: Region)
+    fun addClaim(claim: Claim)
 
-    fun removeClaim(region: Region)
-
-    fun addOfficial(player: CPlayer)
-
-    fun removeOfficial(player: CPlayer)
+    fun removeClaim(claim: Claim)
+    
 
     fun addCitizen(player: CPlayer)
 
@@ -101,5 +100,5 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     fun addOutlaw(player: CPlayer)
 
     fun removeOutlaw(player: CPlayer)
-    
+
 }

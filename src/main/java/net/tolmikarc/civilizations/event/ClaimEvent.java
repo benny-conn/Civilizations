@@ -4,48 +4,48 @@
 package net.tolmikarc.civilizations.event;
 
 import net.tolmikarc.civilizations.model.Civ;
+import net.tolmikarc.civilizations.model.impl.Claim;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
-import org.mineacademy.fo.region.Region;
 
 public class ClaimEvent extends Event {
-    private static final HandlerList handlers = new HandlerList();
+	private static final HandlerList handlers = new HandlerList();
 
-    private final Civ civ;
-    private final Region claim;
-    private final Player player;
-
-
-    public ClaimEvent(Civ civ, Region claim, Player player) {
-        this.civ = civ;
-        this.claim = claim;
-        this.player = player;
-    }
-
-    public Player getPlayer() {
-        return player;
-    }
+	private final Civ civ;
+	private final Claim claim;
+	private final Player player;
 
 
-    public Region getClaim() {
-        return claim;
-    }
+	public ClaimEvent(Civ civ, Claim claim, Player player) {
+		this.civ = civ;
+		this.claim = claim;
+		this.player = player;
+	}
 
-    public Civ getCiv() {
-        return civ;
-    }
+	public Player getPlayer() {
+		return player;
+	}
 
 
-    @NotNull
-    @Override
-    public HandlerList getHandlers() {
-        return handlers;
-    }
+	public Claim getClaim() {
+		return claim;
+	}
 
-    public static HandlerList getHandlerList() {
-        return handlers;
-    }
+	public Civ getCiv() {
+		return civ;
+	}
+
+
+	@NotNull
+	@Override
+	public HandlerList getHandlers() {
+		return handlers;
+	}
+
+	public static HandlerList getHandlerList() {
+		return handlers;
+	}
 
 }

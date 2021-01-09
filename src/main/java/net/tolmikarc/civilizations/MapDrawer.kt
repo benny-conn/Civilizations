@@ -4,6 +4,7 @@
 package net.tolmikarc.civilizations
 
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.util.ClaimUtil
 import org.bukkit.Location
 import org.bukkit.entity.Player
@@ -11,10 +12,9 @@ import org.bukkit.map.MapCanvas
 import org.bukkit.map.MapPalette
 import org.bukkit.map.MapRenderer
 import org.bukkit.map.MapView
-import org.mineacademy.fo.region.Region
 import kotlin.math.abs
 
-class MapDrawer(val region: Region) : MapRenderer() {
+class MapDrawer(val region: Claim) : MapRenderer() {
     override fun render(map: MapView, canvas: MapCanvas, player: Player) {
         AsyncEnvironment.run {
             val civPlayer = PlayerManager.fromBukkitPlayer(player)
@@ -42,7 +42,7 @@ class MapDrawer(val region: Region) : MapRenderer() {
         }
     }
 
-    private fun convertLocation(location: Location, region: Region): Location {
+    private fun convertLocation(location: Location, region: Claim): Location {
         val xoffset = region.center.x - 64
         val zoffset = region.center.z - 64
 

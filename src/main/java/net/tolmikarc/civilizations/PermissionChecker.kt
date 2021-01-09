@@ -8,9 +8,8 @@ import lombok.experimental.UtilityClass
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.Plot
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
-import net.tolmikarc.civilizations.permissions.ClaimPermissions.PermType
+import net.tolmikarc.civilizations.model.impl.Plot
+import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import net.tolmikarc.civilizations.util.ClaimUtil
@@ -19,23 +18,20 @@ import org.bukkit.entity.Player
 
 @UtilityClass
 object PermissionChecker {
-    fun can(permType: PermType, player: Player, civilization: Civ): Boolean {
-        val claimPermissions = civilization.claimPermissions
+
+    fun can(permType: PermissionType, player: Player, civilization: Civ): Boolean {
+        val claimPermissions = civilization.permissionGroups
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         if (isAdmin(civPlayer)) return true
+        val permissionGroup = claimPermissions.getPlayerGroup(civPlayer)
+        if (claimPermissions.adminGroups.contains(permissionGroup)) return true
         if (Settings.OUTLAW_PERMISSIONS_DISABLED) if (CivUtil.isPlayerOutlaw(civPlayer, civilization)) return false
         if (civilization.leader == civPlayer) return true
         return if (ClaimUtil.getPlotFromLocation(player.location, civilization) != null) {
             val plot = ClaimUtil.getPlotFromLocation(player.location, civilization)!!
-            val plotPermissions = plot.claimPermissions
-            if (civilization.officials.contains(civPlayer)) return plotPermissions.permissions[ClaimPermissions.PermGroup.OFFICIAL.id][permType.id]
-            if (plot.members.contains(civPlayer)) return plotPermissions.permissions[ClaimPermissions.PermGroup.MEMBER.id][permType.id]
-            if (civilization.citizens.contains(civPlayer)) plotPermissions.permissions[ClaimPermissions.PermGroup.ALLY.id][permType.id] else plotPermissions.permissions[ClaimPermissions.PermGroup.OUTSIDER.id][permType.id]
+            plot.members.contains(civPlayer)
         } else {
-            if (civilization.officials.contains(civPlayer)) return claimPermissions.permissions[ClaimPermissions.PermGroup.OFFICIAL.id][permType.id]
-            if (civilization.citizens.contains(civPlayer)) return claimPermissions.permissions[ClaimPermissions.PermGroup.MEMBER.id][permType.id]
-            if (civPlayer.civilization != null) if (civilization.allies.contains(civPlayer.civilization)) return claimPermissions.permissions[ClaimPermissions.PermGroup.ALLY.id][permType.id]
-            claimPermissions.permissions[ClaimPermissions.PermGroup.OUTSIDER.id][permType.id]
+            permissionGroup.permissions.contains(permType)
         }
     }
 
@@ -45,7 +41,11 @@ object PermissionChecker {
     }
 
     fun canManageCiv(player: CPlayer, civilization: Civ): Boolean {
-        return if (isAdmin(player)) true else civilization.officials.contains(player) || civilization.leader == player
+        return if (isAdmin(player)) true else civilization.permissionGroups.adminGroups.contains(
+            civilization.permissionGroups.getPlayerGroup(
+                player
+            )
+        ) || civilization.leader == player
     }
 
     fun canManagePlot(civ: Civ, plot: Plot, player: CPlayer): Boolean {

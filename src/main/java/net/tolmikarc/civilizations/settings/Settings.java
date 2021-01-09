@@ -4,6 +4,8 @@
 
 package net.tolmikarc.civilizations.settings;
 
+import net.tolmikarc.civilizations.permissions.PermissionGroup;
+import net.tolmikarc.civilizations.permissions.PermissionType;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.mineacademy.fo.settings.SimpleSettings;
@@ -70,6 +72,12 @@ public class Settings extends SimpleSettings {
 
 	public static Boolean OUTLAW_PERMISSIONS_DISABLED;
 	public static Boolean OUTLAW_ENTER_DISABLED;
+
+	public static PermissionGroup DEFAULT_GROUP;
+	public static PermissionGroup OUTSIDER_GROUP;
+	public static PermissionGroup ALLY_GROUP;
+	public static PermissionGroup ENEMY_GROUP;
+
 
 	public static Boolean DEFAULT_OUTSIDER_BREAK;
 	public static Boolean DEFAULT_OUTSIDER_BUILD;
@@ -165,6 +173,42 @@ public class Settings extends SimpleSettings {
 
 		OUTLAW_PERMISSIONS_DISABLED = getBoolean("Outlaw.Permissions_Disabled");
 		OUTLAW_ENTER_DISABLED = getBoolean("Outlaw.Enter_Disabled");
+
+
+		String defaultGroupName = getString("Permissions.Groups.Default.Name");
+		String allyGroupName = getString("Permissions.Groups.Ally.Name");
+		String enemyGroupName = getString("Permissions.Groups.Enemy.Name");
+		String outsiderGroupName = getString("Permissions.Groups.Outsider.Name");
+
+		Set<PermissionType> defaultGroupPermissions = new HashSet<>();
+		if (getBoolean("Permissions.Groups.Default.Build")) defaultGroupPermissions.add(PermissionType.BUILD);
+		if (getBoolean("Permissions.Groups.Default.Break")) defaultGroupPermissions.add(PermissionType.BREAK);
+		if (getBoolean("Permissions.Groups.Default.Switch")) defaultGroupPermissions.add(PermissionType.SWITCH);
+		if (getBoolean("Permissions.Groups.Default.Interact")) defaultGroupPermissions.add(PermissionType.INTERACT);
+
+		Set<PermissionType> outsiderGroupPermissions = new HashSet<>();
+		if (getBoolean("Permissions.Groups.Outsider.Build")) defaultGroupPermissions.add(PermissionType.BUILD);
+		if (getBoolean("Permissions.Groups.Outsider.Break")) defaultGroupPermissions.add(PermissionType.BREAK);
+		if (getBoolean("Permissions.Groups.Outsider.Switch")) defaultGroupPermissions.add(PermissionType.SWITCH);
+		if (getBoolean("Permissions.Groups.Outsider.Interact")) defaultGroupPermissions.add(PermissionType.INTERACT);
+
+		Set<PermissionType> allyGroupPermissions = new HashSet<>();
+		if (getBoolean("Permissions.Groups.Ally.Build")) defaultGroupPermissions.add(PermissionType.BUILD);
+		if (getBoolean("Permissions.Groups.Ally.Break")) defaultGroupPermissions.add(PermissionType.BREAK);
+		if (getBoolean("Permissions.Groups.Ally.Switch")) defaultGroupPermissions.add(PermissionType.SWITCH);
+		if (getBoolean("Permissions.Groups.Ally.Interact")) defaultGroupPermissions.add(PermissionType.INTERACT);
+
+		Set<PermissionType> enemyGroupPermissions = new HashSet<>();
+		if (getBoolean("Permissions.Groups.Enemy.Build")) defaultGroupPermissions.add(PermissionType.BUILD);
+		if (getBoolean("Permissions.Groups.Enemy.Break")) defaultGroupPermissions.add(PermissionType.BREAK);
+		if (getBoolean("Permissions.Groups.Enemy.Switch")) defaultGroupPermissions.add(PermissionType.SWITCH);
+		if (getBoolean("Permissions.Groups.Enemy.Interact")) defaultGroupPermissions.add(PermissionType.INTERACT);
+
+		DEFAULT_GROUP = new PermissionGroup(defaultGroupName, defaultGroupPermissions);
+		OUTSIDER_GROUP = new PermissionGroup(outsiderGroupName, outsiderGroupPermissions);
+		ALLY_GROUP = new PermissionGroup(allyGroupName, allyGroupPermissions);
+		ENEMY_GROUP = new PermissionGroup(enemyGroupName, enemyGroupPermissions);
+
 
 		DEFAULT_OUTSIDER_BREAK = getBoolean("Permissions.Defaults.Outsider.Break");
 		DEFAULT_OUTSIDER_BUILD = getBoolean("Permissions.Defaults.Outsider.Build");

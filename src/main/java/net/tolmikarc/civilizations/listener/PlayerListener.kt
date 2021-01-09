@@ -12,8 +12,9 @@ import net.tolmikarc.civilizations.event.CivLeaveEvent
 import net.tolmikarc.civilizations.event.PlotEnterEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.Selection
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
+import net.tolmikarc.civilizations.model.impl.Claim
+import net.tolmikarc.civilizations.model.impl.Selection
+import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -41,7 +42,6 @@ import org.bukkit.event.server.MapInitializeEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.debug.LagCatcher
-import org.mineacademy.fo.region.Region
 import org.mineacademy.fo.remain.CompMetadata
 
 class PlayerListener : Listener {
@@ -137,12 +137,12 @@ class PlayerListener : Listener {
                 val block = event.clickedBlock
                 if (block != null) {
                     if (Settings.SWITCHABLES.contains(block.type)) event.isCancelled =
-                        !can(ClaimPermissions.PermType.SWITCH, player, civilization) else {
-                        event.isCancelled = !can(ClaimPermissions.PermType.INTERACT, player, civilization)
+                        !can(PermissionType.SWITCH, player, civilization) else {
+                        event.isCancelled = !can(PermissionType.INTERACT, player, civilization)
                     }
                 }
             } else {
-                event.isCancelled = !can(ClaimPermissions.PermType.INTERACT, player, civilization)
+                event.isCancelled = !can(PermissionType.INTERACT, player, civilization)
             }
             if (event.isCancelled) {
                 Common.tell(player, "&cYou cannot Interact here.")
@@ -172,7 +172,7 @@ class PlayerListener : Listener {
                         increaseBlocksBroken(civPlayer)
                     }
                 } else {
-                    event.isCancelled = !can(ClaimPermissions.PermType.BREAK, player, civilization)
+                    event.isCancelled = !can(PermissionType.BREAK, player, civilization)
                     if (event.isCancelled)
                         Common.tell(player, "&cYou cannot break here.")
                     else
@@ -218,7 +218,7 @@ class PlayerListener : Listener {
                         }
                     }
                 } else {
-                    event.isCancelled = !can(ClaimPermissions.PermType.BUILD, player, civilization)
+                    event.isCancelled = !can(PermissionType.BUILD, player, civilization)
                     if (event.isCancelled) Common.tell(player, "&cYou cannot place here")
                 }
             }
@@ -369,7 +369,7 @@ class PlayerListener : Listener {
             val damager = event.damager
             if (damager !is Player || damaged is Player) return
             val civ = getCivFromLocation(damaged.location) ?: return
-            event.isCancelled = !can(ClaimPermissions.PermType.INTERACT, damager, civ)
+            event.isCancelled = !can(PermissionType.INTERACT, damager, civ)
         } finally {
             LagCatcher.end("entity-damage-by-player")
         }
@@ -379,7 +379,8 @@ class PlayerListener : Listener {
     fun onMap(event: MapInitializeEvent) {
         val map = event.map
         Common.log("${map.centerX} ${map.centerZ}")
-        val region = Region(
+        val region = Claim(
+            map.id,
             Location(map.world, (map.centerX - 64).toDouble(), 1.0, (map.centerZ - 64).toDouble()), Location(
                 map.world,
                 (map.centerX + 64).toDouble(), 1.0, (map.centerZ + 64).toDouble()

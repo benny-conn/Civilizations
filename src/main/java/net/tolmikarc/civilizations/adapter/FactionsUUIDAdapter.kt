@@ -7,20 +7,17 @@ package net.tolmikarc.civilizations.adapter
 import com.massivecraft.factions.FLocation
 import com.massivecraft.factions.FPlayer
 import com.massivecraft.factions.Faction
-import com.massivecraft.factions.perms.PermissibleAction
-import com.massivecraft.factions.perms.Relation
 import com.massivecraft.factions.perms.Role
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.Civilization
-import net.tolmikarc.civilizations.permissions.ClaimPermissions
+import net.tolmikarc.civilizations.model.impl.Civilization
+import net.tolmikarc.civilizations.model.impl.Claim
+import net.tolmikarc.civilizations.permissions.PermissionGroups
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BookMeta
-import org.mineacademy.fo.region.Region
 import java.util.*
-import java.util.stream.Collectors
 
 object FactionsUUIDAdapter {
     private val convertedFactions: MutableMap<Faction, Civ> = HashMap()
@@ -29,13 +26,9 @@ object FactionsUUIDAdapter {
         val civ = Civilization(UUID.randomUUID())
         civ.name = faction.tag
         civ.leader = PlayerManager.getByUUID(faction.getFPlayersWhereRole(Role.ADMIN)[0].player.uniqueId)
-        civ.claimPermissions = convertPermissions(faction)
-        civ.claims = getConvertedRegions(faction, civ)
-        civ.officials = faction.getFPlayersWhereRole(Role.COLEADER).stream()
-            .map { fPlayer: FPlayer -> PlayerManager.getByUUID(fPlayer.player.uniqueId) }.collect(Collectors.toSet())
-        civ.citizens =
-            (faction.fPlayers.stream().map { fPlayer: FPlayer -> PlayerManager.getByUUID(fPlayer.player.uniqueId) }
-                .collect(Collectors.toSet()))
+        civ.permissionGroups = convertPermissions(faction)
+        civ.claims.addAll(getConvertedRegions(faction, civ))
+        civ.citizens.addAll(faction.fPlayers.map { fPlayer: FPlayer -> PlayerManager.getByUUID(fPlayer.player.uniqueId) })
         civ.idNumber = civ.totalClaimCount + 1
         civ.power = faction.power.toInt()
         civ.home = faction.home
@@ -49,9 +42,9 @@ object FactionsUUIDAdapter {
         return civ
     }
 
-    private fun getConvertedRegions(faction: Faction, civ: Civ): MutableSet<Region> {
+    private fun getConvertedRegions(faction: Faction, civ: Civ): MutableSet<Claim> {
         val handledFactionLocations: MutableSet<FLocation> = HashSet()
-        val newRegions: MutableSet<Region> = HashSet()
+        val newRegions: MutableSet<Claim> = HashSet()
         var id = 0
         for (fLocation in faction.allClaims) {
             if (handledFactionLocations.contains(fLocation)) continue
@@ -77,8 +70,8 @@ object FactionsUUIDAdapter {
                 handledFactionLocations.addAll(handledLocationsMovingRight)
             }
             lowestLocation = fLocation
-            val newRegion = Region(
-                civ.uuid.toString() + "CLAIM" + id,
+            val newRegion = Claim(
+                id,
                 Location(
                     lowestLocation.world,
                     (lowestLocation.x * 16).toDouble(),
@@ -98,42 +91,8 @@ object FactionsUUIDAdapter {
         return newRegions
     }
 
-    private fun convertPermissions(faction: Faction): ClaimPermissions {
-        val permissions = ClaimPermissions()
-        val perms: Array<BooleanArray> = permissions.permissions
-        perms[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.BUILD.id] =
-            faction.permissions[Role.COLEADER]!![PermissibleAction.BUILD]!!
-        perms[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.BREAK.id] =
-            faction.permissions[Role.COLEADER]!![PermissibleAction.DESTROY]!!
-        perms[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.SWITCH.id] =
-            faction.permissions[Role.COLEADER]!![PermissibleAction.CONTAINER]!!
-        perms[ClaimPermissions.PermGroup.OFFICIAL.id][ClaimPermissions.PermType.INTERACT.id] =
-            faction.permissions[Role.COLEADER]!![PermissibleAction.ITEM]!!
-        perms[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.BUILD.id] =
-            faction.permissions[Relation.ALLY]!![PermissibleAction.BUILD]!!
-        perms[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.BREAK.id] =
-            faction.permissions[Relation.ALLY]!![PermissibleAction.DESTROY]!!
-        perms[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.SWITCH.id] =
-            faction.permissions[Relation.ALLY]!![PermissibleAction.CONTAINER]!!
-        perms[ClaimPermissions.PermGroup.ALLY.id][ClaimPermissions.PermType.INTERACT.id] =
-            faction.permissions[Relation.ALLY]!![PermissibleAction.ITEM]!!
-        perms[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.BUILD.id] =
-            faction.permissions[Role.NORMAL]!![PermissibleAction.BUILD]!!
-        perms[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.BREAK.id] =
-            faction.permissions[Role.NORMAL]!![PermissibleAction.DESTROY]!!
-        perms[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.SWITCH.id] =
-            faction.permissions[Role.NORMAL]!![PermissibleAction.CONTAINER]!!
-        perms[ClaimPermissions.PermGroup.MEMBER.id][ClaimPermissions.PermType.INTERACT.id] =
-            faction.permissions[Role.NORMAL]!![PermissibleAction.ITEM]!!
-        perms[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.BUILD.id] =
-            faction.permissions[Relation.ENEMY]!![PermissibleAction.BUILD]!!
-        perms[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.BREAK.id] =
-            faction.permissions[Relation.ENEMY]!![PermissibleAction.DESTROY]!!
-        perms[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.SWITCH.id] =
-            faction.permissions[Relation.ENEMY]!![PermissibleAction.CONTAINER]!!
-        perms[ClaimPermissions.PermGroup.OUTSIDER.id][ClaimPermissions.PermType.INTERACT.id] =
-            faction.permissions[Relation.ENEMY]!![PermissibleAction.ITEM]!!
-        permissions.permissions = (perms)
-        return permissions
+
+    private fun convertPermissions(faction: Faction): PermissionGroups {
+        TODO()
     }
 }
