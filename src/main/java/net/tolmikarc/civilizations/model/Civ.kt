@@ -3,6 +3,7 @@
  */
 package net.tolmikarc.civilizations.model
 
+import net.tolmikarc.civilizations.chat.CivChannel
 import net.tolmikarc.civilizations.model.impl.Bank
 import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.model.impl.Colony
@@ -20,12 +21,16 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     var name: String?
     var power: Int
     var leader: CPlayer?
+
     var bank: Bank
+
     var home: Location?
     val claims: MutableSet<Claim>
     val colonies: MutableSet<Colony>
     val plots: MutableSet<Plot>
+
     var warps: MutableMap<String, Location>
+
     var idNumber: Int
     var totalBlocksCount: Int
 
@@ -38,6 +43,7 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
 
     val citizens: MutableSet<CPlayer>
     val outlaws: MutableSet<CPlayer>
+
     val allies: MutableSet<Civ>
     val enemies: MutableSet<Civ>
 
@@ -61,7 +67,8 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     var claimToggleables: ClaimToggleables
     var raid: Raid?
 
-
+    val channel: CivChannel
+    
     fun addPower(power: Int)
 
     fun removePower(power: Int)
@@ -82,7 +89,7 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     fun addClaim(claim: Claim)
 
     fun removeClaim(claim: Claim)
-    
+
 
     fun addCitizen(player: CPlayer)
 

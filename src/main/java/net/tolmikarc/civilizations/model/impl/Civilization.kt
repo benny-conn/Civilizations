@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.model.impl
 
+import net.tolmikarc.civilizations.chat.CivChannel
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
@@ -92,6 +93,8 @@ data class Civilization(override val uuid: UUID) : Civ {
     override var permissionGroups: PermissionGroups = PermissionGroups(this)
     override var claimToggleables = ClaimToggleables()
     override var raid: Raid? = null
+
+    override val channel = CivChannel()
 
     override fun addPower(power: Int) {
         this.power += power
@@ -185,7 +188,7 @@ data class Civilization(override val uuid: UUID) : Civ {
 
     override fun removeCitizen(player: CPlayer) {
         citizens.remove(player)
-        permissionGroups.playerGroupMap.remove(player)
+        permissionGroups.playerGroupMap.remove(player.uuid)
         removePower(Settings.POWER_CITIZENS_WEIGHT)
         if (Settings.ADD_PLAYER_POWER_TO_CIV) {
             removePower(player.power)

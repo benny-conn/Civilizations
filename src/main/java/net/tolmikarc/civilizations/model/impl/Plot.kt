@@ -14,7 +14,12 @@ import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
 import java.util.stream.Collectors
 
-data class Plot(val civ: Civ, val id: Int, val region: Claim, var owner: CPlayer) : ConfigSerializable {
+data class Plot(
+    val civ: Civ,
+    val id: Int,
+    val region: Claim,
+    var owner: CPlayer
+) : ConfigSerializable {
     var price = 0.0
     var forSale = false
     var members: MutableSet<CPlayer> = HashSet()

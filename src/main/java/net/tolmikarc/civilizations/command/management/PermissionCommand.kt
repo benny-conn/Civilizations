@@ -17,7 +17,6 @@ class PermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You do not have a Civilization to manage")
             civPlayer.civilization?.apply {
-                val permissions = this.permissionGroups
                 if (args.size == 1) {
                     if (args[0].equals("options", ignoreCase = true)) {
                         tell(

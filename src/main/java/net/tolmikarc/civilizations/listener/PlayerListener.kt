@@ -25,6 +25,7 @@ import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
 import net.tolmikarc.civilizations.util.WarUtil.addDamages
 import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
 import net.tolmikarc.civilizations.util.WarUtil.increaseBlocksBroken
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.EntityType
@@ -391,6 +392,23 @@ class PlayerListener : Listener {
             )
         )
         map.addRenderer(MapDrawer(region))
+    }
+
+    @EventHandler
+    fun onPlayerChat(event: AsyncPlayerChatEvent) {
+        val civPlayer = PlayerManager.fromBukkitPlayer(event.player)
+        val civ = civPlayer.civilization
+        civ?.let { theCiv ->
+            if (theCiv.channel.players.contains(event.player)) {
+                // TODO externalize format
+                event.format =
+                    "${Settings.PRIMARY_COLOR}[${Settings.SECONDARY_COLOR}${theCiv.name}${Settings.PRIMARY_COLOR}] ${Settings.SECONDARY_COLOR}${event.player.displayName}${Settings.PRIMARY_COLOR}:"
+                for (player in Bukkit.getOnlinePlayers()) {
+                    event.recipients.removeIf { !theCiv.citizens.contains(PlayerManager.fromBukkitPlayer(player)) }
+
+                }
+            }
+        }
     }
 
 }
