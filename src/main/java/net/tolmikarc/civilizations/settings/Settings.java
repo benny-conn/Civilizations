@@ -52,13 +52,14 @@ public class Settings extends SimpleSettings {
 	public static String POWER_CITIZEN_FORMULA;
 
 	public static Integer POWER_PVP_TRANSACTION;
+	public static Double MONEY_PVP_TRANSACTION;
 	public static Integer POWER_RAID_BLOCK;
 
 	public static ChatColor PRIMARY_COLOR;
 	public static ChatColor SECONDARY_COLOR;
 
 	public static Integer BLOCKS_PER_SECONDS_REPAIR;
-	public static Integer REPAIR_COST_PER_BLOCK;
+	public static Double REPAIR_COST_PER_BLOCK;
 	public static Integer RAID_BUY_IN;
 	public static Integer RAID_LENGTH;
 	public static Integer RAID_COOLDOWN;
@@ -77,24 +78,6 @@ public class Settings extends SimpleSettings {
 	public static PermissionGroup OUTSIDER_GROUP;
 	public static PermissionGroup ALLY_GROUP;
 	public static PermissionGroup ENEMY_GROUP;
-
-
-	public static Boolean DEFAULT_OUTSIDER_BREAK;
-	public static Boolean DEFAULT_OUTSIDER_BUILD;
-	public static Boolean DEFAULT_OUTSIDER_SWITCH;
-	public static Boolean DEFAULT_OUTSIDER_INTERACT;
-	public static Boolean DEFAULT_ALLY_BREAK;
-	public static Boolean DEFAULT_ALLY_BUILD;
-	public static Boolean DEFAULT_ALLY_SWITCH;
-	public static Boolean DEFAULT_ALLY_INTERACT;
-	public static Boolean DEFAULT_MEMBER_BREAK;
-	public static Boolean DEFAULT_MEMBER_BUILD;
-	public static Boolean DEFAULT_MEMBER_SWITCH;
-	public static Boolean DEFAULT_MEMBER_INTERACT;
-	public static Boolean DEFAULT_OFFICIAL_BREAK;
-	public static Boolean DEFAULT_OFFICIAL_BUILD;
-	public static Boolean DEFAULT_OFFICIAL_SWITCH;
-	public static Boolean DEFAULT_OFFICIAL_INTERACT;
 
 	public static Boolean RESPAWN_CIV;
 
@@ -146,10 +129,11 @@ public class Settings extends SimpleSettings {
 		POWER_CITIZEN_FORMULA = getString("Power.Player.Citizen");
 
 		POWER_PVP_TRANSACTION = getInteger("Power.War.PVP");
+		MONEY_PVP_TRANSACTION = getDouble("War.Raid.PVP_Transaction");
 		POWER_RAID_BLOCK = getInteger("Power.War.Block");
 
 		BLOCKS_PER_SECONDS_REPAIR = getInteger("War.Blocks_Per_Second_Repair");
-		REPAIR_COST_PER_BLOCK = getInteger("War.Repair_Cost_Per_Block");
+		REPAIR_COST_PER_BLOCK = getDouble("War.Repair_Cost_Per_Block");
 		RAID_BUY_IN = getInteger("War.Raid.Buy_In");
 		RAID_LENGTH = getInteger("War.Raid.Length") * 60;
 		RAID_COOLDOWN = getInteger("War.Raid.Cooldown") * 60;
@@ -208,24 +192,6 @@ public class Settings extends SimpleSettings {
 		OUTSIDER_GROUP = new PermissionGroup(outsiderGroupName, outsiderGroupPermissions);
 		ALLY_GROUP = new PermissionGroup(allyGroupName, allyGroupPermissions);
 		ENEMY_GROUP = new PermissionGroup(enemyGroupName, enemyGroupPermissions);
-
-
-		DEFAULT_OUTSIDER_BREAK = getBoolean("Permissions.Defaults.Outsider.Break");
-		DEFAULT_OUTSIDER_BUILD = getBoolean("Permissions.Defaults.Outsider.Build");
-		DEFAULT_OUTSIDER_SWITCH = getBoolean("Permissions.Defaults.Outsider.Switch");
-		DEFAULT_OUTSIDER_INTERACT = getBoolean("Permissions.Defaults.Outsider.Interact");
-		DEFAULT_ALLY_BREAK = getBoolean("Permissions.Defaults.Ally.Break");
-		DEFAULT_ALLY_BUILD = getBoolean("Permissions.Defaults.Ally.Build");
-		DEFAULT_ALLY_SWITCH = getBoolean("Permissions.Defaults.Ally.Switch");
-		DEFAULT_ALLY_INTERACT = getBoolean("Permissions.Defaults.Ally.Interact");
-		DEFAULT_MEMBER_BREAK = getBoolean("Permissions.Defaults.Member.Break");
-		DEFAULT_MEMBER_BUILD = getBoolean("Permissions.Defaults.Member.Build");
-		DEFAULT_MEMBER_SWITCH = getBoolean("Permissions.Defaults.Member.Switch");
-		DEFAULT_MEMBER_INTERACT = getBoolean("Permissions.Defaults.Member.Interact");
-		DEFAULT_OFFICIAL_BREAK = getBoolean("Permissions.Defaults.Official.Break");
-		DEFAULT_OFFICIAL_BUILD = getBoolean("Permissions.Defaults.Official.Build");
-		DEFAULT_OFFICIAL_SWITCH = getBoolean("Permissions.Defaults.Official.Switch");
-		DEFAULT_OFFICIAL_INTERACT = getBoolean("Permissions.Defaults.Official.Interact");
 
 		RESPAWN_CIV = getBoolean("Respawn.Civ_Home");
 

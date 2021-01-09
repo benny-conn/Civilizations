@@ -71,8 +71,8 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
             }
 
             override fun onFinish() {
-                damages.brokenBlocksMap.keys.minus(handledLocations)
-                if (damages.brokenBlocksMap.keys.isEmpty()) civ.regionDamages = null
+                damages.brokenBlocksMap.keys.removeAll(handledLocations)
+                if (damages.brokenBlocksMap.isEmpty()) civ.regionDamages = null
                 CivManager.queueForSaving(civ)
                 tellSuccess("Successfully repaired " + handledLocations.size + " blocks for " + cost)
             }

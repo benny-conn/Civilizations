@@ -42,6 +42,7 @@ import org.bukkit.event.server.MapInitializeEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.debug.LagCatcher
+import org.mineacademy.fo.model.HookManager
 import org.mineacademy.fo.remain.CompMetadata
 
 class PlayerListener : Listener {
@@ -79,8 +80,11 @@ class PlayerListener : Listener {
             civilization.raid?.let { raid ->
                 killer?.let { killer ->
                     PlayerManager.fromBukkitPlayer(killer).addPower(Settings.POWER_PVP_TRANSACTION)
+                    HookManager.deposit(killer, 10.0)
                 }
                 civPlayer.removePower(Settings.POWER_PVP_TRANSACTION)
+                // TODO make this number n0t mag1c numb3r
+                HookManager.withdraw(player, 10.0)
                 if (!raid.playersInvolved.containsKey(civPlayer)) return
                 if (raid.playersInvolved[civPlayer]!! <= 0) return
                 val playerLives: Int = raid.playersInvolved[civPlayer]!! - 1
@@ -208,7 +212,7 @@ class PlayerListener : Listener {
                                 )
                                 return
                             }
-                            addCooldownTimer(civilization.uuid, CooldownTask.CooldownType.TNT)
+                            addCooldownTimer(civPlayer.uuid, CooldownTask.CooldownType.TNT)
                             block.type = Material.AIR
                             CompMetadata.setMetadata(
                                 block.world.spawnEntity(block.location, EntityType.PRIMED_TNT),
@@ -387,7 +391,6 @@ class PlayerListener : Listener {
             )
         )
         map.addRenderer(MapDrawer(region))
-        TODO("Figure out how to make this only render certain maps")
     }
 
 }

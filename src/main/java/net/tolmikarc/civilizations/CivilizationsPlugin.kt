@@ -49,6 +49,8 @@ class CivilizationsPlugin : SimplePlugin() {
     //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
     //  COOL MAP SYSTEM WITH REAL MINECRAFT MAPS
     //  WG integration
+    //  make settings option for repair blocks a double and consider making others doubles
+    //  war reward for killing players
     //
     override fun onPluginStart() {
         makeFolders()

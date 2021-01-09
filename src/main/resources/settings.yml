@@ -118,12 +118,12 @@ Extra_Settings:
 
 War:
   Blocks_Per_Second_Repair: 500
-  Repair_Cost_Per_Block: 1
+  Repair_Cost_Per_Block: 0.10
   Raid:
     # How much money to start a raid. Set to 0 for no buy in.
     Buy_In: 0
     # in minutes
-    Length: 5
+    Length: 3
     # time in minutes before the same civilization can raid again or end the war
     Cooldown: 60
     # ratio of players online in both civilizations to start a raid. Set both to 0 to disable limit
@@ -148,6 +148,8 @@ War:
     PVP_TP_Cooldown: true
     # how many seconds before an attacker can place TNT in a raid again. Set to -1 to deny TNT in raids and 0 to set no cooldown
     TNT_Cooldown: 30
+    # money transferred between players per kill in war
+    PVP_Transaction: 10.00
 Respawn:
   # will players respawn at their Civilization home when they die?
   # warning: will override other plugin's respawn
@@ -180,29 +182,6 @@ Permissions:
       Interact: true
     Enemy:
       Name: Enemy
-      Build: true
-      Break: true
-      Switch: true
-      Interact: true
-
-
-  Defaults:
-    Outsider:
-      Build: false
-      Break: false
-      Switch: false
-      Interact: false
-    Ally:
-      Build: false
-      Break: false
-      Switch: false
-      Interact: false
-    Member:
-      Build: true
-      Break: true
-      Switch: true
-      Interact: true
-    Official:
       Build: true
       Break: true
       Switch: true

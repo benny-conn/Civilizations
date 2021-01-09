@@ -119,8 +119,8 @@ class Claim(val id: Int, val primary: Location, val secondary: Location) : Confi
     override fun serialize(): SerializedMap {
         val map = SerializedMap()
         map.put("ID", id)
-        map.put("Primary", primary.serialize())
-        map.put("Secondary", secondary.serialize())
+        map.put("Primary", primary)
+        map.put("Secondary", secondary)
         return map
     }
 

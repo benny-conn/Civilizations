@@ -31,6 +31,7 @@ class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enem
                     }
                     "remove" -> {
                         checkBoolean(enemies.contains(enemyCiv), "This Civilization is not your enemy.")
+                        // TODO make sure that there is no cooldown
                         removeEnemy(enemyCiv!!)
                         tell("${Settings.PRIMARY_COLOR}Your Civilization is no longer enemies with ${Settings.SECONDARY_COLOR}" + enemyCiv.name)
                     }
