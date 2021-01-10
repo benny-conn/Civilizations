@@ -68,9 +68,11 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
             .toMutableList())
         canInteract.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.INTERACT) }
             .map { it.name }.toMutableList())
+        
 
         tellNoPrefix(
             "${Settings.PRIMARY_COLOR}============ ${Settings.SECONDARY_COLOR}" + civilization.name + "${Settings.PRIMARY_COLOR} ============",
+            "${Settings.PRIMARY_COLOR}Description: ${Settings.SECONDARY_COLOR}${civilization.description}",
             "" + if (Settings.SHOW_COORDS_IN_INFO && civilization.home != null) "${Settings.PRIMARY_COLOR}Home: ${Settings.SECONDARY_COLOR}" + civilization.home!!.blockX + ", " + civilization.home!!.blockZ else "",
             "${Settings.PRIMARY_COLOR}Leader: ${Settings.SECONDARY_COLOR}" + (civilization.leader?.playerName
                 ?: "None"),

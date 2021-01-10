@@ -36,6 +36,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             }
             field = value
         }
+    override var description: String? = null
     override var power = 0
     override var leader: CPlayer? = null
     override var bank: Bank = Bank(this)
@@ -121,6 +122,7 @@ data class Civilization(override val uuid: UUID) : Civ {
         val map = SerializedMap()
         map.putIfExist("UUID", uuid)
         map.putIfExist("Name", name)
+        map.putIfExist("Description", description)
         map.putIfExist("Power", power)
         map.putIfExist("Leader", leader?.uuid)
         map.putIfExist("Home", home)
@@ -146,6 +148,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             val uuid = map.get("UUID", UUID::class.java)
             val cache = Civilization(uuid)
             val name = map.getString("Name")
+            val description = map.getString("Description")
             val power = map.getInteger("Power")
             var leader: CPlayer? = null
             try {
@@ -173,6 +176,7 @@ data class Civilization(override val uuid: UUID) : Civ {
 
 
             cache.name = name
+            if (description != null) cache.description = description
             if (power != null) cache.power = power
             if (leader == null) leader = citizens.iterator().next()
             cache.leader = leader

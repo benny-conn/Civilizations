@@ -18,6 +18,7 @@ import org.mineacademy.fo.model.ConfigSerializable
 interface Civ : UniquelyIdentifiable, ConfigSerializable {
 
     var name: String?
+    var description: String?
     var power: Int
     var leader: CPlayer?
 
@@ -27,7 +28,7 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     var claims: Claims
 
     var warps: MutableMap<String, Location>
-    
+
     val citizens: MutableSet<CPlayer>
 
     var relationships: Relationships

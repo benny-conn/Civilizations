@@ -7,7 +7,7 @@ package net.tolmikarc.civilizations
 import io.papermc.lib.PaperLib
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import net.tolmikarc.civilizations.command.CivilizationCommandGroup
+import net.tolmikarc.civilizations.command.CivilizationsCommandGroup
 import net.tolmikarc.civilizations.command.MapCommand
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
@@ -48,6 +48,8 @@ class CivilizationsPlugin : SimplePlugin() {
     //  make the conversation canceller a variable
     //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
     //  WG integration
+    //  Remain.setCustomName() instead of packet manipulation???
+    //  Remain.setCooldown() for TNT placement in raid??
     //
     override fun onPluginStart() {
         loadDatabase()
@@ -107,7 +109,7 @@ class CivilizationsPlugin : SimplePlugin() {
 
 
     private fun registerAllCommands() {
-        registerCommands("civilizations|civ", CivilizationCommandGroup())
+        registerCommands("civilizations|civ", CivilizationsCommandGroup())
     }
 
     private fun registerAllEvents() {

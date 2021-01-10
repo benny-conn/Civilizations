@@ -46,6 +46,7 @@ object CivDatastore : Datastore() {
                     }
                     val name: String? = deserializedCiv.name
                     Debugger.debug("sql", "Loading data for civ: $name")
+                    val description = deserializedCiv.description
                     val power: Int = deserializedCiv.power
                     val leader = deserializedCiv.leader
                     val home: Location? = deserializedCiv.home
@@ -62,6 +63,7 @@ object CivDatastore : Datastore() {
 
                     civ.apply {
                         if (name != null) this.name = name
+                        if (description != null) this.description = description
                         this.power = power
                         this.leader = leader
                         if (home != null) this.home = home

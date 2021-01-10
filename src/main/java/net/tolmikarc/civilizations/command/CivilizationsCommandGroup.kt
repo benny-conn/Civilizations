@@ -8,7 +8,7 @@ import net.tolmikarc.civilizations.command.management.*
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 
-class CivilizationCommandGroup : SimpleCommandGroup() {
+class CivilizationsCommandGroup : SimpleCommandGroup() {
     override fun registerSubcommands() {
         setCommandsPerPage(12)
         registerSubcommand(CreateCommand(this))
@@ -31,6 +31,7 @@ class CivilizationCommandGroup : SimpleCommandGroup() {
         registerSubcommand(PlotCommand(this))
         registerSubcommand(SethomeCommand(this))
         registerSubcommand(HomeCommand(this))
+        registerSubcommand(DescriptionCommand(this))
         registerSubcommand(EnemyCommand(this))
         registerSubcommand(SurrenderCommand(this))
         registerSubcommand(RepairCommand(this))
