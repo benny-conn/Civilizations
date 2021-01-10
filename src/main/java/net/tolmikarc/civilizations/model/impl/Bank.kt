@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.model.impl
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
+import net.tolmikarc.civilizations.util.CivUtil
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
@@ -14,6 +15,8 @@ import java.util.*
 data class Bank(val civilization: Civ) : ConfigSerializable {
 
     var balance: Double = 0.0
+    val upkeep: Double = CivUtil.calculateFormulaForCiv(Settings.UPKEEP_FORMULA, civilization)
+    var taxes: Double = 0.0
 
 
     fun addBalance(amount: Double) {

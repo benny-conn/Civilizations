@@ -12,7 +12,6 @@ import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
-import java.util.*
 
 class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info") {
     override fun onCommand() {
@@ -42,6 +41,7 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
         val canSwitch: MutableList<String> = ArrayList()
         val canInteract: MutableList<String> = ArrayList()
         val enemies: MutableList<String?> = ArrayList()
+        val warring: MutableList<String?> = ArrayList()
         val allies: MutableList<String?> = ArrayList()
         val outlaws: MutableList<String?> = ArrayList()
         for (player in civilization.citizens) {
@@ -49,6 +49,9 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
         }
         for (enemy in civilization.relationships.enemies) {
             enemies.add(enemy.name)
+        }
+        for (enemy in civilization.relationships.warring) {
+            warring.add(enemy.name)
         }
         for (ally in civilization.relationships.allies) {
             allies.add(ally.name)
@@ -76,6 +79,8 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
                 ", "
             ), "${Settings.PRIMARY_COLOR}Power: ${Settings.SECONDARY_COLOR} ${civilization.power}",
             "${Settings.PRIMARY_COLOR}Balance: ${Settings.SECONDARY_COLOR} ${Settings.CURRENCY_SYMBOL}${civilization.bank.balance}",
+            "${Settings.PRIMARY_COLOR}Upkeep Cost: ${Settings.SECONDARY_COLOR}${Settings.CURRENCY_SYMBOL}${civilization.bank.upkeep}",
+            "${Settings.PRIMARY_COLOR}Tax Amount: ${Settings.SECONDARY_COLOR}${Settings.CURRENCY_SYMBOL}${civilization.bank.taxes}",
             "${Settings.PRIMARY_COLOR}Total Blocks: ${Settings.SECONDARY_COLOR}" + civilization.claims.totalBlocksCount,
             "${Settings.PRIMARY_COLOR}============================",
             "${Settings.PRIMARY_COLOR}PVP: ${Settings.SECONDARY_COLOR}" + toggleables.pvp,
@@ -104,6 +109,10 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
             "${Settings.PRIMARY_COLOR}============================",
             "${Settings.PRIMARY_COLOR}Enemies: ${Settings.SECONDARY_COLOR}" + Common.join(
                 enemies,
+                ", "
+            ),
+            "${Settings.PRIMARY_COLOR}Warring: ${Settings.SECONDARY_COLOR}" + Common.join(
+                warring,
                 ", "
             ),
             "${Settings.PRIMARY_COLOR}Allies: ${Settings.SECONDARY_COLOR}" + Common.join(

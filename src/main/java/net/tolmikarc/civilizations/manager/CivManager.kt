@@ -14,7 +14,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object CivManager : Manager<Civ> {
-    override val all: MutableCollection<Civ>
+    override val all: Collection<Civ>
         get() = cacheMap.values
     override val cacheMap: MutableMap<UUID, Civ> = ConcurrentHashMap()
     override val byName: MutableMap<String, Civ> = ConcurrentHashMap()

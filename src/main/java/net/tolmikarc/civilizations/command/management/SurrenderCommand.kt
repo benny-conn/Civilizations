@@ -29,6 +29,7 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
                     }
                     relationships.enemies.remove(enemyCiv)
                     enemyCiv?.addPower(Settings.POWER_WAR_WIN)
+                    tellSuccess("&4Surrendered to ${enemyCiv?.name}")
                 }
                 ConfirmMenu("&4Surrender?", "Give up the war with ${enemyCiv!!.name}", ::run)
             }
@@ -37,6 +38,7 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
 
     init {
         minArguments = 1
+        usage = "<enemy>"
         setDescription("Surrender a war with another Civilization")
         if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }

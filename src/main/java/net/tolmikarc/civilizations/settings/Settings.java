@@ -45,6 +45,9 @@ public class Settings extends SimpleSettings {
 	public static Integer COLONY_MIN_DISTANCE_FROM_NEAREST_CLAIM;
 	public static String MAX_PLOTS_FORMULA;
 
+	public static String UPKEEP_FORMULA;
+	public static Double MAX_TAXES;
+
 	public static String MAX_WARPS_FORMULA;
 	public static Boolean SHOW_COORDS_IN_INFO;
 	public static Boolean FLY_ENABLED;
@@ -129,6 +132,9 @@ public class Settings extends SimpleSettings {
 		MAX_COLONIES_FORMULA = getString("Claim.Colony.Max_Colonies");
 		COLONY_MIN_DISTANCE_FROM_NEAREST_CLAIM = getInteger("Claim.Colony.Min_Distance_From_Nearest_Claim");
 		MAX_PLOTS_FORMULA = getString("Plots.Max_Plots");
+
+		UPKEEP_FORMULA = getString("Upkeep");
+		MAX_TAXES = getDouble("Tax_Cap");
 
 		MAX_WARPS_FORMULA = getString("Extra_Settings.Max_Warps");
 		SHOW_COORDS_IN_INFO = getBoolean("Extra_Settings.Show_Coords_In_Info");

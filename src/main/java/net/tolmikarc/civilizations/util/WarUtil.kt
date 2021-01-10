@@ -38,9 +38,8 @@ object WarUtil {
     }
 
     private fun isPlayerRaiding(player: CPlayer, attackedCiv: Civ): Boolean {
-        val attackingCiv = player.civilization ?: return false
         val raid = attackedCiv.raid ?: return false
-        return raid.playersInvolved.containsKey(player) && isBeingRaided(attackedCiv, attackingCiv)
+        return raid.playersInvolved.containsKey(player)
     }
 
 
@@ -49,6 +48,12 @@ object WarUtil {
         if (attackedCiv == null || attackingCiv == null) return false
         val raid = attackedCiv.raid ?: return false
         return raid.civBeingRaided == attackedCiv && raid.civRaiding == attackingCiv
+    }
+
+    fun isBeingRaidedByAlly(attackedCiv: Civ?, allyCiv: Civ?): Boolean {
+        if (attackedCiv == null || allyCiv == null) return false
+        val raid = attackedCiv.raid ?: return false
+        return raid.civBeingRaided == attackedCiv && raid.civRaiding.relationships.allies.contains(allyCiv)
     }
 
     fun isInRaid(civilization: Civ): Boolean {

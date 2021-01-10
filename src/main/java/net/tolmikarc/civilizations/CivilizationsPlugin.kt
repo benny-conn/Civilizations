@@ -20,6 +20,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
+import net.tolmikarc.civilizations.task.UpkeepTaxesTask
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.dynmap.DynmapAPI
@@ -93,6 +94,7 @@ class CivilizationsPlugin : SimplePlugin() {
 
     private fun registerAllTasks() {
         Common.runTimerAsync(20, CooldownTask())
+        Common.runTimerAsync(20 * 60 * 60, UpkeepTaxesTask())
     }
 
     private fun registerAllPlaceholders() {

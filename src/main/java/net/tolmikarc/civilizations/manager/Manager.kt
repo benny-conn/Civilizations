@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.manager
 import java.util.*
 
 interface Manager<T> {
-    val all: MutableCollection<T>
+    val all: Collection<T>
     val cacheMap: MutableMap<UUID, T>
     val byName: MutableMap<String, T>
     val queuedForSaving: MutableSet<T>

@@ -12,7 +12,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object PlayerManager : Manager<CPlayer> {
-    override val all: MutableCollection<CPlayer>
+    override val all: Collection<CPlayer>
         get() = cacheMap.values
     override val cacheMap: MutableMap<UUID, CPlayer> = ConcurrentHashMap()
     override val byName: MutableMap<String, CPlayer> = ConcurrentHashMap()

@@ -23,7 +23,7 @@ class CivListener : Listener {
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         val playersCiv = civPlayer.civilization
         // does the player have a civilization that is raiding the new civ?
-        if (WarUtil.isBeingRaided(event.civ, playersCiv)) {
+        if (WarUtil.isBeingRaided(event.civ, playersCiv) || WarUtil.isBeingRaidedByAlly(event.civ, playersCiv)) {
             // if the player ratio isn't valid, he cannot participate in raid :(
             if (!WarUtil.isPlayerToPlayerRatioValid(event.civ, playersCiv)) {
                 Common.tell(event.player, "&cThere are too many players in this raid for you to participate")
