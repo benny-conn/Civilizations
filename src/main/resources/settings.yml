@@ -33,10 +33,10 @@ Locale: en
 
 # Which color pallet for the plugin messages?
 # (#) <primary> <secondary>
-# 1. dark purple, light purple
-# 2. dark_blue, light_blue
-# 3. orange, yellow
-# 4. dark_green, light_green
+# 1. light purple, dark purple
+# 2. light blue, dark blue
+# 3. yellow, gold
+# 4. light green, dark green
 Color_Pallet: 1
 
 # Will permissions be required for every command
@@ -91,7 +91,7 @@ Plots:
   Max_Plots: "{citizens} * 2"
 
 # (FORMULA) the amount of money a civilization loses every day in exchange for keeping their land
-Upkeep: "{area} / 1000"
+Upkeep: "{total_area} / 1000"
 # max tax amount in currency that a civilization can charge per day to its citizens
 Tax_Cap: 200.00
 

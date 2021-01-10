@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.task
 import net.tolmikarc.civilizations.model.UniquelyIdentifiable
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.scheduler.BukkitRunnable
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class CooldownTask : BukkitRunnable() {
@@ -29,37 +30,25 @@ class CooldownTask : BukkitRunnable() {
             return (this * 1000).toLong()
         }
 
-        private val cooldowns: MutableMap<Cooldown, Long> = ConcurrentHashMap()
+        private val cooldowns: MutableMap<AbstractMap.SimpleEntry<UniquelyIdentifiable, CooldownType>, Long> =
+            ConcurrentHashMap()
 
 
         fun addCooldownTimer(entity: UniquelyIdentifiable, type: CooldownType) {
-            val cooldown = Cooldown.cooldownMap[entity] ?: Cooldown(entity, type)
-            Cooldown.cooldownMap[entity] = cooldown
+            val cooldown = AbstractMap.SimpleEntry(entity, type)
             cooldowns[cooldown] = System.currentTimeMillis() + type.seconds.toMilis()
         }
 
 
         fun hasCooldown(entity: UniquelyIdentifiable, type: CooldownType): Boolean {
-            val cooldown = Cooldown.cooldownMap[entity]
-            if (cooldown != null) {
-                if (cooldown.type == type)
-                    return cooldowns.containsKey(cooldown)
-            }
-            return false
+            val cooldown = AbstractMap.SimpleEntry(entity, type)
+            return cooldowns.containsKey(cooldown)
         }
 
 
         fun getCooldownRemaining(entity: UniquelyIdentifiable, type: CooldownType): Int {
-            val cooldown = Cooldown.cooldownMap[entity]
-            if (cooldown != null)
-                return if (cooldown.type == type && cooldowns.containsKey(cooldown)) ((cooldowns[cooldown]!! - System.currentTimeMillis()) / 1000L).toInt() else 0
-            return 0
-        }
-    }
-
-    data class Cooldown(val entity: UniquelyIdentifiable, val type: CooldownType) {
-        companion object {
-            val cooldownMap: MutableMap<UniquelyIdentifiable, Cooldown> = HashMap()
+            val cooldown = AbstractMap.SimpleEntry(entity, type)
+            return if (cooldowns.containsKey(cooldown)) ((cooldowns[cooldown]!! - System.currentTimeMillis()) / 1000L).toInt() else 0
         }
     }
 

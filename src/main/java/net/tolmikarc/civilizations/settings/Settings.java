@@ -154,6 +154,7 @@ public class Settings extends SimpleSettings {
 		POWER_PVP_TRANSACTION = getInteger("Power.War.PVP");
 		MONEY_PVP_TRANSACTION = getDouble("War.Raid.PVP_Transaction");
 		POWER_RAID_BLOCK = getInteger("Power.War.Block");
+		POWER_WAR_WIN = getInteger("Power.War.Win");
 
 		BLOCKS_PER_SECONDS_REPAIR = getInteger("War.Blocks_Per_Second_Repair");
 		REPAIR_COST_PER_BLOCK = getDouble("War.Repair_Cost_Per_Block");
@@ -228,20 +229,20 @@ public class Settings extends SimpleSettings {
 		int colorPallet = getInteger("Color_Pallet");
 		switch (colorPallet) {
 			case 1:
-				PRIMARY_COLOR = ChatColor.DARK_PURPLE;
-				SECONDARY_COLOR = ChatColor.LIGHT_PURPLE;
+				PRIMARY_COLOR = ChatColor.LIGHT_PURPLE;
+				SECONDARY_COLOR = ChatColor.DARK_PURPLE;
 				break;
 			case 2:
-				PRIMARY_COLOR = ChatColor.BLUE;
-				SECONDARY_COLOR = ChatColor.AQUA;
+				PRIMARY_COLOR = ChatColor.AQUA;
+				SECONDARY_COLOR = ChatColor.BLUE;
 				break;
 			case 3:
-				PRIMARY_COLOR = ChatColor.GOLD;
-				SECONDARY_COLOR = ChatColor.YELLOW;
+				PRIMARY_COLOR = ChatColor.YELLOW;
+				SECONDARY_COLOR = ChatColor.GOLD;
 				break;
 			case 4:
-				PRIMARY_COLOR = ChatColor.DARK_GREEN;
-				SECONDARY_COLOR = ChatColor.GREEN;
+				PRIMARY_COLOR = ChatColor.GREEN;
+				SECONDARY_COLOR = ChatColor.DARK_GREEN;
 				break;
 		}
 	}

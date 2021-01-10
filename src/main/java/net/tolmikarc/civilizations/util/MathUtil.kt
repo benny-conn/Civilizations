@@ -24,11 +24,11 @@ object MathUtil {
 
     fun replaceVariablesAndCalculateFormula(formula: String, civilization: Civ, region: Claim?): Double {
         var replacedVariables = formula
-            .replace("{total_claims}", civilization.claims.totalClaimCount.toString())
-            .replace("{total_area}", civilization.claims.totalBlocksCount.toString())
             .replace("{citizens}", civilization.citizens.size.toString())
             .replace("{power}", civilization.power.toString())
             .replace("{money}", civilization.bank.balance.toString())
+            .replace("{total_area}", civilization.claims.totalBlocksCount.toString())
+            .replace("{total_claims}", civilization.claims.totalClaimCount.toString())
         if (region != null) {
             replacedVariables =
                 replacedVariables.replace("{area}", areaBetweenTwoPoints(region.primary, region.secondary).toString())

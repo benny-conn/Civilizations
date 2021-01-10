@@ -18,10 +18,10 @@ class Relationships(val civ: Civ) : ConfigSerializable {
 
     val warring: Set<Civ>
         get() {
-            val set: MutableSet<Civ> = HashSet()
-            for (civ in enemies) {
-                if (civ.relationships.enemies.contains(civ))
-                    set.add(civ)
+            val set = mutableSetOf<Civ>()
+            for (c in enemies) {
+                if (c.relationships.enemies.contains(civ))
+                    set.add(c)
             }
             return set
         }

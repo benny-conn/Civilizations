@@ -69,8 +69,8 @@ object CivManager : Manager<Civ> {
         civilization.leader = player
         civilization.addCitizen(player)
         player.civilization = civilization
-        player.power += CivUtil.calculateFormulaForCiv(Settings.POWER_LEADER_FORMULA, civilization).toInt()
-        player.power += CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, civilization).toInt()
+        player.addPower(CivUtil.calculateFormulaForCiv(Settings.POWER_LEADER_FORMULA, civilization).toInt())
+        player.addPower(CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, civilization).toInt())
         byName[name] = civilization
         queuedForSaving.add(civilization)
         return civilization

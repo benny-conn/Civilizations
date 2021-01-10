@@ -42,14 +42,11 @@ class CivilizationsPlugin : SimplePlugin() {
     //  how to make perms and toggles better than towny
     //  WAR
     //  make sure players can get out of claims at all times
-    //  find a natural way to introduce players to creating civs/claims
     //  Towny and Factions adapter
     //  maybe a system to restore land to original state before players touched it
     //  make the conversation canceller a variable
     //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
     //  WG integration
-    //  Remain.setCustomName() instead of packet manipulation???
-    //  Remain.setCooldown() for TNT placement in raid??
     //
     override fun onPluginStart() {
         loadDatabase()

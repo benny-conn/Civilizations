@@ -60,13 +60,12 @@ object WarUtil {
         return civilization.raid != null
     }
 
-    private fun getRaidLives(player: CPlayer, civilization: Civ): Int? {
-        if (civilization.raid != null) if (civilization.raid!!.playersInvolved.containsKey(player)) return civilization.raid!!.playersInvolved[player]
-        return 0
+    private fun getRaidLives(player: CPlayer, civilization: Civ): Int {
+        return civilization.raid?.playersInvolved?.get(player) ?: 0
     }
 
     private fun isPlayerLivesValid(player: CPlayer, civInRaid: Civ): Boolean {
-        return if (Settings.RAID_LIVES == -1) true else getRaidLives(player, civInRaid)!! >= 0
+        return if (Settings.RAID_LIVES == -1) true else getRaidLives(player, civInRaid) > 0
     }
 
     fun isPlayerAtWar(player: Player, civ: Civ): Boolean {

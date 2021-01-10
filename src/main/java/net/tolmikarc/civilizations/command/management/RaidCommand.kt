@@ -28,6 +28,7 @@ class RaidCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "raid"
                 checkNotNull(enemyCiv, "Please specify a valid Civilization")
                 checkBoolean(!isInRaid(enemyCiv!!), "This civilization is already in a Raid")
                 checkBoolean(isPlayerAtWar(player, enemyCiv), "You must first be at war to raid an enemy")
+                checkBoolean(enemyCiv.claims.totalClaimCount > 0, "The enemy does not have any land")
                 checkBoolean(
                     !isLocationInCiv(player.location, enemyCiv),
                     "You must not be in the enemy territory when you begin a raid"
@@ -48,7 +49,7 @@ class RaidCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "raid"
                 val raid = Raid(enemyCiv, this)
                 enemyCiv.raid = raid
                 this.raid = raid
-                tell("${Settings.PRIMARY_COLOR}&lRaid has begun! Destroy as much as you can before the timer runs out!")
+                tellSuccess("${Settings.PRIMARY_COLOR}&lRaid has begun! Destroy as much as you can before the timer runs out!")
             }
         }
     }

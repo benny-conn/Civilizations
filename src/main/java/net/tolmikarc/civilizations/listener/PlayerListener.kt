@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.listener
 
+import net.tolmikarc.civilizations.NameTag
 import net.tolmikarc.civilizations.PermissionChecker.can
 import net.tolmikarc.civilizations.constants.Constants
 import net.tolmikarc.civilizations.event.CivEnterEvent
@@ -79,9 +80,15 @@ class PlayerListener : Listener {
             civilization.raid?.let { raid ->
                 // make sure player is involved in the raid
                 if (!raid.playersInvolved.containsKey(civPlayer)) return
-                // if they have no lives left do nothing
-                if (raid.playersInvolved[civPlayer]!! <= 0)
+                // if they have no lives left let them know
+                if (raid.playersInvolved[civPlayer]!! <= 0) {
+                    Common.tell(
+                        player,
+                        "&cYou do not have any more lives left and can no longer participate in the raid"
+                    )
+                    NameTag.remove(player)
                     return
+                }
 
 
                 // give player spawn protection if they died during a raid
@@ -91,11 +98,11 @@ class PlayerListener : Listener {
                     HookManager.deposit(killer, Settings.MONEY_PVP_TRANSACTION)
                 }
                 civPlayer.removePower(Settings.POWER_PVP_TRANSACTION)
-                // TODO make this number n0t mag1c numb3r
                 HookManager.withdraw(player, Settings.MONEY_PVP_TRANSACTION)
                 // subtract one life
                 val playerLives = raid.playersInvolved[civPlayer]!! - 1
                 raid.playersInvolved[civPlayer] = playerLives
+                println(playerLives)
             }
 
         }
@@ -358,8 +365,8 @@ class PlayerListener : Listener {
             val civDamager = PlayerManager.fromBukkitPlayer(damager)
             val location = damaged.getLocation()
             val civilization = getCivFromLocation(location) ?: return
-            if (civilization.citizens.contains(civDamaged)) {
-                event.isCancelled = !canAttackCivilization(civDamager, civilization)
+            if (canAttackCivilization(civDamager, civilization) && canAttackCivilization(civDamaged, civilization)) {
+                event.isCancelled = hasCooldown(civDamaged, CooldownTask.CooldownType.RESPAWN_PROTECTION)
                 if (!event.isCancelled) {
                     // prevent pvplogging
                     if (Settings.RAID_PVP_TP_COOLDOWN) addCooldownTimer(

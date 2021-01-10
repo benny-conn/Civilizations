@@ -15,7 +15,8 @@ import java.util.*
 data class Bank(val civilization: Civ) : ConfigSerializable {
 
     var balance: Double = 0.0
-    val upkeep: Double = CivUtil.calculateFormulaForCiv(Settings.UPKEEP_FORMULA, civilization)
+    val upkeep: Double
+        get() = CivUtil.calculateFormulaForCiv(Settings.UPKEEP_FORMULA, civilization)
     var taxes: Double = 0.0
 
 

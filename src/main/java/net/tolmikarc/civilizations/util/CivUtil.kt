@@ -15,8 +15,8 @@ object CivUtil {
         return replaceVariablesAndCalculateFormula(formula, civilization, null)
     }
 
-    fun calculateFormulaForCiv(formula: String, civilization: Civ, region: Claim): Double {
-        return replaceVariablesAndCalculateFormula(formula, civilization, region)
+    fun calculateFormulaForCiv(formula: String, civilization: Civ, claim: Claim): Double {
+        return replaceVariablesAndCalculateFormula(formula, civilization, claim)
     }
 
     fun isPlayerOutlaw(player: CPlayer, civilization: Civ): Boolean {
