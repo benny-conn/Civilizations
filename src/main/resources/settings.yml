@@ -124,6 +124,8 @@ Extra_Settings:
   Show_Coords_In_Info: true
   # is /civ fly enabled for those given the permission civilizations.command.fly
   Fly: true
+  # inform players about creating a civilization when they first use a chest
+  Tutorial: true
 
 War:
   Blocks_Per_Second_Repair: 500

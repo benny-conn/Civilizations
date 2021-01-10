@@ -22,7 +22,7 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home"
             if (args.isNotEmpty()) {
                 CivManager.getByName(args[0])
                     ?.let { civ ->
-                        if (civ.claimToggleables.public) civ.home?.let { home ->
+                        if (civ.toggleables.public) civ.home?.let { home ->
                             checkBoolean(
                                 !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
                                 "Please wait " + getCooldownRemaining(

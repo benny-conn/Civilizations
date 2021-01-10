@@ -20,7 +20,7 @@ class WorldListener : Listener {
             if (!plot.claimToggleables.fire) event.isCancelled = true
             return
         }
-        if (!civilization.claimToggleables.fire) event.isCancelled = true
+        if (!civilization.toggleables.fire) event.isCancelled = true
     }
 
 }

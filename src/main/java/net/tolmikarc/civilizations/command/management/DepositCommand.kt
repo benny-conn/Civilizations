@@ -22,7 +22,7 @@ class DepositCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "de
                 val amount = doubleToMoney(args[0].toDouble())
                 checkBoolean(HookManager.getBalance(player) - amount > 0, "You do not have enough money to deposit")
                 HookManager.withdraw(player, amount)
-                addBalance(amount)
+                bank.addBalance(amount)
                 tellSuccess("${Settings.PRIMARY_COLOR}Deposited ${Settings.SECONDARY_COLOR}" + amount + "${Settings.PRIMARY_COLOR} into your Civilization's Bank")
             }
         }

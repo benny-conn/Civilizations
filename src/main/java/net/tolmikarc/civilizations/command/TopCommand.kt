@@ -29,7 +29,7 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                     return@sortedBy when (args[0]) {
                         "power" -> it.power
                         "balance" -> it.bank.balance.toInt()
-                        "land" -> it.totalBlocksCount
+                        "land" -> it.claims.totalBlocksCount
                         "citizens" -> it.citizenCount
                         else -> it.power
                     }
@@ -56,7 +56,7 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                         for (i in lowerLimit..(upperLimit + 1)) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].totalBlocksCount} ")
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].claims.totalBlocksCount} ")
                         }
                     }
                     "citizens" -> {

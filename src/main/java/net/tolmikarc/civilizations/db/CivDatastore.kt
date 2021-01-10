@@ -9,8 +9,6 @@ import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.impl.Bank
 import net.tolmikarc.civilizations.model.impl.Civilization
-import net.tolmikarc.civilizations.model.impl.Claim
-import net.tolmikarc.civilizations.model.impl.Plot
 import net.tolmikarc.civilizations.war.RegionDamages
 import org.bukkit.Location
 import org.bukkit.inventory.ItemStack
@@ -51,21 +49,15 @@ object CivDatastore : Datastore() {
                     val power: Int = deserializedCiv.power
                     val leader = deserializedCiv.leader
                     val home: Location? = deserializedCiv.home
-                    val claims: MutableSet<Claim> = deserializedCiv.claims
-
-                    val plots: MutableSet<Plot> = deserializedCiv.plots
+                    val claims = deserializedCiv.claims
                     val warps: MutableMap<String, Location> = deserializedCiv.warps
-                    val idNumber: Int = deserializedCiv.idNumber
-                    val totalBlocksCount: Int = deserializedCiv.totalBlocksCount
                     val citizens: MutableSet<CPlayer> = deserializedCiv.citizens
-                    val allies: MutableSet<Civ> = deserializedCiv.allies
-                    val enemies: MutableSet<Civ> = deserializedCiv.enemies
-                    val outlaws: MutableSet<CPlayer> = deserializedCiv.outlaws
+                    val relationships = deserializedCiv.relationships
                     val bank: Bank = deserializedCiv.bank
                     val banner: ItemStack? = deserializedCiv.banner
                     val book: ItemStack? = deserializedCiv.book
                     val permissions = deserializedCiv.permissionGroups
-                    val toggleables = deserializedCiv.claimToggleables
+                    val toggleables = deserializedCiv.toggleables
                     val regionDamages: RegionDamages? = deserializedCiv.regionDamages
 
                     civ.apply {
@@ -73,20 +65,15 @@ object CivDatastore : Datastore() {
                         this.power = power
                         this.leader = leader
                         if (home != null) this.home = home
-                        this.claims.addAll(claims)
-                        this.plots.addAll(plots)
+                        this.claims = claims
                         this.warps = warps
-                        this.idNumber = idNumber
-                        this.totalBlocksCount = totalBlocksCount
                         this.citizens.addAll(citizens)
-                        this.allies.addAll(allies)
-                        this.enemies.addAll(enemies)
-                        this.outlaws.addAll(outlaws)
+                        this.relationships = relationships
                         this.bank = bank
                         if (banner != null) this.banner = banner
                         if (book != null) this.book = book
                         this.permissionGroups = permissions
-                        this.claimToggleables = toggleables
+                        this.toggleables = toggleables
                         if (regionDamages != null) this.regionDamages = regionDamages
                     }
                 } else CivManager.removeCiv(civ)

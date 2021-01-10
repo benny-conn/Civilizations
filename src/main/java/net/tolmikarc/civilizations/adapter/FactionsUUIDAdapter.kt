@@ -27,9 +27,9 @@ object FactionsUUIDAdapter {
         civ.name = faction.tag
         civ.leader = PlayerManager.getByUUID(faction.getFPlayersWhereRole(Role.ADMIN)[0].player.uniqueId)
         civ.permissionGroups = convertPermissions(faction)
-        civ.claims.addAll(getConvertedRegions(faction, civ))
+        civ.claims.claims.addAll(getConvertedRegions(faction, civ))
         civ.citizens.addAll(faction.fPlayers.map { fPlayer: FPlayer -> PlayerManager.getByUUID(fPlayer.player.uniqueId) })
-        civ.idNumber = civ.totalClaimCount + 1
+        civ.claims.idNumber = civ.claims.totalClaimCount + 1
         civ.power = faction.power.toInt()
         civ.home = faction.home
         val book = ItemStack(Material.WRITTEN_BOOK)

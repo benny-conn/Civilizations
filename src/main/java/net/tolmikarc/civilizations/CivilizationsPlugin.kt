@@ -44,12 +44,9 @@ class CivilizationsPlugin : SimplePlugin() {
     //  find a natural way to introduce players to creating civs/claims
     //  Towny and Factions adapter
     //  maybe a system to restore land to original state before players touched it
-    //  learn about kotlin coroutines
     //  make the conversation canceller a variable
     //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
-    //  COOL MAP SYSTEM WITH REAL MINECRAFT MAPS
     //  WG integration
-    //  make settings option for repair blocks a double and consider making others doubles
     //
     override fun onPluginStart() {
         loadDatabase()

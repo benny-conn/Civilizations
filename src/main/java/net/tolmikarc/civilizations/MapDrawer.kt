@@ -24,9 +24,9 @@ class MapDrawer(val region: Claim) : MapRenderer() {
                     val civ = ClaimUtil.getCivFromLocation(location)!!
                     var color = MapPalette.BLUE
                     if (playersCiv != null) {
-                        if (playersCiv.enemies.contains(civ))
+                        if (playersCiv.relationships.enemies.contains(civ))
                             color = MapPalette.RED
-                        if (playersCiv.allies.contains(civ))
+                        if (playersCiv.relationships.allies.contains(civ))
                             color = MapPalette.LIGHT_GREEN
                     }
                     canvas.setPixel(

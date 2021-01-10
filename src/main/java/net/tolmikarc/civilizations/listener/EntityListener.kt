@@ -38,11 +38,11 @@ class EntityListener : Listener {
             if (!plot.claimToggleables.mobs) event.isCancelled = true
             return
         }
-        if (!civilization.claimToggleables.mobs) {
+        if (!civilization.toggleables.mobs) {
             event.isCancelled = true
 
             // Remove monsters in civilization
-            for (region in civilization.claims) for (entity in region.entities) {
+            for (region in civilization.claims.claims) for (entity in region.entities) {
                 (entity as? Monster)?.remove()
             }
         }
@@ -104,7 +104,7 @@ class EntityListener : Listener {
                 if (!plot.claimToggleables.explosion) blockIterator.remove()
                 continue
             }
-            if (!civilization.claimToggleables.explosion) blockIterator.remove()
+            if (!civilization.toggleables.explosion) blockIterator.remove()
         }
     }
 

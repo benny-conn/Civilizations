@@ -49,9 +49,9 @@ data class PermissionGroups(val civ: Civ) : ConfigSerializable {
     }
 
     fun getPlayerGroup(player: CPlayer): PermissionGroup {
-        if (civ.allies.any { it.citizens.contains(player) })
+        if (civ.relationships.allies.any { it.citizens.contains(player) })
             return allyGroup
-        if (civ.enemies.any { it.citizens.contains(player) })
+        if (civ.relationships.enemies.any { it.citizens.contains(player) })
             return enemyGroup
         return playerGroupMap.getOrDefault(player.uuid, outsiderGroup)
     }

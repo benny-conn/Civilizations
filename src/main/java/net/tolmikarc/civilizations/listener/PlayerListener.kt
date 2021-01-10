@@ -26,6 +26,7 @@ import net.tolmikarc.civilizations.util.WarUtil.increaseBlocksBroken
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.Statistic
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -201,6 +202,16 @@ class PlayerListener : Listener {
             val player = event.player
             val block = event.block
             PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
+
+
+                // inform players that their chests are vulnerable!
+                if (block.type == Material.CHEST)
+                    if (Settings.TUTORIAL)
+                        if (player.getStatistic(Statistic.CHEST_OPENED) <= 1)
+                            if (civPlayer.civilization == null)
+                                Common.tell(player, "Use /civ create to create a Civilization and protect your land!")
+
+
                 val civilization = getCivFromLocation(block.location) ?: return
                 // if a player can attack (is in a raid currently and valid player proportions) then let him place tnt
                 if (canAttackCivilization(civPlayer, civilization)) {
@@ -368,7 +379,7 @@ class PlayerListener : Listener {
                 }
                 return
             }
-            event.isCancelled = !civilization.claimToggleables.pvp
+            event.isCancelled = !civilization.toggleables.pvp
             if (event.isCancelled) {
                 Common.tell(damager, "&cYou cannot PVP here.")
             }

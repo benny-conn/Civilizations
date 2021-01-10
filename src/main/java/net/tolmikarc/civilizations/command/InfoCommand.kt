@@ -35,7 +35,7 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
 
     private fun sendInfo(civilization: Civ) {
         val permissions = civilization.permissionGroups
-        val toggleables = civilization.claimToggleables
+        val toggleables = civilization.toggleables
         val citizenNames: MutableList<String?> = ArrayList()
         val canBuild: MutableList<String> = ArrayList()
         val canBreak: MutableList<String> = ArrayList()
@@ -47,16 +47,16 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
         for (player in civilization.citizens) {
             citizenNames.add(player.playerName)
         }
-        for (enemy in civilization.enemies) {
+        for (enemy in civilization.relationships.enemies) {
             enemies.add(enemy.name)
         }
-        for (ally in civilization.allies) {
+        for (ally in civilization.relationships.allies) {
             allies.add(ally.name)
         }
-        for (outlaw in civilization.outlaws) {
+        for (outlaw in civilization.relationships.outlaws) {
             outlaws.add(outlaw.playerName)
         }
-        
+
         canBuild.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.BUILD) }.map { it.name }
             .toMutableList())
         canBreak.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.BREAK) }.map { it.name }
@@ -76,7 +76,7 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
                 ", "
             ), "${Settings.PRIMARY_COLOR}Power: ${Settings.SECONDARY_COLOR} ${civilization.power}",
             "${Settings.PRIMARY_COLOR}Balance: ${Settings.SECONDARY_COLOR} ${Settings.CURRENCY_SYMBOL}${civilization.bank.balance}",
-            "${Settings.PRIMARY_COLOR}Total Blocks: ${Settings.SECONDARY_COLOR}" + civilization.totalBlocksCount,
+            "${Settings.PRIMARY_COLOR}Total Blocks: ${Settings.SECONDARY_COLOR}" + civilization.claims.totalBlocksCount,
             "${Settings.PRIMARY_COLOR}============================",
             "${Settings.PRIMARY_COLOR}PVP: ${Settings.SECONDARY_COLOR}" + toggleables.pvp,
             "${Settings.PRIMARY_COLOR}Mob Spawning: ${Settings.SECONDARY_COLOR}" + toggleables.mobs,

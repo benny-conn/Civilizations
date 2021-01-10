@@ -66,7 +66,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
         if (args.size > 1 && args[1].equals("here", ignoreCase = true)) {
             getRegionFromLocation(player.location)?.let { visualizedRegions.add(it) }
 
-        } else visualizedRegions.addAll(civilization.claims)
+        } else visualizedRegions.addAll(civilization.claims.claims)
         if (civPlayer.visualizing) {
             tell("${Settings.SECONDARY_COLOR}Beginning to visualize...")
         } else {
@@ -92,7 +92,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
         checkBoolean(!player.visualizing, "Stop visualizing before you claim more land.")
         checkBoolean(player.selection.bothPointsSelected(), "You must have both points selected to claim")
         val claim = Claim(
-            civilization.totalClaimCount,
+            civilization.claims.totalClaimCount,
             player.selection.primary!!,
             player.selection.secondary!!
         )
@@ -105,11 +105,11 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
         )
         val maxClaims = calculateFormulaForCiv(Settings.MAX_CLAIMS_FORMULA, civilization)
         if (maxClaims.toInt() != -1) checkBoolean(
-            civilization.totalClaimCount < maxClaims,
+            civilization.claims.totalClaimCount < maxClaims,
             "You cannot have more than $maxClaims claims"
         )
         if (Settings.MAX_BLOCKS_COUNT != -1) checkBoolean(
-            civilization.totalBlocksCount + totalArea < Settings.MAX_BLOCKS_COUNT,
+            civilization.claims.totalBlocksCount + totalArea < Settings.MAX_BLOCKS_COUNT,
             "You cannot have more than " + Settings.MAX_BLOCKS_COUNT + " blocks claimed"
         )
         if (Settings.MAX_CLAIM_SIZE != -1) checkBoolean(
@@ -120,7 +120,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
             distanceFromNearestClaim(claim.center) > Settings.MIN_DISTANCE_FROM_NEAREST_CLAIM,
             "You cannot claim so close to another Civilization's home"
         )
-        if (civilization.totalClaimCount > 0 && !isColony) checkBoolean(
+        if (civilization.claims.totalClaimCount > 0 && !isColony) checkBoolean(
             isRegionConnected(claim, civilization),
             "Claim must be connected to existing claim."
         )
@@ -137,14 +137,14 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
             isLocationInRegion(getPlayer().location, claim),
             "You must be standing in your new claim to claim it."
         )
-        if (civilization.totalClaimCount == 0)
+        if (civilization.claims.totalClaimCount == 0)
             checkBoolean(
                 !getPlayer().location.subtract(0.0, 1.0, 0.0).block.type.isAir,
                 "You be standing on solid ground to claim land"
             )
         if (isColony) {
             checkBoolean(
-                civilization.totalClaimCount > 0,
+                civilization.claims.totalClaimCount > 0,
                 "You must have at least one regular claim before creating a colony."
             )
             checkBoolean(
@@ -153,19 +153,19 @@ class ClaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "clai
             )
             val maxColonies = calculateFormulaForCiv(Settings.MAX_COLONIES_FORMULA, civilization)
             if (maxColonies.toInt() != -1) checkBoolean(
-                civilization.colonyCount < maxColonies,
+                civilization.claims.colonyCount < maxColonies,
                 "You cannot have more than $maxColonies colonies."
             )
-            val colony = Colony(civilization, civilization.idNumber, getPlayer().location)
-            civilization.addColony(colony)
-            tellSuccess("${Settings.SECONDARY_COLOR}Claimed colony with id ${Settings.PRIMARY_COLOR}" + civilization.idNumber)
+            val colony = Colony(civilization, civilization.claims.idNumber, getPlayer().location)
+            civilization.claims.addColony(colony)
+            tellSuccess("${Settings.SECONDARY_COLOR}Claimed colony with id ${Settings.PRIMARY_COLOR}" + civilization.claims.idNumber)
         } else {
-            tellSuccess("${Settings.SECONDARY_COLOR}Claimed region with id ${Settings.PRIMARY_COLOR}" + civilization.idNumber)
+            tellSuccess("${Settings.SECONDARY_COLOR}Claimed region with id ${Settings.PRIMARY_COLOR}" + civilization.claims.idNumber)
         }
-        if (civilization.totalClaimCount == 0) civilization.home = getPlayer().location
+        if (civilization.claims.totalClaimCount == 0) civilization.home = getPlayer().location
         HookManager.withdraw(getPlayer(), cost)
         player.selection.removeSelection(getPlayer())
-        civilization.addClaim(claim)
+        civilization.claims.addClaim(claim)
         Common.callEvent(
             ClaimEvent(
                 civilization,

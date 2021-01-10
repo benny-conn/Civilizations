@@ -22,7 +22,7 @@ class UnclaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "un
                 val regionToRemove = getRegionFromLocation(player.location, this)
                 checkNotNull(regionToRemove, "There is no region at your location")
                 fun run() {
-                    removeClaim(regionToRemove!!)
+                    claims.removeClaim(regionToRemove!!)
                     tellSuccess("&cRemoved region successfully")
                     Common.callEvent(
                         UnclaimEvent(

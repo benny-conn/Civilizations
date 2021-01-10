@@ -8,7 +8,7 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.permissions.ClaimToggleables
+import net.tolmikarc.civilizations.permissions.Toggleables
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
@@ -23,7 +23,7 @@ data class Plot(
     var price = 0.0
     var forSale = false
     var members: MutableSet<CPlayer> = HashSet()
-    var claimToggleables = ClaimToggleables()
+    var claimToggleables = Toggleables()
 
 
     fun addMember(player: CPlayer) {
@@ -57,7 +57,7 @@ data class Plot(
             val members: MutableSet<CPlayer> =
                 map.getSet("Members", UUID::class.java).stream().map { PlayerManager.getByUUID(it) }
                     .collect(Collectors.toSet())
-            val claimToggleables = map.get("Toggleables", ClaimToggleables::class.java)
+            val claimToggleables = map.get("Toggleables", Toggleables::class.java)
             plot.price = price.toDouble()
             plot.forSale = forSale
             plot.members = members

@@ -21,7 +21,7 @@ class DepositPrompt(val civilization: Civ, val player: Player) : SimplePrompt() 
             return null
         }
         HookManager.withdraw(player, cost)
-        civilization.addBalance(cost)
+        civilization.bank.addBalance(cost)
         tell("Successfully deposited $cost")
         return null
     }

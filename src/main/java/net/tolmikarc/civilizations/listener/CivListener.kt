@@ -55,7 +55,7 @@ class CivListener : Listener {
         // FINALLY make sure the player knows hes entering a new civ
         Remain.sendActionBar(
             event.player,
-            "${Settings.PRIMARY_COLOR}Now entering ${Settings.SECONDARY_COLOR}" + event.civ.name + (if (event.civ.claimToggleables.pvp) " &4&l[PVP]" else "")
+            "${Settings.PRIMARY_COLOR}Now entering ${Settings.SECONDARY_COLOR}" + event.civ.name + (if (event.civ.toggleables.pvp) " &4&l[PVP]" else "")
         )
     }
 

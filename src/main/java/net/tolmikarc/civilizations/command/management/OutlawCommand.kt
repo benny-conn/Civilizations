@@ -23,11 +23,11 @@ class OutlawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "out
                 val outlaw = findPlayer(args[0], "Specify a valid and online player")
                 PlayerManager.fromBukkitPlayer(outlaw).let { civOutlaw ->
                     checkBoolean(!this.citizens.contains(civOutlaw), "You cannot outlaw a player in your town.")
-                    if (this.outlaws.contains(civOutlaw)) {
-                        this.removeOutlaw(civOutlaw)
+                    if (this.relationships.outlaws.contains(civOutlaw)) {
+                        this.relationships.removeOutlaw(civOutlaw)
                         tell("${Settings.SECONDARY_COLOR}Successfully removed ${Settings.PRIMARY_COLOR}${args[0]}${Settings.PRIMARY_COLOR} as an outlaw")
                     } else {
-                        this.addOutlaw(civOutlaw)
+                        this.relationships.addOutlaw(civOutlaw)
                         tell("${Settings.SECONDARY_COLOR}Successfully outlawed player ${Settings.PRIMARY_COLOR}${args[0]}")
                     }
                 }

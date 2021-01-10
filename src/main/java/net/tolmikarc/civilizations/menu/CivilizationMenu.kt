@@ -87,7 +87,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
             setInfo("Toggle settings on or off for your Civilization")
             pvp = object : Button() {
                 override fun onClickedInMenu(p0: Player?, p1: Menu, p2: ClickType?) {
-                    civilization.claimToggleables.pvp = !civilization.claimToggleables.pvp
+                    civilization.toggleables.pvp = !civilization.toggleables.pvp
                     restartMenu()
                 }
 
@@ -96,13 +96,13 @@ class CivilizationMenu(civ: Civ) : Menu() {
                         CompMaterial.IRON_SWORD,
                         "&c&lToggle PVP",
                         "",
-                        "PVP: ${civilization.claimToggleables.pvp}"
+                        "PVP: ${civilization.toggleables.pvp}"
                     ).build().make()
                 }
             }
             mobs = object : Button() {
                 override fun onClickedInMenu(p0: Player?, p1: Menu, p2: ClickType?) {
-                    civilization.claimToggleables.mobs = !civilization.claimToggleables.mobs
+                    civilization.toggleables.mobs = !civilization.toggleables.mobs
                     restartMenu()
                 }
 
@@ -111,13 +111,13 @@ class CivilizationMenu(civ: Civ) : Menu() {
                         CompMaterial.SPAWNER,
                         "&2&lToggle Mobs Spawning",
                         "",
-                        "Mobs: ${civilization.claimToggleables.mobs}"
+                        "Mobs: ${civilization.toggleables.mobs}"
                     ).build().make()
                 }
             }
             explosions = object : Button() {
                 override fun onClickedInMenu(p0: Player?, p1: Menu, p2: ClickType?) {
-                    civilization.claimToggleables.explosion = !civilization.claimToggleables.explosion
+                    civilization.toggleables.explosion = !civilization.toggleables.explosion
                     restartMenu()
                 }
 
@@ -126,13 +126,13 @@ class CivilizationMenu(civ: Civ) : Menu() {
                         CompMaterial.TNT_MINECART,
                         "&4&lToggle Explosions",
                         "",
-                        "Explosions: ${civilization.claimToggleables.explosion}"
+                        "Explosions: ${civilization.toggleables.explosion}"
                     ).build().make()
                 }
             }
             fire = object : Button() {
                 override fun onClickedInMenu(p0: Player?, p1: Menu, p2: ClickType?) {
-                    civilization.claimToggleables.fire = !civilization.claimToggleables.fire
+                    civilization.toggleables.fire = !civilization.toggleables.fire
                     restartMenu()
                 }
 
@@ -141,13 +141,13 @@ class CivilizationMenu(civ: Civ) : Menu() {
                         CompMaterial.CAMPFIRE,
                         "&6&lToggle Fire Spreading",
                         "",
-                        "Fire: ${civilization.claimToggleables.fire}"
+                        "Fire: ${civilization.toggleables.fire}"
                     ).build().make()
                 }
             }
             public = object : Button() {
                 override fun onClickedInMenu(p0: Player?, p1: Menu, p2: ClickType?) {
-                    civilization.claimToggleables.public = !civilization.claimToggleables.public
+                    civilization.toggleables.public = !civilization.toggleables.public
                     restartMenu()
                 }
 
@@ -156,13 +156,13 @@ class CivilizationMenu(civ: Civ) : Menu() {
                         CompMaterial.BIRCH_DOOR,
                         "&b&lToggle Public Home",
                         "",
-                        "Public: ${civilization.claimToggleables.public}"
+                        "Public: ${civilization.toggleables.public}"
                     ).build().make()
                 }
             }
             inviteOnly = object : Button() {
                 override fun onClickedInMenu(p0: Player?, p1: Menu, p2: ClickType?) {
-                    civilization.claimToggleables.inviteOnly = !civilization.claimToggleables.inviteOnly
+                    civilization.toggleables.inviteOnly = !civilization.toggleables.inviteOnly
                     restartMenu()
                 }
 
@@ -171,7 +171,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
                         CompMaterial.CLOCK,
                         "&3&lToggle Invite Only",
                         "",
-                        "Invite Only: ${civilization.claimToggleables.inviteOnly}"
+                        "Invite Only: ${civilization.toggleables.inviteOnly}"
                     ).build().make()
                 }
             }
@@ -326,7 +326,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
                     return ItemCreator.of(
                         CompMaterial.BEACON, "&b&lStats", "",
                         "Power: ${civilization.power}",
-                        "Land: ${civilization.totalBlocksCount} blocks"
+                        "Land: ${civilization.claims.totalBlocksCount} blocks"
                     ).build().make()
                 }
             }
@@ -338,11 +338,11 @@ class CivilizationMenu(civ: Civ) : Menu() {
                 override fun getItem(): ItemStack {
                     return ItemCreator.of(
                         CompMaterial.FLINT_AND_STEEL, "&4&lToggleables", "",
-                        "Fire: ${civilization.claimToggleables.fire}",
-                        "PVP: ${civilization.claimToggleables.pvp}",
-                        "Explosions: ${civilization.claimToggleables.explosion}",
-                        "Mobs: ${civilization.claimToggleables.mobs}",
-                        "Public: ${civilization.claimToggleables.public}",
+                        "Fire: ${civilization.toggleables.fire}",
+                        "PVP: ${civilization.toggleables.pvp}",
+                        "Explosions: ${civilization.toggleables.explosion}",
+                        "Mobs: ${civilization.toggleables.mobs}",
+                        "Public: ${civilization.toggleables.public}",
                         "",
                         "Click to adjust a toggle setting!"
                     ).build().make()
@@ -371,19 +371,19 @@ class CivilizationMenu(civ: Civ) : Menu() {
                         CompMaterial.COMPASS, "&e&lRelationships", "",
                         "Allies: ${
                             Common.join(
-                                civilization.allies.map { civilization -> civilization.name + "\n" },
+                                civilization.relationships.allies.map { civilization -> civilization.name + "\n" },
                                 ", "
                             )
                         }",
                         "Enemies: ${
                             Common.join(
-                                civilization.enemies.map { civilization -> civilization.name + "\n" },
+                                civilization.relationships.enemies.map { civilization -> civilization.name + "\n" },
                                 ", "
                             )
                         }",
                         "Outlaws: ${
                             Common.join(
-                                civilization.outlaws.map { civPlayer -> civPlayer.playerName + "\n" },
+                                civilization.relationships.outlaws.map { civPlayer -> civPlayer.playerName + "\n" },
                                 ", "
                             )
                         }"

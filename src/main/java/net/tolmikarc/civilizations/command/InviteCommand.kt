@@ -19,7 +19,10 @@ class InviteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "add
         val inviteeCache = PlayerManager.fromBukkitPlayer(invitee)
         checkNotNull(senderCache.civilization, "You must have a Civilization to invite another player to it.")
         val civilization = senderCache.civilization!!
-        checkBoolean(!civilization.outlaws.contains(inviteeCache), "You cannot invite an outlaw of your Civilization.")
+        checkBoolean(
+            !civilization.relationships.outlaws.contains(inviteeCache),
+            "You cannot invite an outlaw of your Civilization."
+        )
         inviteeCache.civilizationInvite = civilization
         tellSuccess("${Settings.SECONDARY_COLOR}Successfully sent an invite to ${Settings.PRIMARY_COLOR}" + invitee.name)
         Common.tell(

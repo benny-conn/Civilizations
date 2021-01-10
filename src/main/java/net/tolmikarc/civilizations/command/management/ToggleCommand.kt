@@ -15,18 +15,18 @@ class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "togg
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             civPlayer.civilization?.apply {
                 when (args[0].toLowerCase()) {
-                    "fire" -> claimToggleables.fire =
-                        !claimToggleables.fire.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!claimToggleables.fire}") }
-                    "explosions" -> claimToggleables.explosion =
-                        !claimToggleables.explosion.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!claimToggleables.explosion}") }
-                    "mobs" -> claimToggleables.mobs =
-                        !claimToggleables.mobs.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!claimToggleables.mobs}") }
-                    "pvp" -> claimToggleables.pvp =
-                        !claimToggleables.pvp.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!claimToggleables.pvp}") }
-                    "public" -> claimToggleables.public =
-                        !claimToggleables.public.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!claimToggleables.public}") }
-                    "inviteonly" -> claimToggleables.inviteOnly =
-                        !claimToggleables.inviteOnly.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!claimToggleables.inviteOnly}") }
+                    "fire" -> toggleables.fire =
+                        !toggleables.fire.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.fire}") }
+                    "explosions" -> toggleables.explosion =
+                        !toggleables.explosion.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.explosion}") }
+                    "mobs" -> toggleables.mobs =
+                        !toggleables.mobs.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.mobs}") }
+                    "pvp" -> toggleables.pvp =
+                        !toggleables.pvp.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.pvp}") }
+                    "public" -> toggleables.public =
+                        !toggleables.public.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.public}") }
+                    "inviteonly" -> toggleables.inviteOnly =
+                        !toggleables.inviteOnly.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.inviteOnly}") }
                     else -> returnInvalidArgs()
                 }
             }

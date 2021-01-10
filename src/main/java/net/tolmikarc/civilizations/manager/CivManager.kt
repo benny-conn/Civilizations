@@ -86,8 +86,8 @@ object CivManager : Manager<Civ> {
 
     fun removeCiv(civ: Civ) {
         for (c in cacheMap.values) {
-            c.allies.remove(civ)
-            c.enemies.remove(civ)
+            c.relationships.allies.remove(civ)
+            c.relationships.enemies.remove(civ)
         }
         cacheMap.remove(civ.uuid)
         queuedForSaving.remove(civ)

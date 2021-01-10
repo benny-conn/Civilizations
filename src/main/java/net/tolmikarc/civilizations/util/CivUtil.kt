@@ -20,6 +20,6 @@ object CivUtil {
     }
 
     fun isPlayerOutlaw(player: CPlayer, civilization: Civ): Boolean {
-        return civilization.outlaws.contains(player)
+        return civilization.relationships.outlaws.contains(player)
     }
 }

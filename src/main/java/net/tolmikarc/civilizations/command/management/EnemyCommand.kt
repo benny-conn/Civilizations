@@ -24,24 +24,24 @@ class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enem
                 when (args[0].toLowerCase()) {
                     "add" -> {
                         checkBoolean(
-                            !enemies.contains(enemyCiv),
+                            !relationships.enemies.contains(enemyCiv),
                             "You are already enemies with this civilization"
                         )
-                        checkBoolean(!allies.contains(enemyCiv), "You cannot enemy an ally Civilization.")
-                        addEnemy(enemyCiv!!)
+                        checkBoolean(!relationships.allies.contains(enemyCiv), "You cannot enemy an ally Civilization.")
+                        relationships.addEnemy(enemyCiv!!)
                         tell("${Settings.PRIMARY_COLOR}Your Civilization is now enemies with ${Settings.SECONDARY_COLOR}" + enemyCiv.name)
-                        if (enemyCiv.enemies.contains(this)) {
+                        if (enemyCiv.relationships.enemies.contains(this)) {
                             Bukkit.getOnlinePlayers().forEach {
                                 Common.tell(it, "&4${enemyCiv.name} &cis now at war with &4${this.name}")
                             }
                         }
                     }
                     "remove" -> {
-                        checkBoolean(enemies.contains(enemyCiv), "This Civilization is not your enemy.")
+                        checkBoolean(relationships.enemies.contains(enemyCiv), "This Civilization is not your enemy.")
                         // TODO make sure that there is no cooldown
-                        if (warring.contains(enemyCiv))
+                        if (relationships.warring.contains(enemyCiv))
                             returnTell("You must use /civ surrender to end the war")
-                        removeEnemy(enemyCiv!!)
+                        relationships.removeEnemy(enemyCiv!!)
                         tell("${Settings.PRIMARY_COLOR}Your Civilization is no longer enemies with ${Settings.SECONDARY_COLOR}" + enemyCiv.name)
                     }
                     else -> {

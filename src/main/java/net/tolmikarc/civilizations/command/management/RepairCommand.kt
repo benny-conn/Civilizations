@@ -53,7 +53,7 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
             civ.bank.balance - cost > 0,
             "Your Civilization does not have enough money to perform this task. (Cost: $cost)"
         )
-        civ.removeBalance(cost.toDouble())
+        civ.bank.removeBalance(cost)
 
 
         object : ChunkedTask(Settings.BLOCKS_PER_SECONDS_REPAIR) {

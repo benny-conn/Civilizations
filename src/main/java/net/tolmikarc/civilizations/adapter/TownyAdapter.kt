@@ -19,8 +19,8 @@ import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.impl.Civilization
 import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.model.impl.Colony
-import net.tolmikarc.civilizations.permissions.ClaimToggleables
 import net.tolmikarc.civilizations.permissions.PermissionGroups
+import net.tolmikarc.civilizations.permissions.Toggleables
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Bukkit
 import org.bukkit.Location
@@ -47,7 +47,7 @@ object TownyAdapter {
                     nation.allies.forEach(Consumer { nationAlly: Nation ->
                         nationAlly.towns.forEach(Consumer { townAlly: Town ->
                             convertedTowns[town]?.let {
-                                convertedTowns[townAlly]?.allies?.add(
+                                convertedTowns[townAlly]?.relationships?.allies?.add(
                                     it
                                 )
                             }
@@ -56,14 +56,14 @@ object TownyAdapter {
                     nation.enemies.forEach(Consumer { nationEnemy: Nation ->
                         nationEnemy.towns.forEach(Consumer { townEnemy: Town ->
                             convertedTowns[town]?.let {
-                                convertedTowns[townEnemy]?.enemies?.add(
+                                convertedTowns[townEnemy]?.relationships?.enemies?.add(
                                     it
                                 )
                             }
                         })
                     })
-                    convertedTowns[town]?.allies?.addAll(allies)
-                    convertedTowns[town]?.enemies?.addAll(enemies)
+                    convertedTowns[town]?.relationships?.allies?.addAll(allies)
+                    convertedTowns[town]?.relationships?.enemies?.addAll(enemies)
                 }
             } catch (e: NotRegisteredException) {
                 Common.log(town.name + " does not have a nation and therefore has no enemies or allies")
@@ -98,9 +98,9 @@ object TownyAdapter {
         }
         civ.citizens.addAll(newCivMembers)
         val newRegions = getConvertedRegions(town, civ)
-        civ.claims.addAll(newRegions)
-        civ.idNumber = newRegions.size + 1
-        civ.claimToggleables = convertToggleables(town)
+        civ.claims.claims.addAll(newRegions)
+        civ.claims.idNumber = newRegions.size + 1
+        civ.toggleables = convertToggleables(town)
         convertedTowns[town] = civ
         if (deleteAfterConversion) TownyUniverse.getInstance().dataSource.removeTown(town)
         return civ
@@ -119,7 +119,7 @@ object TownyAdapter {
                 val z: Int = townBlock.z * 16
                 val y = world?.getHighestBlockYAt(x, z)
                 val colony = y?.let { Location(world, x.toDouble(), it.toDouble(), z.toDouble()) }
-                    ?.let { Colony(civ, civ.idNumber, it) }
+                    ?.let { Colony(civ, civ.claims.idNumber, it) }
                 if (colony != null) {
                     newColonies.add(colony)
                 }
@@ -172,7 +172,7 @@ object TownyAdapter {
             newRegions.add(newRegion)
             id++
         }
-        civ.colonies.addAll(newColonies)
+        civ.claims.colonies.addAll(newColonies)
         return newRegions
     }
 
@@ -180,8 +180,8 @@ object TownyAdapter {
         TODO()
     }
 
-    private fun convertToggleables(town: Town): ClaimToggleables {
-        val toggleables = ClaimToggleables()
+    private fun convertToggleables(town: Town): Toggleables {
+        val toggleables = Toggleables()
         toggleables.explosion = town.permissions.explosion
         toggleables.fire = town.permissions.fire
         toggleables.pvp = town.permissions.pvp

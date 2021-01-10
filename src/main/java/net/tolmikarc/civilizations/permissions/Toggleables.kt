@@ -7,7 +7,7 @@ package net.tolmikarc.civilizations.permissions
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 
-class ClaimToggleables : ConfigSerializable {
+class Toggleables : ConfigSerializable {
     var pvp = false
     var fire = false
     var explosion = false
@@ -27,8 +27,8 @@ class ClaimToggleables : ConfigSerializable {
 
     companion object {
         @JvmStatic
-        fun deserialize(map: SerializedMap): ClaimToggleables {
-            val claimToggleables = ClaimToggleables()
+        fun deserialize(map: SerializedMap): Toggleables {
+            val claimToggleables = Toggleables()
             claimToggleables.explosion = map.getBoolean("Explosion")
             claimToggleables.fire = map.getBoolean("Fire")
             claimToggleables.mobs = map.getBoolean("Mobs")

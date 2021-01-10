@@ -17,7 +17,6 @@ import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import java.util.*
-import java.util.function.Consumer
 
 class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "colony") {
     override fun onCommand() {
@@ -27,7 +26,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
             civPlayer.civilization?.let { civ ->
                 if (args[0].equals("?", ignoreCase = true)) {
                     val colonyIds: MutableList<String> = ArrayList()
-                    for (colony in civ.colonies) {
+                    for (colony in civ.claims.colonies) {
                         colonyIds.add(colony.id.toString())
                     }
                     tell("Colonies: " + Common.join(colonyIds, ", "))
@@ -35,7 +34,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
                 }
                 val id = findNumber(0, "Please specify a valid number")
                 var location: Location? = null
-                for (colony in civ.colonies) {
+                for (colony in civ.claims.colonies) {
                     if (colony.id == id) location = colony.warp
                 }
                 checkNotNull(location, "There is no Colony with the specified ID $id")
@@ -62,7 +61,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         if (civPlayer.civilization != null) {
             val civilization = civPlayer.civilization!!
-            civilization.colonies.forEach(Consumer { colony: Colony -> colonies.add(colony.id.toString()) })
+            civilization.claims.colonies.forEach { colony: Colony -> colonies.add(colony.id.toString()) }
         }
         return if (args.size == 1) colonies else null
     }

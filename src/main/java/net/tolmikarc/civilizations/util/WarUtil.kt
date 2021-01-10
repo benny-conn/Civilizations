@@ -68,7 +68,7 @@ object WarUtil {
         val cache = PlayerManager.fromBukkitPlayer(player)
         val playerCiv = cache.civilization
         if (playerCiv != null) {
-            return civ.warring.contains(playerCiv) || playerCiv.warring.contains(civ)
+            return civ.relationships.warring.contains(playerCiv) || playerCiv.relationships.warring.contains(civ)
         }
         return false
     }

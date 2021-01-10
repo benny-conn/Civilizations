@@ -65,6 +65,8 @@ public class Settings extends SimpleSettings {
 	public static ChatColor PRIMARY_COLOR;
 	public static ChatColor SECONDARY_COLOR;
 
+	public static Boolean TUTORIAL;
+
 	public static Integer BLOCKS_PER_SECONDS_REPAIR;
 	public static Double REPAIR_COST_PER_BLOCK;
 	public static Double SURRENDER_COST;
@@ -131,6 +133,7 @@ public class Settings extends SimpleSettings {
 		MAX_WARPS_FORMULA = getString("Extra_Settings.Max_Warps");
 		SHOW_COORDS_IN_INFO = getBoolean("Extra_Settings.Show_Coords_In_Info");
 		FLY_ENABLED = getBoolean("Extra_Settings.Fly");
+		TUTORIAL = getBoolean("Extra_Settings.Tutorial");
 
 
 		POWER_MONEY_WEIGHT = getInteger("Power.Money");

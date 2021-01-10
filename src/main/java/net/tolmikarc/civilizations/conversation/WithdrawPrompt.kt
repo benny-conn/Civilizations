@@ -22,7 +22,7 @@ class WithdrawPrompt(val civilization: Civ, val player: Player) : SimplePrompt()
         }
 
         HookManager.deposit(player, amount)
-        civilization.removeBalance(amount)
+        civilization.bank.removeBalance(amount)
         tell("Successfully withdrew $amount")
         return null
     }

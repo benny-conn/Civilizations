@@ -27,7 +27,7 @@ class WithdrawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "w
                 val amount = doubleToMoney(args[0].toDouble())
                 checkBoolean(bank.balance - amount > 0, "Your Civilization does not have enough money to withdraw")
                 HookManager.deposit(player, amount)
-                removeBalance(amount)
+                bank.removeBalance(amount)
                 tellSuccess("${Settings.PRIMARY_COLOR}Withdrew ${Settings.SECONDARY_COLOR}" + amount + "${Settings.PRIMARY_COLOR} from your Civilization's Bank")
             }
         }
