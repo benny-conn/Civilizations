@@ -24,7 +24,6 @@ import java.sql.SQLException
 import java.util.*
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.collections.HashSet
 import kotlin.collections.set
 
 data class Civilization(override val uuid: UUID) : Civ {
@@ -41,9 +40,9 @@ data class Civilization(override val uuid: UUID) : Civ {
     override var leader: CPlayer? = null
     override var bank: Bank = Bank(this)
     override var home: Location? = null
-    override val claims: MutableSet<Claim> = HashSet()
-    override val colonies: MutableSet<Colony> = HashSet()
-    override val plots: MutableSet<Plot> = HashSet()
+    override val claims = mutableSetOf<Claim>()
+    override val colonies = mutableSetOf<Colony>()
+    override val plots = mutableSetOf<Plot>()
     override var warps: MutableMap<String, Location> = LinkedHashMap()
     override var idNumber = 1
     override var totalBlocksCount = 0
@@ -55,14 +54,14 @@ data class Civilization(override val uuid: UUID) : Civ {
     override val colonyCount
         get() = colonies.size
 
-    override val citizens: MutableSet<CPlayer> = HashSet()
-    override val outlaws: MutableSet<CPlayer> = HashSet()
-    override val allies: MutableSet<Civ> = HashSet()
-    override val enemies: MutableSet<Civ> = HashSet()
+    override val citizens = mutableSetOf<CPlayer>()
+    override val outlaws = mutableSetOf<CPlayer>()
+    override val allies = mutableSetOf<Civ>()
+    override val enemies = mutableSetOf<Civ>()
 
     override val warring: Set<Civ>
         get() {
-            val set: MutableSet<Civ> = HashSet()
+            val set = mutableSetOf<Civ>()
             for (civ in enemies) {
                 if (civ.enemies.contains(this))
                     set.add(civ)

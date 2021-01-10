@@ -4,7 +4,6 @@
 
 package net.tolmikarc.civilizations.listener
 
-import net.tolmikarc.civilizations.MapDrawer
 import net.tolmikarc.civilizations.PermissionChecker.can
 import net.tolmikarc.civilizations.constants.Constants
 import net.tolmikarc.civilizations.event.CivEnterEvent
@@ -12,7 +11,6 @@ import net.tolmikarc.civilizations.event.CivLeaveEvent
 import net.tolmikarc.civilizations.event.PlotEnterEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.model.impl.Selection
 import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Settings
@@ -39,7 +37,6 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.*
-import org.bukkit.event.server.MapInitializeEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.debug.LagCatcher
@@ -79,16 +76,24 @@ class PlayerListener : Listener {
             if (civPlayer.civilization == null) return
             val civilization = civPlayer.civilization!!
             civilization.raid?.let { raid ->
+                // make sure player is involved in the raid
+                if (!raid.playersInvolved.containsKey(civPlayer)) return
+                // if they have no lives left do nothing
+                if (raid.playersInvolved[civPlayer]!! <= 0)
+                    return
+
+
+                // give player spawn protection if they died during a raid
+                addCooldownTimer(civPlayer, CooldownTask.CooldownType.RESPAWN_PROTECTION)
                 killer?.let { killer ->
                     PlayerManager.fromBukkitPlayer(killer).addPower(Settings.POWER_PVP_TRANSACTION)
-                    HookManager.deposit(killer, 10.0)
+                    HookManager.deposit(killer, Settings.MONEY_PVP_TRANSACTION)
                 }
                 civPlayer.removePower(Settings.POWER_PVP_TRANSACTION)
                 // TODO make this number n0t mag1c numb3r
-                HookManager.withdraw(player, 10.0)
-                if (!raid.playersInvolved.containsKey(civPlayer)) return
-                if (raid.playersInvolved[civPlayer]!! <= 0) return
-                val playerLives: Int = raid.playersInvolved[civPlayer]!! - 1
+                HookManager.withdraw(player, Settings.MONEY_PVP_TRANSACTION)
+                // subtract one life
+                val playerLives = raid.playersInvolved[civPlayer]!! - 1
                 raid.playersInvolved[civPlayer] = playerLives
             }
 
@@ -202,18 +207,18 @@ class PlayerListener : Listener {
                     if (Settings.RAID_TNT_COOLDOWN != -1) {
                         if (block.type == Material.TNT) {
                             // make sure player doesnt have a tnt cooldown
-                            if (hasCooldown(civPlayer.uuid, CooldownTask.CooldownType.TNT)) {
-                                event.isCancelled = true
+                            if (hasCooldown(civPlayer, CooldownTask.CooldownType.TNT)) {
                                 Common.tell(
                                     player,
                                     "Please wait " + getCooldownRemaining(
-                                        civPlayer.uuid,
+                                        civPlayer,
                                         CooldownTask.CooldownType.TNT
                                     ) + " settings before using TNT again"
                                 )
+                                event.isCancelled = true
                                 return
                             }
-                            addCooldownTimer(civPlayer.uuid, CooldownTask.CooldownType.TNT)
+                            addCooldownTimer(civPlayer, CooldownTask.CooldownType.TNT)
                             block.type = Material.AIR
                             CompMetadata.setMetadata(
                                 block.world.spawnEntity(block.location, EntityType.PRIMED_TNT),
@@ -334,14 +339,20 @@ class PlayerListener : Listener {
             val damager = event.damager
             if (damaged !is Player || damager !is Player) return
             val civDamaged = PlayerManager.fromBukkitPlayer(damaged)
+            // check if player has spawn protection
+            if (hasCooldown(civDamaged, CooldownTask.CooldownType.RESPAWN_PROTECTION)) {
+                event.isCancelled = true
+                return
+            }
             val civDamager = PlayerManager.fromBukkitPlayer(damager)
             val location = damaged.getLocation()
             val civilization = getCivFromLocation(location) ?: return
             if (civilization.citizens.contains(civDamaged)) {
                 event.isCancelled = !canAttackCivilization(civDamager, civilization)
                 if (!event.isCancelled) {
+                    // prevent pvplogging
                     if (Settings.RAID_PVP_TP_COOLDOWN) addCooldownTimer(
-                        damaged.getUniqueId(),
+                        civDamaged,
                         CooldownTask.CooldownType.TELEPORT
                     )
                 } else {
@@ -378,20 +389,6 @@ class PlayerListener : Listener {
         } finally {
             LagCatcher.end("entity-damage-by-player")
         }
-    }
-
-    @EventHandler
-    fun onMap(event: MapInitializeEvent) {
-        val map = event.map
-        Common.log("${map.centerX} ${map.centerZ}")
-        val region = Claim(
-            map.id,
-            Location(map.world, (map.centerX - 64).toDouble(), 1.0, (map.centerZ - 64).toDouble()), Location(
-                map.world,
-                (map.centerX + 64).toDouble(), 1.0, (map.centerZ + 64).toDouble()
-            )
-        )
-        map.addRenderer(MapDrawer(region))
     }
 
     @EventHandler

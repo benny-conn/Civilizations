@@ -61,8 +61,15 @@ Database:
 Cooldowns:
   # in seconds
   Teleport: 10
-  # time after toggling pvp before you can toggle pvp again
+  # time after toggling pvp before you can toggle pvp again in seconds
   PVP: 30
+  # spawn kill protection during raid cooldown in seconds
+  Respawn_Protection: 5
+  # tnt placement cooldown during raid in seconds
+  TNT: 10
+  # time before you can start another raid and before the war can be ended IN MINUTES
+  Raid: 60
+
 Claim:
   # minimum distance a new claim can be from any other civilization. Set to -1 to disable limit
   Min_Distance_From_Nearest_Claim: -1
@@ -103,6 +110,8 @@ Power:
     # (FORMULA) how much power for being the citizen of a civilization
     Citizen: "{power} / 8"
   War:
+    # how much will be given to winner
+    Win: 1000
     # how much power per player killed in war time (amount will be transferred from the killed to the killer)
     PVP: 10
     # how much power per block broken in war time (amount transferred from the attacked to the attacker and the amount will be added to the player who broke)
@@ -119,13 +128,13 @@ Extra_Settings:
 War:
   Blocks_Per_Second_Repair: 500
   Repair_Cost_Per_Block: 0.10
+  # cost to end war early. money will go to enemy civ
+  Surrender_Cost: 5000.00
   Raid:
     # How much money to start a raid. Set to 0 for no buy in.
     Buy_In: 0
     # in minutes
     Length: 3
-    # time in minutes before the same civilization can raid again or end the war
-    Cooldown: 60
     # ratio of players online in both civilizations to start a raid. Set both to 0 to disable limit
     # EXAMPLE: there must be one attacked player online for every attacking player
     Online_Ratio:
@@ -146,8 +155,6 @@ War:
     Attacker_Teleport: false
     # will pvp during a raid trigger a teleport cooldown for a damaged player to prevent teleporting out of combat. Set to -1 to disable limit
     PVP_TP_Cooldown: true
-    # how many seconds before an attacker can place TNT in a raid again. Set to -1 to deny TNT in raids and 0 to set no cooldown
-    TNT_Cooldown: 30
     # money transferred between players per kill in war
     PVP_Transaction: 10.00
 Respawn:
@@ -186,7 +193,6 @@ Permissions:
       Break: true
       Switch: true
       Interact: true
-
   # list of all blocks that are considered in the "switch" permission check. These blocks are considered before the
   # interact check is performed (ex: if lever is on this list, and a town has interacting set to false and switch set to true
   # the lever will be able to be switched. if the lever is not on this list, it will not be able to be switched)

@@ -8,6 +8,7 @@ import io.papermc.lib.PaperLib
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.tolmikarc.civilizations.command.CivilizationCommandGroup
+import net.tolmikarc.civilizations.command.MapCommand
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.listener.CivListener
@@ -20,7 +21,6 @@ import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import org.bukkit.Bukkit
-import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.dynmap.DynmapAPI
 import org.mineacademy.fo.ASCIIUtil
@@ -50,10 +50,8 @@ class CivilizationsPlugin : SimplePlugin() {
     //  COOL MAP SYSTEM WITH REAL MINECRAFT MAPS
     //  WG integration
     //  make settings option for repair blocks a double and consider making others doubles
-    //  war reward for killing players
     //
     override fun onPluginStart() {
-        makeFolders()
         loadDatabase()
         registerAllCommands()
         registerAllEvents()
@@ -61,6 +59,7 @@ class CivilizationsPlugin : SimplePlugin() {
         registerAllTasks()
         Common.ADD_TELL_PREFIX = true
         Common.log("Civilizations by Tolmikarc up and running!")
+
         for (civ in CivManager.all) {
             civ.home?.let {
                 DynmapHook.doDynmapStuffWithCiv(civ)
@@ -73,7 +72,7 @@ class CivilizationsPlugin : SimplePlugin() {
     }
 
     override fun onPluginStop() {
-        cleanUpExtraWarBlocks()
+        removeMapRenderers()
         Common.log("Saving Data and Closing Datastore Connections")
         PlayerManager.saveQueuedForSaving()
         CivManager.saveQueuedForSaving()
@@ -183,20 +182,13 @@ class CivilizationsPlugin : SimplePlugin() {
         }
     }
 
-    private fun cleanUpExtraWarBlocks() {
-        for (civilization in CivManager.all) {
-            civilization.regionDamages?.let {
-                for (block in it.cleanUpSet) {
-                    block.type = Material.AIR
-                }
-            }
+
+    private fun removeMapRenderers() {
+        for (map in MapCommand.drawnMaps) {
+            map.renderers.clear()
         }
     }
 
-    private fun makeFolders() {
-        val regionsFolder = File(dataFolder, "regions" + File.separator)
-        if (!regionsFolder.exists()) regionsFolder.mkdirs()
-    }
 
     private fun seedDatabase() {
         GlobalScope.launch {
@@ -212,7 +204,6 @@ class CivilizationsPlugin : SimplePlugin() {
     companion object {
         val instance: SimplePlugin
             get() = getInstance()
-
 
         val dynmapApi: DynmapAPI?
             get() {

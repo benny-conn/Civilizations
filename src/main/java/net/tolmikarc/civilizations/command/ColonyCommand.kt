@@ -40,9 +40,9 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
                 }
                 checkNotNull(location, "There is no Colony with the specified ID $id")
                 checkBoolean(
-                    !hasCooldown(civPlayer.uuid, CooldownTask.CooldownType.TELEPORT),
+                    !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
                     "Please wait " + getCooldownRemaining(
-                        civPlayer.uuid,
+                        civPlayer,
                         CooldownTask.CooldownType.TELEPORT
                     ) + " seconds before teleporting again."
                 )
@@ -52,7 +52,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
                     else
                         tellError("Failed to teleport to Colony!")
                 }
-                addCooldownTimer(civPlayer.uuid, CooldownTask.CooldownType.TELEPORT)
+                addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
             }
         }
     }

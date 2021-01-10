@@ -73,9 +73,7 @@ object CivDatastore : Datastore() {
                         this.power = power
                         this.leader = leader
                         if (home != null) this.home = home
-                        println("$home AGAIN")
                         this.claims.addAll(claims)
-                        println("$claims again")
                         this.plots.addAll(plots)
                         this.warps = warps
                         this.idNumber = idNumber

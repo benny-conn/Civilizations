@@ -8,7 +8,6 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
-import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.getCooldownRemaining
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.hasCooldown
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
@@ -40,16 +39,15 @@ class RaidCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "raid"
                     "There are not enough enemy players online to start a raid."
                 )
                 checkBoolean(
-                    !hasCooldown(uuid, CooldownTask.CooldownType.RAID),
+                    !hasCooldown(this, CooldownTask.CooldownType.RAID),
                     "You have to wait " + getCooldownRemaining(
-                        uuid,
+                        this,
                         CooldownTask.CooldownType.RAID
                     ) / 60 + " minutes to begin another raid"
                 )
                 val raid = Raid(enemyCiv, this)
                 enemyCiv.raid = raid
                 this.raid = raid
-                addCooldownTimer(uuid, CooldownTask.CooldownType.RAID)
                 tell("${Settings.PRIMARY_COLOR}&lRaid has begun! Destroy as much as you can before the timer runs out!")
             }
         }

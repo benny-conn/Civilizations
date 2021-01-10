@@ -23,9 +23,9 @@ class WarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp"
             val warp = civilization!!.warps[args[0]]
             checkNotNull(warp, "Your Civilization does not have a home.")
             checkBoolean(
-                !hasCooldown(uuid, CooldownTask.CooldownType.TELEPORT),
+                !hasCooldown(this, CooldownTask.CooldownType.TELEPORT),
                 "Please wait " + getCooldownRemaining(
-                    uuid,
+                    this,
                     CooldownTask.CooldownType.TELEPORT
                 ) + " seconds before teleporting again."
             )
@@ -35,7 +35,7 @@ class WarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp"
                 else
                     tellError("Failed to teleport to Warp!")
             }
-            addCooldownTimer(uuid, CooldownTask.CooldownType.TELEPORT)
+            addCooldownTimer(this, CooldownTask.CooldownType.TELEPORT)
         }
     }
 

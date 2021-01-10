@@ -18,10 +18,6 @@ class MapDrawer(val region: Claim) : MapRenderer() {
     override fun render(map: MapView, canvas: MapCanvas, player: Player) {
         AsyncEnvironment.run {
             val civPlayer = PlayerManager.fromBukkitPlayer(player)
-            if (!civPlayer.mapping) {
-                map.setWorld(player.world)
-                return@run
-            }
             val playersCiv = civPlayer.civilization
             for (location in region.blocks.map { it.location })
                 if (ClaimUtil.isLocationInACiv(location)) {

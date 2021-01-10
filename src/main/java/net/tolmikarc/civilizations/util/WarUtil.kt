@@ -76,7 +76,6 @@ object WarUtil {
     fun addDamages(attackedCiv: Civ, attackingCiv: Civ, block: Block) {
         if (attackedCiv.regionDamages == null) attackedCiv.regionDamages = RegionDamages()
         attackedCiv.regionDamages?.brokenBlocksMap?.set(block.location, block.blockData.asString)
-        block.type = Material.AIR
         attackedCiv.removePower(Settings.POWER_RAID_BLOCK)
         attackingCiv.addPower(Settings.POWER_BLOCKS_WEIGHT)
         CivManager.queueForSaving(attackedCiv, attackingCiv)

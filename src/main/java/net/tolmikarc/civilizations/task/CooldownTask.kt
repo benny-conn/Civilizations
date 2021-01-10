@@ -4,10 +4,9 @@
 
 package net.tolmikarc.civilizations.task
 
+import net.tolmikarc.civilizations.model.UniquelyIdentifiable
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.scheduler.BukkitRunnable
-import java.util.*
-import java.util.AbstractMap.SimpleEntry
 import java.util.concurrent.ConcurrentHashMap
 
 class CooldownTask : BukkitRunnable() {
@@ -23,29 +22,56 @@ class CooldownTask : BukkitRunnable() {
         }
     }
 
-    enum class CooldownType(val seconds: Int) {
-        PVP(30), TELEPORT(10), RAID(Settings.RAID_LENGTH + Settings.RAID_COOLDOWN), TNT(Settings.RAID_TNT_COOLDOWN);
-    }
 
     companion object {
-        private val cooldowns: MutableMap<SimpleEntry<UUID, CooldownType>, Long> = ConcurrentHashMap()
+
+        fun Int.toMilis(): Long {
+            return (this * 1000).toLong()
+        }
+
+        private val cooldowns: MutableMap<Cooldown, Long> = ConcurrentHashMap()
 
 
-        fun addCooldownTimer(uuid: UUID, type: CooldownType) {
-            val map = SimpleEntry(uuid, type)
-            cooldowns[map] = System.currentTimeMillis() + (type.seconds * 1000).toLong()
+        fun addCooldownTimer(entity: UniquelyIdentifiable, type: CooldownType) {
+            val cooldown = Cooldown.cooldownMap[entity] ?: Cooldown(entity, type)
+            Cooldown.cooldownMap[entity] = cooldown
+            cooldowns[cooldown] = System.currentTimeMillis() + type.seconds.toMilis()
         }
 
 
-        fun hasCooldown(uuid: UUID, type: CooldownType): Boolean {
-            val map = SimpleEntry(uuid, type)
-            return cooldowns.containsKey(map)
+        fun hasCooldown(entity: UniquelyIdentifiable, type: CooldownType): Boolean {
+            val cooldown = Cooldown.cooldownMap[entity]
+            if (cooldown != null) {
+                if (cooldown.type == type)
+                    return cooldowns.containsKey(cooldown)
+            }
+            return false
         }
 
 
-        fun getCooldownRemaining(uuid: UUID, type: CooldownType): Int {
-            val map = SimpleEntry(uuid, type)
-            return if (cooldowns.containsKey(map)) ((cooldowns[map]!! - System.currentTimeMillis()) / 1000L).toInt() else 0
+        fun getCooldownRemaining(entity: UniquelyIdentifiable, type: CooldownType): Int {
+            val cooldown = Cooldown.cooldownMap[entity]
+            if (cooldown != null)
+                return if (cooldown.type == type && cooldowns.containsKey(cooldown)) ((cooldowns[cooldown]!! - System.currentTimeMillis()) / 1000L).toInt() else 0
+            return 0
         }
     }
+
+    data class Cooldown(val entity: UniquelyIdentifiable, val type: CooldownType) {
+        companion object {
+            val cooldownMap: MutableMap<UniquelyIdentifiable, Cooldown> = HashMap()
+        }
+    }
+
+    enum class CooldownType(val seconds: Int) {
+        PVP(Settings.PVP_TOGGLE_COOLDOWN), TELEPORT(Settings.TELEPORT_COOLDOWN), RAID(Settings.RAID_COOLDOWN), TNT(
+            Settings.RAID_TNT_COOLDOWN
+        ),
+        END_WAR(
+            Settings.RAID_COOLDOWN
+        ),
+        RESPAWN_PROTECTION(Settings.RESPAWN_PROTECTION)
+    }
+
+
 }

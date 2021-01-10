@@ -12,6 +12,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
+import net.tolmikarc.civilizations.task.CooldownTask
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.mineacademy.fo.Common
@@ -26,7 +27,9 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
 
     fun addPlayerToRaid(player: Player) {
         PlayerManager.fromBukkitPlayer(player).let {
+
             playersInvolved.putIfAbsent(it, Settings.RAID_LIVES)
+
 
             if (Common.doesPluginExist("protocollib")) {
                 val onlinePlayersFromCivs: MutableList<Player> = ArrayList()
@@ -37,7 +40,9 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
                     )
                         onlinePlayersFromCivs.add(p)
                 }
-                NameTag.of("&c" + player.displayName).applyTo(player, onlinePlayersFromCivs)
+                if (playersInvolved[it]!! <= 0) NameTag.of(player.displayName).applyTo(player, onlinePlayersFromCivs)
+                else
+                    NameTag.of("&c" + player.displayName).applyTo(player, onlinePlayersFromCivs)
             }
         }
         Common.callEvent(PlayerJoinRaidEvent(this, player))
@@ -94,6 +99,9 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
             }
             civBeingRaided.raid = null
             civRaiding.raid = null
+            CooldownTask.addCooldownTimer(civBeingRaided, CooldownTask.CooldownType.END_WAR)
+            CooldownTask.addCooldownTimer(civRaiding, CooldownTask.CooldownType.END_WAR)
+            CooldownTask.addCooldownTimer(civRaiding, CooldownTask.CooldownType.RAID)
         }
         Common.callEvent(RaidEndEvent(this))
     }

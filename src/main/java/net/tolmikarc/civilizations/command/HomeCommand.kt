@@ -21,26 +21,44 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home"
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             if (args.isNotEmpty()) {
                 CivManager.getByName(args[0])
-                    ?.let { if (it.claimToggleables.public) it.home?.let { home -> player.teleport(home) } else tell("&cTown not public") }
+                    ?.let { civ ->
+                        if (civ.claimToggleables.public) civ.home?.let { home ->
+                            checkBoolean(
+                                !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
+                                "Please wait " + getCooldownRemaining(
+                                    civPlayer,
+                                    CooldownTask.CooldownType.TELEPORT
+                                ) + " seconds before teleporting again."
+                            )
+                            PaperLib.teleportAsync(player, home).thenAccept {
+                                if (it)
+                                    tellSuccess("${Settings.PRIMARY_COLOR}Teleported to Civ Home!")
+                                else
+                                    tellError("Failed to teleport to Civ Home!")
+                            }
+                            addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
+
+                        } else tell("&cTown not public")
+                    }
                 return
             }
             checkNotNull(civPlayer.civilization, "You do not have a Civilization")
             civPlayer.civilization?.let { civilization ->
                 checkNotNull(civilization.home, "Your Civilization does not have a home.")
                 checkBoolean(
-                    !hasCooldown(civPlayer.uuid, CooldownTask.CooldownType.TELEPORT),
+                    !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
                     "Please wait " + getCooldownRemaining(
-                        civPlayer.uuid,
+                        civPlayer,
                         CooldownTask.CooldownType.TELEPORT
                     ) + " seconds before teleporting again."
                 )
                 PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
                     if (it)
-                        tellSuccess("Teleported to Civ Home!")
+                        tellSuccess("${Settings.PRIMARY_COLOR}Teleported to Civ Home!")
                     else
                         tellError("Failed to teleport to Civ Home!")
                 }
-                addCooldownTimer(civPlayer.uuid, CooldownTask.CooldownType.TELEPORT)
+                addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
             }
         }
     }

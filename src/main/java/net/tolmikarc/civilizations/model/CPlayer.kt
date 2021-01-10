@@ -12,10 +12,8 @@ interface CPlayer : UniquelyIdentifiable {
     var civilizationInvite: Civ?
     var power: Int
     val selection: Selection
-    var completedTutorial: Boolean
     var visualizing: Boolean
     var flying: Boolean
-    var mapping: Boolean
     var raidBlocksDestroyed: Int
 
     fun addPower(power: Int)

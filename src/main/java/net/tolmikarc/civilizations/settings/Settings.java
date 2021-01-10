@@ -30,6 +30,12 @@ public class Settings extends SimpleSettings {
 	public static Integer DB_PORT;
 	public static Integer DELETE_AFTER;
 
+
+	public static Integer PVP_TOGGLE_COOLDOWN;
+	public static Integer TELEPORT_COOLDOWN;
+	public static Integer RESPAWN_PROTECTION;
+
+
 	public static Integer MIN_DISTANCE_FROM_NEAREST_CLAIM;
 	public static String COST_FORMULA;
 	public static String MAX_CLAIMS_FORMULA;
@@ -50,6 +56,7 @@ public class Settings extends SimpleSettings {
 	public static String POWER_LEADER_FORMULA;
 	public static String POWER_OFFICIAL_FORMULA;
 	public static String POWER_CITIZEN_FORMULA;
+	public static Integer POWER_WAR_WIN;
 
 	public static Integer POWER_PVP_TRANSACTION;
 	public static Double MONEY_PVP_TRANSACTION;
@@ -60,6 +67,7 @@ public class Settings extends SimpleSettings {
 
 	public static Integer BLOCKS_PER_SECONDS_REPAIR;
 	public static Double REPAIR_COST_PER_BLOCK;
+	public static Double SURRENDER_COST;
 	public static Integer RAID_BUY_IN;
 	public static Integer RAID_LENGTH;
 	public static Integer RAID_COOLDOWN;
@@ -70,6 +78,7 @@ public class Settings extends SimpleSettings {
 	public static Boolean RAID_PVP_TP_COOLDOWN;
 	public static Integer RAID_TNT_COOLDOWN;
 	public static Boolean RAID_ATTACKER_TELEPORT;
+
 
 	public static Boolean OUTLAW_PERMISSIONS_DISABLED;
 	public static Boolean OUTLAW_ENTER_DISABLED;
@@ -105,6 +114,11 @@ public class Settings extends SimpleSettings {
 		DB_PORT = getInteger("Database.Port");
 		DELETE_AFTER = getInteger("Database.Delete_After");
 
+		TELEPORT_COOLDOWN = getInteger("Cooldowns.Teleport");
+		PVP_TOGGLE_COOLDOWN = getInteger("Cooldowns.PVP");
+		RESPAWN_PROTECTION = getInteger("Cooldowns.Respawn_Protection");
+
+
 		MIN_DISTANCE_FROM_NEAREST_CLAIM = getInteger("Claim.Min_Distance_From_Nearest_Claim");
 		COST_FORMULA = getString("Claim.Claim_Cost");
 		MAX_CLAIMS_FORMULA = getString("Claim.Max_Claim_Count");
@@ -134,9 +148,10 @@ public class Settings extends SimpleSettings {
 
 		BLOCKS_PER_SECONDS_REPAIR = getInteger("War.Blocks_Per_Second_Repair");
 		REPAIR_COST_PER_BLOCK = getDouble("War.Repair_Cost_Per_Block");
+		SURRENDER_COST = getDouble("War.Surrender_Cost");
 		RAID_BUY_IN = getInteger("War.Raid.Buy_In");
 		RAID_LENGTH = getInteger("War.Raid.Length") * 60;
-		RAID_COOLDOWN = getInteger("War.Raid.Cooldown") * 60;
+		RAID_COOLDOWN = getInteger("Cooldowns.Raid") * 60;
 		int attackerOnline = getInteger("War.Raid.Online_Ratio.Attacker");
 		int attackedOnline = getInteger("War.Raid.Online_Ratio.Attacked");
 		if (attackedOnline == 0 || attackerOnline == 0)
@@ -152,7 +167,7 @@ public class Settings extends SimpleSettings {
 		RAID_LIVES = getInteger("War.Raid.Lives");
 		RAID_BREAK_SWITCHABLES = getBoolean("War.Raid.Break_Switchables");
 		RAID_PVP_TP_COOLDOWN = getBoolean("War.Raid.PVP_TP_Cooldown");
-		RAID_TNT_COOLDOWN = getInteger("War.Raid.TNT_Cooldown");
+		RAID_TNT_COOLDOWN = getInteger("Cooldowns.TNT");
 		RAID_ATTACKER_TELEPORT = getBoolean("War.Raid.Attacker_Teleport");
 
 		OUTLAW_PERMISSIONS_DISABLED = getBoolean("Outlaw.Permissions_Disabled");

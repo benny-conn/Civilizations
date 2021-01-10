@@ -30,7 +30,7 @@ class CivListener : Listener {
                 return
             }
             // if the player is allowed in, then make sure he is a part of the involved players during the raid
-            event.civ.raid!!.addPlayerToRaid(player)
+            event.civ.raid?.addPlayerToRaid(player)
         }
 
         if (CivUtil.isPlayerOutlaw(PlayerManager.fromBukkitPlayer(player), event.civ)) {

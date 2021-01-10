@@ -7,6 +7,8 @@ package net.tolmikarc.civilizations.command.management
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
+import org.bukkit.Bukkit
+import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -28,10 +30,17 @@ class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enem
                         checkBoolean(!allies.contains(enemyCiv), "You cannot enemy an ally Civilization.")
                         addEnemy(enemyCiv!!)
                         tell("${Settings.PRIMARY_COLOR}Your Civilization is now enemies with ${Settings.SECONDARY_COLOR}" + enemyCiv.name)
+                        if (enemyCiv.enemies.contains(this)) {
+                            Bukkit.getOnlinePlayers().forEach {
+                                Common.tell(it, "&4${enemyCiv.name} &cis now at war with &4${this.name}")
+                            }
+                        }
                     }
                     "remove" -> {
                         checkBoolean(enemies.contains(enemyCiv), "This Civilization is not your enemy.")
                         // TODO make sure that there is no cooldown
+                        if (warring.contains(enemyCiv))
+                            returnTell("You must use /civ surrender to end the war")
                         removeEnemy(enemyCiv!!)
                         tell("${Settings.PRIMARY_COLOR}Your Civilization is no longer enemies with ${Settings.SECONDARY_COLOR}" + enemyCiv.name)
                     }

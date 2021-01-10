@@ -11,15 +11,14 @@ import net.tolmikarc.civilizations.model.impl.Civilization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
+import java.util.concurrent.ConcurrentHashMap
 
 object CivManager : Manager<Civ> {
     override val all: MutableCollection<Civ>
         get() = cacheMap.values
-    override val cacheMap: MutableMap<UUID, Civ> = HashMap()
-    override val byName: MutableMap<String, Civ> = HashMap()
-    override val queuedForSaving: MutableSet<Civ> = HashSet()
+    override val cacheMap: MutableMap<UUID, Civ> = ConcurrentHashMap()
+    override val byName: MutableMap<String, Civ> = ConcurrentHashMap()
+    override val queuedForSaving = mutableSetOf<Civ>()
 
     val civNames: MutableSet<String>
         get() = byName.keys

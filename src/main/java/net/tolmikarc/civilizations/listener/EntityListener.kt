@@ -14,13 +14,16 @@ import net.tolmikarc.civilizations.util.WarUtil.addDamages
 import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
 import net.tolmikarc.civilizations.util.WarUtil.shootBlockAndAddDamages
 import org.bukkit.Material
+import org.bukkit.entity.EntityType
 import org.bukkit.entity.Monster
 import org.bukkit.entity.Player
+import org.bukkit.entity.TNTPrimed
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityExplodeEvent
+import org.bukkit.event.entity.ExplosionPrimeEvent
 import org.mineacademy.fo.RandomUtil
 import org.mineacademy.fo.remain.CompMetadata
 import java.util.*
@@ -46,6 +49,20 @@ class EntityListener : Listener {
     }
 
     @EventHandler
+    fun onPrime(event: ExplosionPrimeEvent) {
+        val entity = event.entity
+        if (entity.type != EntityType.PRIMED_TNT) return
+        val tnt = entity as TNTPrimed
+        if (CompMetadata.hasMetadata(
+                tnt,
+                Constants.WAR_TNT_TAG
+            )
+        ) {
+            event.radius = 10F
+        }
+    }
+
+    @EventHandler
     fun onExplode(event: EntityExplodeEvent) {
         val entity = event.entity
         if (!CompMetadata.hasMetadata(entity, Constants.WAR_TNT_TAG)) return
@@ -58,6 +75,7 @@ class EntityListener : Listener {
                     Constants.WAR_TNT_TAG
                 )
             ) {
+                event.yield = 0F
                 val attackingPlayer = PlayerManager.getByUUID(
                     UUID.fromString(
                         CompMetadata.getMetadata(
@@ -65,24 +83,19 @@ class EntityListener : Listener {
                             Constants.WAR_TNT_TAG
                         )
                     )!!
-                )!!
+                )
+
                 if (canAttackCivilization(attackingPlayer, civilization)) {
                     if (!Settings.RAID_BREAK_SWITCHABLES) if (Settings.SWITCHABLES.contains(block.type) || block.type == Material.TNT) {
                         blockIterator.remove()
                         continue
                     }
-                    if (civilization.regionDamages?.cleanUpSet?.contains(block) == true) {
-                        blockIterator.remove()
-                        continue
-                    }
                     val attackingCiv = attackingPlayer.civilization!!
-
-                    if (RandomUtil.chance(50))
+                    if (RandomUtil.chance(80))
                         shootBlockAndAddDamages(civilization, attackingCiv, block)
                     else
                         addDamages(civilization, attackingCiv, block)
                     WarUtil.increaseBlocksBroken(attackingPlayer)
-                    blockIterator.remove()
                     continue
                 }
             }

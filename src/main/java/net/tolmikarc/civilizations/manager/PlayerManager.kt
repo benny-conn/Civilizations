@@ -9,15 +9,14 @@ import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.impl.CivPlayer
 import org.bukkit.entity.Player
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
+import java.util.concurrent.ConcurrentHashMap
 
 object PlayerManager : Manager<CPlayer> {
     override val all: MutableCollection<CPlayer>
         get() = cacheMap.values
-    override val cacheMap: MutableMap<UUID, CPlayer> = HashMap()
-    override val byName: MutableMap<String, CPlayer> = HashMap()
-    override val queuedForSaving: MutableSet<CPlayer> = HashSet()
+    override val cacheMap: MutableMap<UUID, CPlayer> = ConcurrentHashMap()
+    override val byName: MutableMap<String, CPlayer> = ConcurrentHashMap()
+    override val queuedForSaving = mutableSetOf<CPlayer>()
 
     override fun getByUUID(uuid: UUID): CPlayer {
         var civPlayer = cacheMap[uuid]
