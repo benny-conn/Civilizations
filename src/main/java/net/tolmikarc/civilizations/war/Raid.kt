@@ -15,22 +15,34 @@ import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.util.ClaimUtil
 import org.bukkit.Bukkit
+import org.bukkit.ChatColor
 import org.bukkit.entity.Player
 import org.mineacademy.fo.Common
+import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.model.Countdown
+import org.mineacademy.fo.remain.Remain
 import java.util.*
 
-class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RAID_LENGTH!!) {
+class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RAID_LENGTH) {
 
     // map of players and their lives
     val playersInvolved: MutableMap<CPlayer, Int> = HashMap()
 
     fun addPlayerToRaid(player: Player) {
+
+        Remain.sendBossbarTimed(
+            player,
+            "${ChatColor.RED}${ChatColor.BOLD}Raid of ${ChatColor.DARK_RED}${ChatColor.BOLD}${civBeingRaided.name}",
+            timeLeft
+        )
+
         PlayerManager.fromBukkitPlayer(player).let {
 
-            if (playersInvolved[it] == 0) return
             playersInvolved.putIfAbsent(it, Settings.RAID_LIVES)
 
+            if (playersInvolved[it] == 0) return
+
+            if (playersInvolved[it] == Settings.RAID_LIVES) Common.callEvent(PlayerJoinRaidEvent(this, player))
 
             if (Common.doesPluginExist("ProtocolLib")) {
                 val onlinePlayersFromOppositeCiv = mutableListOf<Player>()
@@ -46,7 +58,6 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
 
             }
         }
-        Common.callEvent(PlayerJoinRaidEvent(this, player))
     }
 
 
@@ -54,12 +65,20 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
         for (player in Bukkit.getOnlinePlayers()) {
             PlayerManager.fromBukkitPlayer(player).let {
                 if (civBeingRaided.citizens.contains(it)) {
-                    Common.tell(player, "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!")
+                    Messenger.warn(player, "Raid begun on ${civBeingRaided.name} by ${civRaiding.name}")
+                    Messenger.warn(
+                        player,
+                        "${timeLeft / 60} Minutes left!"
+                    )
                     if (ClaimUtil.isLocationInCiv(player.location, civBeingRaided))
                         addPlayerToRaid(player)
                 }
                 if (civRaiding.citizens.contains(it)) {
-                    Common.tell(player, "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!")
+                    Messenger.warn(player, "Raid begun on ${civBeingRaided.name} by ${civRaiding.name}")
+                    Messenger.warn(
+                        player,
+                        "${timeLeft / 60} Minutes left!"
+                    )
                 }
             }
         }
@@ -70,13 +89,13 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
         if (timeLeft % 120 == 0)
             for (player in Bukkit.getOnlinePlayers()) {
                 PlayerManager.fromBukkitPlayer(player).let {
-                    if (civBeingRaided.citizens.contains(it)) Common.tell(
+                    if (civBeingRaided.citizens.contains(it)) Messenger.warn(
                         player,
-                        "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!"
+                        "${timeLeft / 60} Minutes left!"
                     )
-                    if (civRaiding.citizens.contains(it)) Common.tell(
+                    if (civRaiding.citizens.contains(it)) Messenger.warn(
                         player,
-                        "${Settings.PRIMARY_COLOR}" + timeLeft / 60 + " Minutes left!"
+                        "${timeLeft / 60} Minutes left!"
                     )
                 }
             }

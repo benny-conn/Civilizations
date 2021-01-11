@@ -10,12 +10,13 @@ import net.tolmikarc.civilizations.util.MathUtil
 import org.bukkit.conversations.ConversationContext
 import org.bukkit.conversations.Prompt
 import org.bukkit.entity.Player
-import org.mineacademy.fo.conversation.SimplePrompt
+import org.mineacademy.fo.conversation.SimpleDecimalPrompt
 import org.mineacademy.fo.model.HookManager
 
-class WithdrawPrompt(val civilization: Civ, val player: Player) : SimplePrompt() {
-    override fun acceptValidatedInput(p0: ConversationContext, p1: String): Prompt? {
-        val amount = MathUtil.doubleToMoney(p1.toDouble())
+class WithdrawPrompt(val civilization: Civ, val player: Player) : SimpleDecimalPrompt() {
+    
+    override fun acceptValidatedInput(p0: ConversationContext, p1: Double): Prompt? {
+        val amount = MathUtil.doubleToMoney(p1)
         if (civilization.bank.balance - amount < 0) {
             tell("&cYou cannot withdraw more money than your Civilization has")
             return null
@@ -35,8 +36,5 @@ class WithdrawPrompt(val civilization: Civ, val player: Player) : SimplePrompt()
         return "Please specify a valid number"
     }
 
-    override fun isInputValid(context: ConversationContext, input: String): Boolean {
-        return net.tolmikarc.civilizations.util.MathUtil.isDouble(input)
-    }
 
 }

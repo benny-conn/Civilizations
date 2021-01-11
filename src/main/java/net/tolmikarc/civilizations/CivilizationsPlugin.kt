@@ -37,7 +37,6 @@ class CivilizationsPlugin : SimplePlugin() {
 
     // TODO
     //  Permissions gui
-    //  animal ownership feature (maybe needs to be its own plugin)
     //  placeholder support
     //  how to make perms and toggles better than towny
     //  WAR
@@ -47,6 +46,7 @@ class CivilizationsPlugin : SimplePlugin() {
     //  make the conversation canceller a variable
     //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
     //  WG integration
+    //  teleport to civ outside of borders async for enemies during raid
     //
     override fun onPluginStart() {
         loadDatabase()
@@ -106,6 +106,9 @@ class CivilizationsPlugin : SimplePlugin() {
 
 
     private fun registerAllCommands() {
+        val stringBuffer = StringBuffer()
+
+
         registerCommands("civilizations|civ", CivilizationsCommandGroup())
     }
 

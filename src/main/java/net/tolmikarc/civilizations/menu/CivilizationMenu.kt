@@ -4,8 +4,7 @@
 
 package net.tolmikarc.civilizations.menu
 
-import net.tolmikarc.civilizations.conversation.DepositPrompt
-import net.tolmikarc.civilizations.conversation.WithdrawPrompt
+import net.tolmikarc.civilizations.conversation.BankTranscationConversation
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
@@ -214,9 +213,13 @@ class CivilizationMenu(civ: Civ) : Menu() {
                 }
             }
             depositButton = object : Button() {
-                override fun onClickedInMenu(p0: Player, p1: Menu, p2: ClickType) {
-                    p0.closeInventory()
-                    DepositPrompt(civilization, p0).show(p0)
+                override fun onClickedInMenu(player: Player, menu: Menu, click: ClickType) {
+                    player.closeInventory()
+                    BankTranscationConversation(
+                        BankTranscationConversation.Transaction.DEPOSIT,
+                        civilization,
+                        player
+                    ).start(player)
                 }
 
                 override fun getItem(): ItemStack {
@@ -227,9 +230,13 @@ class CivilizationMenu(civ: Civ) : Menu() {
                 }
             }
             withdrawButton = object : Button() {
-                override fun onClickedInMenu(p0: Player, p1: Menu, p2: ClickType) {
-                    p0.closeInventory()
-                    WithdrawPrompt(civilization, p0).show(p0)
+                override fun onClickedInMenu(player: Player, menu: Menu, click: ClickType) {
+                    player.closeInventory()
+                    BankTranscationConversation(
+                        BankTranscationConversation.Transaction.WITHDRAW,
+                        civilization,
+                        player
+                    ).start(player)
                 }
 
                 override fun getItem(): ItemStack {

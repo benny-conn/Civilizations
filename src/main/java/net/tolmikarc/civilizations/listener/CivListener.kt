@@ -53,10 +53,17 @@ class CivListener : Listener {
             player.isFlying = true
         }
         // FINALLY make sure the player knows hes entering a new civ
-        Remain.sendActionBar(
-            event.player,
-            "${Settings.PRIMARY_COLOR}Now entering ${Settings.SECONDARY_COLOR}" + event.civ.name + (if (event.civ.toggleables.pvp) " &4&l[PVP]" else "")
-        )
+        when (Settings.NOTICE_TYPE) {
+            1 -> Remain.sendActionBar(
+                event.player,
+                "${Settings.PRIMARY_COLOR}Now entering ${Settings.SECONDARY_COLOR}" + event.civ.name + (if (event.civ.toggleables.pvp) " &4&l[PVP]" else "")
+            )
+            2 -> Remain.sendTitle(
+                player,
+                "${Settings.PRIMARY_COLOR}Entering ${Settings.SECONDARY_COLOR}${event.civ.name}" + (if (event.civ.toggleables.pvp) " &4&l[PVP]" else ""),
+                "${Settings.PRIMARY_COLOR}Power: ${Settings.SECONDARY_COLOR}${event.civ.power}"
+            )
+        }
     }
 
     @EventHandler
@@ -64,10 +71,17 @@ class CivListener : Listener {
         val player = event.player
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         // let the player know if we are leaving the civ
-        Remain.sendActionBar(
-            player,
-            "${Settings.PRIMARY_COLOR}Now Leaving ${Settings.SECONDARY_COLOR}" + event.civ.name
-        )
+        when (Settings.NOTICE_TYPE) {
+            1 -> Remain.sendActionBar(
+                player,
+                "${Settings.PRIMARY_COLOR}Now Leaving ${Settings.SECONDARY_COLOR}" + event.civ.name
+            )
+            2 -> Remain.sendTitle(
+                player,
+                "${Settings.PRIMARY_COLOR}Leaving ${Settings.SECONDARY_COLOR}${event.civ.name}",
+                ""
+            )
+        }
         // stop the player from flying if he leaves his own civ
         if (event.civ.citizens.contains(civPlayer) && civPlayer.flying) {
             player.isFlying = false

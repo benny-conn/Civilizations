@@ -18,7 +18,7 @@ import net.tolmikarc.civilizations.war.Raid
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
-class RaidCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "raid") {
+class RaidCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "raid") {
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
@@ -49,7 +49,6 @@ class RaidCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "raid"
                 val raid = Raid(enemyCiv, this)
                 enemyCiv.raid = raid
                 this.raid = raid
-                tellSuccess("${Settings.PRIMARY_COLOR}&lRaid has begun! Destroy as much as you can before the timer runs out!")
             }
         }
     }

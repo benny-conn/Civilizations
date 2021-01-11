@@ -40,7 +40,7 @@ class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enem
                         checkBoolean(relationships.enemies.contains(enemyCiv), "This Civilization is not your enemy.")
                         // TODO make sure that there is no cooldown
                         if (relationships.warring.contains(enemyCiv))
-                            returnTell("You must use /civ surrender to end the war")
+                            returnTell("&cYou must use /civ surrender to end the war")
                         relationships.removeEnemy(enemyCiv!!)
                         tell("${Settings.PRIMARY_COLOR}Your Civilization is no longer enemies with ${Settings.SECONDARY_COLOR}" + enemyCiv.name)
                     }

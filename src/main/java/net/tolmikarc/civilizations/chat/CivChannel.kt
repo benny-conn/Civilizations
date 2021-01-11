@@ -6,5 +6,5 @@ package net.tolmikarc.civilizations.chat
 import org.bukkit.entity.Player
 
 class CivChannel {
-    val players: MutableSet<Player> = HashSet()
+    val players = mutableSetOf<Player>()
 }

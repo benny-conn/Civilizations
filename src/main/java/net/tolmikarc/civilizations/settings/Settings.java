@@ -17,6 +17,7 @@ import java.util.Set;
 
 public class Settings extends SimpleSettings {
 
+	public static String ALIASES;
 	public static Boolean ALL_PERMISSIONS_ENABLED;
 
 	public static String CURRENCY_SYMBOL;
@@ -70,6 +71,8 @@ public class Settings extends SimpleSettings {
 
 	public static Boolean TUTORIAL;
 
+	public static Integer NOTICE_TYPE;
+
 	public static Integer BLOCKS_PER_SECONDS_REPAIR;
 	public static Double REPAIR_COST_PER_BLOCK;
 	public static Double SURRENDER_COST;
@@ -105,6 +108,8 @@ public class Settings extends SimpleSettings {
 
 	private static void init() {
 
+		ALIASES = getString("Aliases");
+
 		ALL_PERMISSIONS_ENABLED = getBoolean("All_Permissions_Enabled");
 
 		CURRENCY_SYMBOL = getString("Currency_Symbol");
@@ -135,6 +140,8 @@ public class Settings extends SimpleSettings {
 
 		UPKEEP_FORMULA = getString("Upkeep");
 		MAX_TAXES = getDouble("Tax_Cap");
+
+		NOTICE_TYPE = getInteger("Notice_Type");
 
 		MAX_WARPS_FORMULA = getString("Extra_Settings.Max_Warps");
 		SHOW_COORDS_IN_INFO = getBoolean("Extra_Settings.Show_Coords_In_Info");

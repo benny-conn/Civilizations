@@ -10,6 +10,8 @@ Prefix: "&5&lCIV &7// "
 # How many milliseconds should an action take before the lag is logged to console
 Log_Lag_Over_Milis: 100
 Locale: en
+# command aliases separated by comma. default command: /civilizations
+Aliases: "civ, c"
 
 # -------------------------- FORMULAS ----------------------------------
 #
@@ -94,6 +96,11 @@ Plots:
 Upkeep: "{total_area} / 1000"
 # max tax amount in currency that a civilization can charge per day to its citizens
 Tax_Cap: 200.00
+
+# how should players be notified when entering and leaving civs
+# 1: action bar
+# 2: title
+Notice_Type: 1
 
 # how much power for a civilization added for every category
 Power:

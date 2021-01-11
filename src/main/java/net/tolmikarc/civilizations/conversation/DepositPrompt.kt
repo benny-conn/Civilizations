@@ -10,12 +10,13 @@ import net.tolmikarc.civilizations.util.MathUtil
 import org.bukkit.conversations.ConversationContext
 import org.bukkit.conversations.Prompt
 import org.bukkit.entity.Player
-import org.mineacademy.fo.conversation.SimplePrompt
+import org.mineacademy.fo.conversation.SimpleDecimalPrompt
 import org.mineacademy.fo.model.HookManager
 
-class DepositPrompt(val civilization: Civ, val player: Player) : SimplePrompt() {
-    override fun acceptValidatedInput(p0: ConversationContext, p1: String): Prompt? {
-        val cost = MathUtil.doubleToMoney(p1.toDouble())
+class DepositPrompt(val civilization: Civ, val player: Player) : SimpleDecimalPrompt() {
+
+    override fun acceptValidatedInput(context: ConversationContext?, input: Double): Prompt? {
+        val cost = MathUtil.doubleToMoney(input)
         if (HookManager.getBalance(player) - cost < 0) {
             tell("&cYou cannot deposit more money than you have")
             return null
@@ -32,10 +33,6 @@ class DepositPrompt(val civilization: Civ, val player: Player) : SimplePrompt() 
 
     override fun getFailedValidationText(context: ConversationContext, invalidInput: String): String? {
         return "Please specify a valid number"
-    }
-
-    override fun isInputValid(context: ConversationContext, input: String): Boolean {
-        return net.tolmikarc.civilizations.util.MathUtil.isDouble(input)
     }
 
 }

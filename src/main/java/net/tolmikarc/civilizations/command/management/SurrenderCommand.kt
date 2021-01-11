@@ -24,6 +24,10 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
                 if (!relationships.warring.contains(enemyCiv)) returnTell("You are not warring this Civilization")
                 fun run() {
                     if (hasCooldown(this, CooldownTask.CooldownType.END_WAR)) {
+                        checkBoolean(
+                            bank.balance - Settings.SURRENDER_COST < 0,
+                            "You do not have enough money to surrender in your Civ. Required amount: ${Settings.SURRENDER_COST}"
+                        )
                         bank.removeBalance(Settings.SURRENDER_COST)
                         enemyCiv?.bank?.addBalance(Settings.SURRENDER_COST)
                     }
@@ -31,7 +35,7 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
                     enemyCiv?.addPower(Settings.POWER_WAR_WIN)
                     tellSuccess("&4Surrendered to ${enemyCiv?.name}")
                 }
-                ConfirmMenu("&4Surrender?", "Give up the war with ${enemyCiv!!.name}", ::run)
+                ConfirmMenu("&4Surrender?", "Give up the war with ${enemyCiv!!.name}", ::run).displayTo(player)
             }
         }
     }

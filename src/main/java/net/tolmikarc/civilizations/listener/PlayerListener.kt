@@ -41,6 +41,7 @@ import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.*
 import org.bukkit.inventory.EquipmentSlot
 import org.mineacademy.fo.Common
+import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.debug.LagCatcher
 import org.mineacademy.fo.model.HookManager
 import org.mineacademy.fo.remain.CompMetadata
@@ -78,8 +79,12 @@ class PlayerListener : Listener {
             if (civPlayer.civilization == null) return
             val civilization = civPlayer.civilization!!
             civilization.raid?.let { raid ->
+
                 // make sure player is involved in the raid
                 if (!raid.playersInvolved.containsKey(civPlayer)) return
+
+                val playerLives = raid.playersInvolved[civPlayer]!! - 1
+                raid.playersInvolved[civPlayer] = playerLives
                 // if they have no lives left let them know
                 if (raid.playersInvolved[civPlayer]!! <= 0) {
                     Common.tell(
@@ -93,16 +98,20 @@ class PlayerListener : Listener {
 
                 // give player spawn protection if they died during a raid
                 addCooldownTimer(civPlayer, CooldownTask.CooldownType.RESPAWN_PROTECTION)
+                Messenger.warn(
+                    player,
+                    "You lost ${Settings.CURRENCY_SYMBOL}${Settings.MONEY_PVP_TRANSACTION} and ${Settings.POWER_PVP_TRANSACTION} power for dying during a raid. You have ${raid.playersInvolved[civPlayer]} lives left"
+                )
+                Messenger.success(
+                    killer,
+                    "You earned ${Settings.CURRENCY_SYMBOL}${Settings.MONEY_PVP_TRANSACTION} and ${Settings.POWER_PVP_TRANSACTION} power for killing ${player.name}."
+                )
                 killer?.let { killer ->
                     PlayerManager.fromBukkitPlayer(killer).addPower(Settings.POWER_PVP_TRANSACTION)
                     HookManager.deposit(killer, Settings.MONEY_PVP_TRANSACTION)
                 }
                 civPlayer.removePower(Settings.POWER_PVP_TRANSACTION)
                 HookManager.withdraw(player, Settings.MONEY_PVP_TRANSACTION)
-                // subtract one life
-                val playerLives = raid.playersInvolved[civPlayer]!! - 1
-                raid.playersInvolved[civPlayer] = playerLives
-                println(playerLives)
             }
 
         }
@@ -127,7 +136,7 @@ class PlayerListener : Listener {
                 civPlayer.selection.select(block, player, Selection.ClickType.LEFT)
                 Common.tell(
                     player,
-                    "&6Set first point to " + civPlayer.selection.primary!!.x.toString() + " " + civPlayer.selection.primary!!.z.toString()
+                    "${Settings.PRIMARY_COLOR}Set first point to " + civPlayer.selection.primary!!.x.toString() + " " + civPlayer.selection.primary!!.z.toString()
                 )
             }
             if (event.action == Action.RIGHT_CLICK_BLOCK) {
@@ -136,7 +145,7 @@ class PlayerListener : Listener {
                     civPlayer.selection.select(block, player, Selection.ClickType.RIGHT)
                     Common.tell(
                         player,
-                        "&6Set second point to " + civPlayer.selection.secondary!!.x.toString() + " " + civPlayer.selection.secondary!!.z.toString()
+                        "${Settings.PRIMARY_COLOR}Set second point to " + civPlayer.selection.secondary!!.x.toString() + " " + civPlayer.selection.secondary!!.z.toString()
                     )
                 }
             }
@@ -415,13 +424,12 @@ class PlayerListener : Listener {
         val civ = civPlayer.civilization
         civ?.let { theCiv ->
             if (theCiv.channel.players.contains(event.player)) {
-                // TODO externalize format
                 event.format =
                     "${Settings.PRIMARY_COLOR}[${Settings.SECONDARY_COLOR}${theCiv.name}${Settings.PRIMARY_COLOR}] ${Settings.SECONDARY_COLOR}${event.player.displayName}${Settings.PRIMARY_COLOR}:"
                 for (player in Bukkit.getOnlinePlayers()) {
                     event.recipients.removeIf { !theCiv.citizens.contains(PlayerManager.fromBukkitPlayer(player)) }
-
                 }
+                event.recipients.add(event.player)
             }
         }
     }
