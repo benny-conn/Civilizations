@@ -7,12 +7,11 @@ package net.tolmikarc.civilizations.command.management
 import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
-import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
-class SetwarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "setwarp") {
+class SetHomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "sethome") {
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
@@ -24,23 +23,16 @@ class SetwarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "se
                 )
                 checkBoolean(
                     isLocationInCiv(player.location, this),
-                    "You must be in your Civilization to set a Warp."
+                    "You must be in your Civilization to set the home."
                 )
-                val maxWarps = calculateFormulaForCiv(Settings.MAX_WARPS_FORMULA, this)
-                checkBoolean(
-                    warps.keys.size.toDouble() < maxWarps,
-                    "You cannot have more than $maxWarps total warps."
-                )
-                addWarp(args[0], player.location)
-                tellSuccess("${Settings.PRIMARY_COLOR}Set a Civilization Warp at your location with the name ${Settings.SECONDARY_COLOR}" + args[0])
+                home = player.location
+                tellSuccess("${Settings.SECONDARY_COLOR}Set the Civilization home location")
             }
         }
     }
 
     init {
-        setDescription("Set a warp for your Civilization.")
-        usage = "<name>"
-        minArguments = 1
+        setDescription("Set your Civilizations home location.")
         if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 }

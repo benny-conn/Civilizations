@@ -10,8 +10,8 @@ Prefix: "&5&lCIV &7// "
 # How many milliseconds should an action take before the lag is logged to console
 Log_Lag_Over_Milis: 100
 Locale: en
-# command aliases separated by comma. default command: /civilizations
-Aliases: "civ, c"
+# command aliases separated by "|". default command: /civilizations
+Aliases: "civ|c"
 
 # -------------------------- FORMULAS ----------------------------------
 #
@@ -101,6 +101,12 @@ Tax_Cap: 200.00
 # 1: action bar
 # 2: title
 Notice_Type: 1
+
+Visualizing:
+  # particles displayed when visualizing claims
+  # find particle names at https://minecraft.gamepedia.com/Particles
+  Claim: END_ROD
+  Plot: TOTEM
 
 # how much power for a civilization added for every category
 Power:

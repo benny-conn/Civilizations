@@ -19,10 +19,7 @@ class WithdrawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "w
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You must have a civilization to put money into")
             civPlayer.civilization?.apply {
-                checkBoolean(
-                    canManageCiv(civPlayer, this),
-                    "You must be the Civilization Leader or an Official to withdraw money"
-                )
+                checkBoolean(canManageCiv(civPlayer, this), "You cannot manage this Civilization")
                 checkBoolean(isDouble(args[0]), "Please type in a valid number")
                 val amount = doubleToMoney(args[0].toDouble())
                 checkBoolean(bank.balance - amount > 0, "Your Civilization does not have enough money to withdraw")

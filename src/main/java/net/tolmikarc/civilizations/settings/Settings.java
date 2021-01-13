@@ -8,6 +8,7 @@ import net.tolmikarc.civilizations.permissions.PermissionGroup;
 import net.tolmikarc.civilizations.permissions.PermissionType;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.mineacademy.fo.remain.CompParticle;
 import org.mineacademy.fo.settings.SimpleSettings;
 
 import java.util.HashSet;
@@ -72,6 +73,8 @@ public class Settings extends SimpleSettings {
 	public static Boolean TUTORIAL;
 
 	public static Integer NOTICE_TYPE;
+	public static CompParticle CLAIM_PARTICLE;
+	public static CompParticle PLOT_PARTICLE;
 
 	public static Integer BLOCKS_PER_SECONDS_REPAIR;
 	public static Double REPAIR_COST_PER_BLOCK;
@@ -142,6 +145,8 @@ public class Settings extends SimpleSettings {
 		MAX_TAXES = getDouble("Tax_Cap");
 
 		NOTICE_TYPE = getInteger("Notice_Type");
+		CLAIM_PARTICLE = CompParticle.valueOf(getString("Visualizing.Claim".toUpperCase()));
+		PLOT_PARTICLE = CompParticle.valueOf(getString("Visualizing.Plot".toUpperCase()));
 
 		MAX_WARPS_FORMULA = getString("Extra_Settings.Max_Warps");
 		SHOW_COORDS_IN_INFO = getBoolean("Extra_Settings.Show_Coords_In_Info");

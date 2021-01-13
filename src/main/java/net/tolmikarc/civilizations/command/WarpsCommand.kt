@@ -14,7 +14,7 @@ import java.util.*
 class WarpsCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warps") {
     override fun onCommand() {
         checkConsole()
-        val civPlayer = PlayerManager.fromBukkitPlayer(player).run {
+        PlayerManager.fromBukkitPlayer(player).run {
             checkNotNull(civilization, "You do not have a Civilization")
             val warpNames: List<String> = ArrayList(civilization!!.warps.keys)
             val warpNamesCombined = Common.join(warpNames, ", ")

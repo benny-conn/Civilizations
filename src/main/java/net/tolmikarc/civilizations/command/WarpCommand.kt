@@ -21,7 +21,7 @@ class WarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp"
         PlayerManager.fromBukkitPlayer(player).run {
             checkNotNull(civilization, "You do not have a Civilization")
             val warp = civilization!!.warps[args[0]]
-            checkNotNull(warp, "Your Civilization does not have a home.")
+            checkNotNull(warp, "Please specify a valid warp.")
             checkBoolean(
                 !hasCooldown(this, CooldownTask.CooldownType.TELEPORT),
                 "Please wait " + getCooldownRemaining(
@@ -39,7 +39,7 @@ class WarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp"
         }
     }
 
-    override fun tabComplete(): List<String> {
+    override fun tabComplete(): List<String>? {
         val warps: MutableList<String> = ArrayList()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             if (civPlayer.civilization != null) {

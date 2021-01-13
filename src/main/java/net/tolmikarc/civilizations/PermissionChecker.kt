@@ -5,6 +5,7 @@
 package net.tolmikarc.civilizations
 
 import lombok.experimental.UtilityClass
+import net.tolmikarc.civilizations.constants.Permissions
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
@@ -22,7 +23,7 @@ object PermissionChecker {
     fun can(permType: PermissionType, player: Player, civilization: Civ): Boolean {
         val claimPermissions = civilization.permissionGroups
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
-        if (isAdmin(civPlayer)) return true
+        if (canBypass(permType, civPlayer)) return true
         val permissionGroup = claimPermissions.getPlayerGroup(civPlayer)
         if (claimPermissions.adminGroups.contains(permissionGroup)) return true
         if (Settings.OUTLAW_PERMISSIONS_DISABLED) if (CivUtil.isPlayerOutlaw(civPlayer, civilization)) return false
@@ -35,13 +36,25 @@ object PermissionChecker {
         }
     }
 
+    private fun canBypass(permType: PermissionType, player: CPlayer): Boolean {
+        if (isAdmin(player)) return true
+        val bukkitPlayer = Bukkit.getPlayer(player.uuid) ?: return false
+        return when (permType) {
+            PermissionType.BUILD -> bukkitPlayer.hasPermission(Permissions.Bypass.BUILD)
+            PermissionType.BREAK -> bukkitPlayer.hasPermission(Permissions.Bypass.BUILD)
+            PermissionType.SWITCH -> bukkitPlayer.hasPermission(Permissions.Bypass.SWITCH)
+            PermissionType.INTERACT -> bukkitPlayer.hasPermission(Permissions.Bypass.INTERACT)
+        }
+    }
+
     fun isAdmin(player: CPlayer): Boolean {
-        return if (Bukkit.getPlayer(player.uuid) != null) Bukkit.getPlayer(player.uuid)!!
-            .hasPermission("civilizations.admin") else false
+        val bukkitPlayer = Bukkit.getPlayer(player.uuid) ?: return false
+        return bukkitPlayer.hasPermission(Permissions.ADMIN)
     }
 
     fun canManageCiv(player: CPlayer, civilization: Civ): Boolean {
-        return if (isAdmin(player)) true else civilization.permissionGroups.adminGroups.contains(
+        if (isAdmin(player)) return true
+        return civilization.permissionGroups.adminGroups.contains(
             civilization.permissionGroups.getPlayerGroup(
                 player
             )

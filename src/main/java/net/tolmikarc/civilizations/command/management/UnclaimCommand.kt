@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.event.UnclaimEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
@@ -19,6 +20,7 @@ class UnclaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "un
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You do not have a civilization")
             civPlayer.civilization?.apply {
+                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
                 val regionToRemove = getRegionFromLocation(player.location, this)
                 checkNotNull(regionToRemove, "There is no region at your location")
                 fun run() {

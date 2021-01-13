@@ -5,6 +5,7 @@
 package net.tolmikarc.civilizations.command
 
 import io.papermc.lib.PaperLib
+import net.tolmikarc.civilizations.PermissionChecker.isAdmin
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
@@ -15,29 +16,39 @@ import net.tolmikarc.civilizations.task.CooldownTask.Companion.hasCooldown
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
-class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home") {
+class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|tp") {
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             if (args.isNotEmpty()) {
                 CivManager.getByName(args[0])
                     ?.let { civ ->
-                        if (civ.toggleables.public) civ.home?.let { home ->
-                            checkBoolean(
-                                !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
-                                "Please wait " + getCooldownRemaining(
-                                    civPlayer,
-                                    CooldownTask.CooldownType.TELEPORT
-                                ) + " seconds before teleporting again."
-                            )
-                            PaperLib.teleportAsync(player, home).thenAccept {
+                        if (isAdmin(civPlayer) && civ.home != null) {
+                            PaperLib.teleportAsync(player, civ.home!!).thenAccept {
                                 if (it)
                                     tellSuccess("${Settings.PRIMARY_COLOR}Teleported to Civ Home!")
                                 else
                                     tellError("Failed to teleport to Civ Home!")
                             }
-                            addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
+                        }
+                        if (civ.toggleables.public) {
+                            civ.home?.let { home ->
+                                checkBoolean(
+                                    !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
+                                    "Please wait " + getCooldownRemaining(
+                                        civPlayer,
+                                        CooldownTask.CooldownType.TELEPORT
+                                    ) + " seconds before teleporting again."
+                                )
+                                PaperLib.teleportAsync(player, home).thenAccept {
+                                    if (it)
+                                        tellSuccess("${Settings.PRIMARY_COLOR}Teleported to Civ Home!")
+                                    else
+                                        tellError("Failed to teleport to Civ Home!")
+                                }
+                                addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
 
+                            }
                         } else tell("&cTown not public")
                     }
                 return

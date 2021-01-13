@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.CivilizationMenu
 import net.tolmikarc.civilizations.settings.Settings
@@ -15,6 +16,7 @@ class MenuCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "menu|
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).run {
             checkNotNull(civilization, "You must have a Civilization to use this command.")
+            checkBoolean(PermissionChecker.canManageCiv(this, civilization!!), "You cannot manage this Civilization")
             civilization?.run { CivilizationMenu(this).displayTo(player) }
         }
     }

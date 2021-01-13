@@ -16,10 +16,7 @@ class OutlawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "out
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You must have a Civilization to manage it.")
             civPlayer.civilization?.apply {
-                checkBoolean(
-                    canManageCiv(civPlayer, this),
-                    "You must be the Leader or an Official of your Civilization to use this command."
-                )
+                checkBoolean(canManageCiv(civPlayer, this), "You cannot manage this Civilization")
                 val outlaw = findPlayer(args[0], "Specify a valid and online player")
                 PlayerManager.fromBukkitPlayer(outlaw).let { civOutlaw ->
                     checkBoolean(!this.citizens.contains(civOutlaw), "You cannot outlaw a player in your town.")

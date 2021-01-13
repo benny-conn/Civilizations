@@ -4,6 +4,7 @@
 package net.tolmikarc.civilizations.conversation
 
 import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.settings.Localization
 import org.bukkit.conversations.ConversationCanceller
 import org.bukkit.conversations.Prompt
 import org.bukkit.entity.Player
@@ -22,7 +23,7 @@ class BankTranscationConversation(private val transaction: Transaction, val civ:
     }
 
     override fun getCanceller(): ConversationCanceller {
-        return SimpleCanceller("cancel", "exit")
+        return SimpleCanceller(Localization.CANCEL)
     }
 
     enum class Transaction {

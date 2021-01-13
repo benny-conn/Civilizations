@@ -14,11 +14,8 @@ class TaxesCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "taxes
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         val civ = civPlayer.civilization
         checkNotNull(civ, "You must have a civ to use this command")
-        checkBoolean(
-            PermissionChecker.canManageCiv(civPlayer, civ!!),
-            "You are not permitted to manage this Civilization"
-        )
-        civ.apply {
+        civ?.apply {
+            checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
             val amount = findNumber(0, "Please specify a valid number").toDouble()
             if (amount > Settings.MAX_TAXES)
                 returnTell("The maximum tax amount is ${Settings.MAX_TAXES}")

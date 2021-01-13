@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.command.management
+package net.tolmikarc.civilizations.command.admin
 
-import net.tolmikarc.civilizations.PermissionChecker
+import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.permissions.PermissionGroup
 import net.tolmikarc.civilizations.settings.Settings
@@ -11,22 +11,18 @@ import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
-class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank") {
+class ARankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank") {
     override fun onCommand() {
-        checkConsole()
-        val civPlayer = PlayerManager.fromBukkitPlayer(player)
-        val civ = civPlayer.civilization
-        checkNotNull(civ, "You must have a civ to use this command.")
+        val civ = CivManager.getByName(args[0])
+        checkNotNull(civ, "Please specify a valid Civilization.")
         civ?.apply {
-            checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
-
-            when (args[0].toLowerCase()) {
+            when (args[1].toLowerCase()) {
                 "set" -> {
                     checkArgs(3, "Please specify a player's name and a rank to apply to them")
                     val player = PlayerManager.getByName(args[1])
                     val rank = permissionGroups.getGroupByName(args[2])
                     checkNotNull(player, "Please specify a valid player")
-                    checkBoolean(citizens.contains(player), "Player is not a member of your Civilization")
+                    checkBoolean(citizens.contains(player), "Player is not a member of the Civilization")
                     checkNotNull(
                         rank,
                         "Please specify a valid rank. Options: ${

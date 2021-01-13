@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
@@ -24,6 +25,7 @@ class RaidCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "raid")
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You must have a civilization to Raid another.")
             civPlayer.civilization?.apply {
+                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
                 val enemyCiv = CivManager.getByName(args[0])
                 checkNotNull(enemyCiv, "Please specify a valid Civilization")
                 checkBoolean(!isInRaid(enemyCiv!!), "This civilization is already in a Raid")

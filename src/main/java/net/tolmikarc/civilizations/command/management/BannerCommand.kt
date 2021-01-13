@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Tag
@@ -22,7 +23,7 @@ class BannerCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ban
                     val banner = player.inventory.itemInMainHand
                     checkBoolean(Tag.BANNERS.isTagged(banner.type), "You must be holding a banner to use this command.")
                     checkBoolean(
-                        this.leader == it,
+                        canManageCiv(it, this),
                         "You must be the leader of the Civilization to set the Banner"
                     )
                     this.banner = banner

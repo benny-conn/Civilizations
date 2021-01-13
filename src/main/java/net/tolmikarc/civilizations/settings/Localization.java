@@ -16,6 +16,7 @@ public class Localization extends SimpleLocalization {
 	public static String CANCEL;
 
 	private static void init() {
+		pathPrefix(null);
 		CONFIRM = getString("Confirm");
 		CANCEL = getString("Cancel");
 	}

@@ -58,7 +58,10 @@ class Claim(val id: Int, val primary: Location, val secondary: Location) : Confi
             return BlockUtil.getBlocks(centered[0], centered[1])
         }
     val boundingBox: Set<Location>
-        get() = BlockUtil.getBoundingBox(primary, secondary)
+        get() = BlockUtil.getBoundingBox(
+            Location(primary.world, primary.x, 0.0, primary.z),
+            Location(secondary.world, secondary.x, 256.0, secondary.z)
+        )
 
     val entities: List<Entity?>
         get() {

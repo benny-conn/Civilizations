@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
@@ -19,6 +20,7 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You must have a civilization to Raid another.")
             civPlayer.civilization?.apply {
+                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
                 val enemyCiv = CivManager.getByName(args[0])
                 checkNotNull(enemyCiv, "Please specify a valid Civ to surrender to")
                 if (!relationships.warring.contains(enemyCiv)) returnTell("You are not warring this Civilization")

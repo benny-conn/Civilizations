@@ -9,6 +9,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.tolmikarc.civilizations.command.CivilizationsCommandGroup
 import net.tolmikarc.civilizations.command.MapCommand
+import net.tolmikarc.civilizations.command.admin.AdminCommandGroup
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.listener.CivListener
@@ -106,10 +107,8 @@ class CivilizationsPlugin : SimplePlugin() {
 
 
     private fun registerAllCommands() {
-        val stringBuffer = StringBuffer()
-
-
-        registerCommands("civilizations|civ", CivilizationsCommandGroup())
+        registerCommands(Settings.ALIASES, CivilizationsCommandGroup())
+        registerCommands("cadmin|civadmin|civilizationsadmin", AdminCommandGroup())
     }
 
     private fun registerAllEvents() {

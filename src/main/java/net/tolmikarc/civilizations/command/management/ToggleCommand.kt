@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -14,6 +15,7 @@ class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "togg
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             civPlayer.civilization?.apply {
+                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
                 when (args[0].toLowerCase()) {
                     "fire" -> toggleables.fire =
                         !toggleables.fire.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.fire}") }
@@ -34,7 +36,7 @@ class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "togg
 
     }
 
-    override fun tabComplete(): List<String> {
+    override fun tabComplete(): List<String>? {
         return if (args.size == 1) listOf("fire", "explosions", "pvp", "mobs", "public", "inviteonly")
         else
             super.tabComplete()

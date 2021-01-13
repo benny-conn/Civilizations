@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
@@ -18,6 +19,7 @@ class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enem
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, "You do not have a Civilization")
             civPlayer.civilization?.apply {
+                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
                 val enemyCiv = CivManager.getByName(args[1])
                 checkNotNull(enemyCiv, "Please specify a valid enemy Civilization")
                 checkBoolean(enemyCiv != this, "You cannot enemy yourself")

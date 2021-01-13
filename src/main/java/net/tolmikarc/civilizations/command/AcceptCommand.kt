@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command
 
-import net.tolmikarc.civilizations.event.JoinCivEvent
+import net.tolmikarc.civilizations.event.CivJoinEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
@@ -22,7 +22,7 @@ class AcceptCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "acc
                 civPlayer.civilizationInvite = null
                 tell("${Settings.SECONDARY_COLOR}Accepted invite from the Civilization ${Settings.PRIMARY_COLOR}" + civPlayer.civilization!!.name)
                 tell("${Settings.SECONDARY_COLOR}Type " + "${Settings.PRIMARY_COLOR}/civ ? ${Settings.SECONDARY_COLOR}for a list of Civilizations commands.")
-                Common.callEvent(JoinCivEvent(this, player))
+                Common.callEvent(CivJoinEvent(this, player))
             }
         }
 

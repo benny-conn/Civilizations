@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Material
@@ -22,7 +23,7 @@ class BookCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "book"
                     val book = player.inventory.itemInMainHand
                     checkBoolean(book.type == Material.WRITTEN_BOOK, "You must be holding a Book to use this command.")
                     checkBoolean(
-                        this.leader == it,
+                        PermissionChecker.canManageCiv(it, this),
                         "You must be the leader of the Civilization to set the Book"
                     )
                     this.book = book

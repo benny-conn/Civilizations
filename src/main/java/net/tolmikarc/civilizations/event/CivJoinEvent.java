@@ -9,14 +9,14 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
-public class JoinCivEvent extends Event {
+public class CivJoinEvent extends Event {
 	private static final HandlerList handlers = new HandlerList();
 
 	private final Civ civ;
 	private final Player player;
 
 
-	public JoinCivEvent(Civ civ, Player player) {
+	public CivJoinEvent(Civ civ, Player player) {
 		this.civ = civ;
 		this.player = player;
 	}
