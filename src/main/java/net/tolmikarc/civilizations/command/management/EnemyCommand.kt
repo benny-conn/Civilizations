@@ -31,10 +31,10 @@ class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enem
                         )
                         checkBoolean(!relationships.allies.contains(enemyCiv), "You cannot enemy an ally Civilization.")
                         relationships.addEnemy(enemyCiv!!)
-                        tell("${Settings.PRIMARY_COLOR}Your Civilization is now enemies with ${Settings.SECONDARY_COLOR}" + enemyCiv.name)
+                        tell("{1}Your Civilization is now enemies with {2}" + enemyCiv.name)
                         if (enemyCiv.relationships.enemies.contains(this)) {
                             Bukkit.getOnlinePlayers().forEach {
-                                Common.tell(it, "&4${enemyCiv.name} &cis now at war with &4${this.name}")
+                                Common.tell(it, "&4${enemyCiv.name} {3}is now at war with &4${this.name}")
                             }
                         }
                     }
@@ -42,9 +42,9 @@ class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enem
                         checkBoolean(relationships.enemies.contains(enemyCiv), "This Civilization is not your enemy.")
                         // TODO make sure that there is no cooldown
                         if (relationships.warring.contains(enemyCiv))
-                            returnTell("&cYou must use /civ surrender to end the war")
+                            returnTell("{3}You must use /civ surrender to end the war")
                         relationships.removeEnemy(enemyCiv!!)
-                        tell("${Settings.PRIMARY_COLOR}Your Civilization is no longer enemies with ${Settings.SECONDARY_COLOR}" + enemyCiv.name)
+                        tell("{1}Your Civilization is no longer enemies with {2}" + enemyCiv.name)
                     }
                     else -> {
                         returnInvalidArgs()

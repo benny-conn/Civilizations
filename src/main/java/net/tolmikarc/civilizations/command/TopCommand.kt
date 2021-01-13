@@ -36,41 +36,41 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                 }
                 val lowerLimit = (page * 10) - 9
                 val upperLimit = page * 10
-                tellNoPrefix("${Settings.PRIMARY_COLOR}======= ${Settings.SECONDARY_COLOR}Top Civs: ${args[0].capitalize()} ($page) ${Settings.PRIMARY_COLOR}=======")
+                tellNoPrefix("{1}======= {2}Top Civs: ${args[0].capitalize()} ($page) {1}=======")
                 when (args[0]) {
                     "power" -> {
                         for (i in lowerLimit..(upperLimit + 1)) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].power} ")
+                            tellNoPrefix("{1} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].power} ")
                         }
                     }
                     "balance" -> {
                         for (i in lowerLimit..(upperLimit + 1)) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].bank.balance} ")
+                            tellNoPrefix("{1} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].bank.balance} ")
                         }
                     }
                     "land" -> {
                         for (i in lowerLimit..(upperLimit + 1)) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].claims.totalBlocksCount} ")
+                            tellNoPrefix("{1} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].claims.totalBlocksCount} ")
                         }
                     }
                     "citizens" -> {
                         for (i in lowerLimit..(upperLimit + 1)) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].citizenCount} ")
+                            tellNoPrefix("{1} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].citizenCount} ")
                         }
                     }
                     else -> {
                         for (i in lowerLimit..(upperLimit + 1)) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].power} ")
+                            tellNoPrefix("{1} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].power} ")
                         }
                     }
                 }
@@ -80,11 +80,11 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                 val topPlayers = ArrayList(PlayerManager.cacheMap.values).sortedBy { it.power }
                 val lowerLimit = (page * 10) - 9
                 val upperLimit = page * 10
-                tellNoPrefix("${Settings.PRIMARY_COLOR}======= ${Settings.SECONDARY_COLOR}Top Players ($page) ${Settings.PRIMARY_COLOR}=======")
+                tellNoPrefix("{1}======= {2}Top Players ($page) {1}=======")
                 for (i in lowerLimit..(upperLimit + 1)) {
                     if (i >= topPlayers.size)
                         break
-                    tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${topPlayers[i].playerName}: ${topPlayers[i].power} ")
+                    tellNoPrefix("{1} ${i}. ${topPlayers[i].playerName}: ${topPlayers[i].power} ")
                 }
             }
         }

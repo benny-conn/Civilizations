@@ -41,7 +41,7 @@ class ConfirmMenu(title: String, info: String, result: () -> Unit) : Menu() {
             }
 
             override fun getItem(): ItemStack {
-                return ItemCreator.of(CompMaterial.REDSTONE_BLOCK).name("&c" + Localization.CANCEL).build().make()
+                return ItemCreator.of(CompMaterial.REDSTONE_BLOCK).name("{3}" + Localization.CANCEL).build().make()
             }
         }
     }

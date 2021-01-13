@@ -23,7 +23,7 @@ class DepositCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "de
                 checkBoolean(HookManager.getBalance(player) - amount > 0, "You do not have enough money to deposit")
                 HookManager.withdraw(player, amount)
                 bank.addBalance(amount)
-                tellSuccess("${Settings.PRIMARY_COLOR}Deposited ${Settings.SECONDARY_COLOR}" + amount + "${Settings.PRIMARY_COLOR} into your Civilization's Bank")
+                tellSuccess("{1}Deposited {2}" + amount + "{1} into your Civilization's Bank")
             }
         }
     }

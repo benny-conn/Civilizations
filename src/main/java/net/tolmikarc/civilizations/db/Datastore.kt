@@ -33,7 +33,7 @@ abstract class Datastore {
         autoReconnect: Boolean = true
     ) {
         this.connect(
-            "jdbc:mysql://$host:$port/$database?useSSL=false&useUnicode=yes&characterEncoding=UTF-8&autoReconnect=$autoReconnect",
+            "jdbc:mysql://$host:$port/$database?useSSL=false&useUnicode=yes{3}haracterEncoding=UTF-8&autoReconnect=$autoReconnect",
             user,
             password,
             table
@@ -230,7 +230,7 @@ abstract class Datastore {
     }
 
     protected open val expirationDays: Int
-        get() = 90
+        get() = Settings.DELETE_AFTER
 
     @Throws(SQLException::class)
     fun isStored(uuid: UUID): Boolean {

@@ -33,9 +33,9 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
 
         } else visualizedRegions.addAll(civilization.claims.claims)
         if (civPlayer.visualizing) {
-            tell("${Settings.SECONDARY_COLOR}Beginning to visualize...")
+            tell("{2}Beginning to visualize...")
         } else {
-            tell("&cStopping visualization...")
+            tell("{3}Stopping visualization...")
         }
         for (region in visualizedRegions) {
             Common.runTimerAsync(20 * 4, object : BukkitRunnable() {
@@ -127,9 +127,9 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
             )
             val colony = Colony(civilization, civilization.claims.idNumber, getPlayer().location)
             civilization.claims.addColony(colony)
-            tellSuccess("${Settings.PRIMARY_COLOR}Claimed colony at your location!")
+            tellSuccess("{1}Claimed colony at your location!")
         } else {
-            tellSuccess("${Settings.PRIMARY_COLOR}Claimed region at your location!")
+            tellSuccess("{1}Claimed region at your location!")
         }
         if (civilization.claims.totalClaimCount == 0) civilization.home = getPlayer().location
         HookManager.withdraw(getPlayer(), cost)

@@ -7,7 +7,6 @@ package net.tolmikarc.civilizations.command.admin
 import net.tolmikarc.civilizations.event.CivLeaveEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -21,7 +20,7 @@ class AKickCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "kick
         civ?.apply {
             addedPlayer?.let {
                 removeCitizen(it)
-                tellSuccess("${Settings.PRIMARY_COLOR}Successfully removed ${Settings.SECONDARY_COLOR}${it.playerName} ${Settings.PRIMARY_COLOR}from ${Settings.SECONDARY_COLOR}$name")
+                tellSuccess("{1}Successfully removed {2}${it.playerName} {1}from {2}$name")
                 Common.callEvent(CivLeaveEvent(this, player))
             }
         }

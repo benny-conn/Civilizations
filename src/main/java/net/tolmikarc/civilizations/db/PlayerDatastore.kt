@@ -8,7 +8,6 @@ import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.debug.Debugger
@@ -95,8 +94,4 @@ object PlayerDatastore : Datastore() {
             }
         }
     }
-
-    override val expirationDays: Int
-        get() = Settings.DELETE_AFTER
-
 }

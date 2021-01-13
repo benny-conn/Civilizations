@@ -145,8 +145,8 @@ public class Settings extends SimpleSettings {
 		MAX_TAXES = getDouble("Tax_Cap");
 
 		NOTICE_TYPE = getInteger("Notice_Type");
-		CLAIM_PARTICLE = CompParticle.valueOf(getString("Visualizing.Claim".toUpperCase()));
-		PLOT_PARTICLE = CompParticle.valueOf(getString("Visualizing.Plot".toUpperCase()));
+		CLAIM_PARTICLE = CompParticle.valueOf(getString("Visualizing.Claim").toUpperCase());
+		PLOT_PARTICLE = CompParticle.valueOf(getString("Visualizing.Plot").toUpperCase());
 
 		MAX_WARPS_FORMULA = getString("Extra_Settings.Max_Warps");
 		SHOW_COORDS_IN_INFO = getBoolean("Extra_Settings.Show_Coords_In_Info");

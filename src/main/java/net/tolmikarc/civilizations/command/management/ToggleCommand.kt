@@ -18,17 +18,17 @@ class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "togg
                 checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
                 when (args[0].toLowerCase()) {
                     "fire" -> toggleables.fire =
-                        !toggleables.fire.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.fire}") }
+                        !toggleables.fire.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.fire}") }
                     "explosions" -> toggleables.explosion =
-                        !toggleables.explosion.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.explosion}") }
+                        !toggleables.explosion.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.explosion}") }
                     "mobs" -> toggleables.mobs =
-                        !toggleables.mobs.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.mobs}") }
+                        !toggleables.mobs.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.mobs}") }
                     "pvp" -> toggleables.pvp =
-                        !toggleables.pvp.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.pvp}") }
+                        !toggleables.pvp.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.pvp}") }
                     "public" -> toggleables.public =
-                        !toggleables.public.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.public}") }
+                        !toggleables.public.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.public}") }
                     "inviteonly" -> toggleables.inviteOnly =
-                        !toggleables.inviteOnly.also { tellSuccess("${Settings.PRIMARY_COLOR}Toggled ${args[0]}:${Settings.SECONDARY_COLOR} ${!toggleables.inviteOnly}") }
+                        !toggleables.inviteOnly.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.inviteOnly}") }
                     else -> returnInvalidArgs()
                 }
             }

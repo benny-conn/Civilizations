@@ -23,11 +23,11 @@ import java.util.*
 
 open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot") {
 
-    fun addMemberToPlot(player: CPlayer, civilization: Civ) {
+    fun addMemberToPlot(civPlayer: CPlayer, civilization: Civ) {
         val plot: Plot? = ClaimUtil.getPlotFromLocation(getPlayer().location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         checkBoolean(
-            PermissionChecker.canManagePlot(civilization, plot!!, player),
+            PermissionChecker.canManagePlot(civilization, plot!!, civPlayer),
             "You must own this plot to add members to it"
         )
         plot.apply {
@@ -35,16 +35,16 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             val newPlayer = findPlayer(args[0], "Specify a valid and online player")
             val civNewPlayer = PlayerManager.fromBukkitPlayer(newPlayer)
             addMember(civNewPlayer)
-            tellSuccess("${Settings.PRIMARY_COLOR}Added ${Settings.SECONDARY_COLOR}" + newPlayer.displayName + "${Settings.PRIMARY_COLOR} to your plot")
+            tellSuccess("{1}Added {2}" + newPlayer.displayName + "{1} to your plot")
         }
     }
 
-    fun setPlotForSale(player: CPlayer, civilization: Civ) {
-        val plot: Plot? = ClaimUtil.getPlotFromLocation(getPlayer().location, civilization)
+    fun setPlotForSale(civPlayer: CPlayer, civilization: Civ) {
+        val plot: Plot? = ClaimUtil.getPlotFromLocation(player.location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         plot?.apply {
             checkBoolean(
-                PermissionChecker.canManagePlot(civilization, this, player),
+                PermissionChecker.canManagePlot(civilization, this, civPlayer),
                 "You must own this plot to set it for sale"
             )
             if (args.size > 1) {
@@ -52,34 +52,35 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
                 price = MathUtil.doubleToMoney(args[1].toDouble())
             }
             forSale = true
-            tellSuccess("${Settings.PRIMARY_COLOR}Successfully put this plot up for sale at the price ${Settings.SECONDARY_COLOR}" + price)
+            tellSuccess("{1}Successfully put this plot up for sale at the price {2}" + price)
         }
     }
 
-    fun claimPlot(player: CPlayer, civilization: Civ) {
-        val plot: Plot? = ClaimUtil.getPlotFromLocation(getPlayer().location, civilization)
+    fun claimPlot(civPlayer: CPlayer, civilization: Civ) {
+        val plot: Plot? = ClaimUtil.getPlotFromLocation(player.location, civilization)
         checkNotNull(plot, "There is no plot at your location")
         plot?.apply {
             checkBoolean(forSale, "This plot is not for sale")
-            checkBoolean(HookManager.getBalance(getPlayer()) - price > 0, "You cannot afford this claim")
-            HookManager.withdraw(getPlayer(), price)
-            owner = player
+            checkBoolean(HookManager.getBalance(player) - price > 0, "You cannot afford this claim")
+            HookManager.withdraw(player, price)
+            owner = civPlayer
             price = 0.0
             forSale = false
-            addMember(player)
-            tellSuccess("${Settings.PRIMARY_COLOR}Successfully claimed this plot.")
+            addMember(civPlayer)
+            tellSuccess("{1}Successfully claimed this plot.")
         }
     }
 
-    fun definePlot(player: CPlayer, civilization: Civ) {
-        checkBoolean(PermissionChecker.canManageCiv(player, civilization), "You cannot manage this Civilization")
-        checkBoolean(player.selection.bothPointsSelected(), "You must have both points selected to claim")
+    fun definePlot(civPlayer: CPlayer, civilization: Civ) {
+        checkBoolean(PermissionChecker.canManageCiv(civPlayer, civilization), "You cannot manage this Civilization")
+        checkBoolean(civPlayer.selection.bothPointsSelected(), "You must have both points selected to claim")
         val maxPlots = CivUtil.calculateFormulaForCiv(Settings.MAX_PLOTS_FORMULA, civilization)
         checkBoolean(
             civilization.claims.plotCount.toDouble() < maxPlots,
             "You cannot define more than $maxPlots total plots."
         )
-        val plotRegion = Claim(civilization.claims.plotCount, player.selection.primary!!, player.selection.secondary!!)
+        val plotRegion =
+            Claim(civilization.claims.plotCount, civPlayer.selection.primary!!, civPlayer.selection.secondary!!)
         checkBoolean(
             ClaimUtil.isLocationInCiv(plotRegion.primary, civilization) && ClaimUtil.isLocationInCiv(
                 plotRegion.secondary,
@@ -97,7 +98,17 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
                 this
             )
         }
-            .also { tellSuccess("${Settings.PRIMARY_COLOR}Successfully defined new plot with id ${Settings.SECONDARY_COLOR}" + civilization.claims.plotCount) }
+            .also { tellSuccess("{1}Successfully defined new plot with id {2}" + civilization.claims.plotCount) }
+    }
+
+    fun deletePlot(civPlayer: CPlayer, civilization: Civ) {
+        checkBoolean(PermissionChecker.canManageCiv(civPlayer, civilization), "You cannot manage this Civilization")
+        val plot = ClaimUtil.getPlotFromLocation(player.location, civilization)
+        checkNotNull(plot, "You are not standing in a plot")
+        plot?.apply {
+            civilization.claims.removePlot(this)
+            tellSuccess("Successfully deleted the plot at your location.")
+        }
     }
 
     fun visualize(civPlayer: CPlayer, civilization: Civ) {
@@ -105,16 +116,16 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         val visualizedRegions: MutableSet<Claim> = HashSet()
         if (args.size > 1) {
             checkBoolean(args[1].equals("here", ignoreCase = true), usageMessage)
-            val plotHere = ClaimUtil.getPlotFromLocation(getPlayer().location, civilization)
+            val plotHere = ClaimUtil.getPlotFromLocation(player.location, civilization)
             checkNotNull(plotHere, "There is no plot at your location")
             visualizedRegions.add(plotHere!!.region)
             tell("Visualizing plot with ID " + plotHere.id)
             if (!civPlayer.visualizing) civPlayer.visualizing = true
         } else civilization.claims.plots.forEach { claimedPlot -> visualizedRegions.add(claimedPlot.region) }
         if (civPlayer.visualizing) {
-            tell("${Settings.SECONDARY_COLOR}Beginning to visualize...")
+            tell("{1}Beginning to visualize...")
         } else {
-            tell("&cStopping visualization...")
+            tell("{3}Stopping visualization...")
         }
         for (region in visualizedRegions) {
             Common.runTimerAsync(20 * 4, object : BukkitRunnable() {

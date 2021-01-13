@@ -89,7 +89,7 @@ class PlayerListener : Listener {
                 if (raid.playersInvolved[civPlayer]!! <= 0) {
                     Common.tell(
                         player,
-                        "&cYou do not have any more lives left and can no longer participate in the raid"
+                        "{3}You do not have any more lives left and can no longer participate in the raid"
                     )
                     NameTag.remove(player)
                     return
@@ -136,7 +136,7 @@ class PlayerListener : Listener {
                 civPlayer.selection.select(block, player, Selection.ClickType.LEFT)
                 Common.tell(
                     player,
-                    "${Settings.PRIMARY_COLOR}Set first point to " + civPlayer.selection.primary!!.x.toString() + " " + civPlayer.selection.primary!!.z.toString()
+                    "{1}Set first point to " + civPlayer.selection.primary!!.x.toString() + " " + civPlayer.selection.primary!!.z.toString()
                 )
             }
             if (event.action == Action.RIGHT_CLICK_BLOCK) {
@@ -145,7 +145,7 @@ class PlayerListener : Listener {
                     civPlayer.selection.select(block, player, Selection.ClickType.RIGHT)
                     Common.tell(
                         player,
-                        "${Settings.PRIMARY_COLOR}Set second point to " + civPlayer.selection.secondary!!.x.toString() + " " + civPlayer.selection.secondary!!.z.toString()
+                        "{1}Set second point to " + civPlayer.selection.secondary!!.x.toString() + " " + civPlayer.selection.secondary!!.z.toString()
                     )
                 }
             }
@@ -172,7 +172,7 @@ class PlayerListener : Listener {
                 event.isCancelled = !can(PermissionType.INTERACT, player, civilization)
             }
             if (event.isCancelled) {
-                Common.tell(player, "&cYou cannot Interact here.")
+                Common.tell(player, "{3}You cannot Interact here.")
             }
         } finally {
             LagCatcher.end("use")
@@ -201,7 +201,7 @@ class PlayerListener : Listener {
                 } else {
                     event.isCancelled = !can(PermissionType.BREAK, player, civilization)
                     if (event.isCancelled)
-                        Common.tell(player, "&cYou cannot break here.")
+                        Common.tell(player, "{3}You cannot break here.")
                     else
                         return
                 }
@@ -256,7 +256,7 @@ class PlayerListener : Listener {
                     }
                 } else {
                     event.isCancelled = !can(PermissionType.BUILD, player, civilization)
-                    if (event.isCancelled) Common.tell(player, "&cYou cannot place here")
+                    if (event.isCancelled) Common.tell(player, "{3}You cannot place here")
                 }
             }
         } finally {
@@ -383,7 +383,7 @@ class PlayerListener : Listener {
                         CooldownTask.CooldownType.TELEPORT
                     )
                 } else {
-                    Common.tell(damager, "&cYou cannot PVP here.")
+                    Common.tell(damager, "{3}You cannot PVP here.")
                 }
                 return
             }
@@ -391,13 +391,13 @@ class PlayerListener : Listener {
             if (plot != null) {
                 if (!plot.claimToggleables.pvp) event.isCancelled = true
                 if (event.isCancelled) {
-                    Common.tell(damager, "&cYou cannot PVP here.")
+                    Common.tell(damager, "{3}You cannot PVP here.")
                 }
                 return
             }
             event.isCancelled = !civilization.toggleables.pvp
             if (event.isCancelled) {
-                Common.tell(damager, "&cYou cannot PVP here.")
+                Common.tell(damager, "{3}You cannot PVP here.")
             }
         } finally {
             LagCatcher.end("pvp")
@@ -425,7 +425,7 @@ class PlayerListener : Listener {
         civ?.let { theCiv ->
             if (theCiv.channel.players.contains(event.player)) {
                 event.format =
-                    "${Settings.PRIMARY_COLOR}[${Settings.SECONDARY_COLOR}${theCiv.name}${Settings.PRIMARY_COLOR}] ${Settings.SECONDARY_COLOR}${event.player.displayName}${Settings.PRIMARY_COLOR}:"
+                    "{1}[{2}${theCiv.name}{1}] {2}${event.player.displayName}{1}:"
                 for (player in Bukkit.getOnlinePlayers()) {
                     event.recipients.removeIf { !theCiv.citizens.contains(PlayerManager.fromBukkitPlayer(player)) }
                 }

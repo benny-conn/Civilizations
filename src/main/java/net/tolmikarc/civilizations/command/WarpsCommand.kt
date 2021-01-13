@@ -18,7 +18,7 @@ class WarpsCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp
             checkNotNull(civilization, "You do not have a Civilization")
             val warpNames: List<String> = ArrayList(civilization!!.warps.keys)
             val warpNamesCombined = Common.join(warpNames, ", ")
-            tell("${Settings.PRIMARY_COLOR}Warps: ${Settings.SECONDARY_COLOR}" + warpNamesCombined)
+            tell("{1}Warps: {2}" + warpNamesCombined)
         }
     }
 

@@ -29,7 +29,7 @@ class SetWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "se
                     "You cannot have more than $maxWarps total warps."
                 )
                 addWarp(args[0], player.location)
-                tellSuccess("${Settings.PRIMARY_COLOR}Set a Civilization Warp at your location with the name ${Settings.SECONDARY_COLOR}" + args[0])
+                tellSuccess("{1}Set a Civilization Warp at your location with the name {2}" + args[0])
             }
         }
     }

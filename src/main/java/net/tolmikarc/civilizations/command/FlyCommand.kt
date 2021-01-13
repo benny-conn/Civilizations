@@ -17,7 +17,7 @@ class FlyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "fly") 
         PlayerManager.fromBukkitPlayer(player).apply {
             checkNotNull(civilization, "You must have a Civilization to use this command.")
             flying = !flying
-            tellSuccess("${Settings.PRIMARY_COLOR}Enabled flight while you are in your Civilization.")
+            tellSuccess("{1}Enabled flight while you are in your Civilization.")
             if (isLocationInCiv(player.location, civilization!!)) player.isFlying = flying
         }
     }

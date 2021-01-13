@@ -5,7 +5,6 @@
 package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
-import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -16,7 +15,7 @@ class ARemoveWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent,
         civ?.apply {
             checkBoolean(warps.containsKey(args[1]), "Please specify a valid warp")
             removeWarp(args[1])
-            tellSuccess("${Settings.PRIMARY_COLOR}Set a Civilization Warp at your location with the name ${Settings.SECONDARY_COLOR}" + args[0])
+            tellSuccess("{1}Set a Civilization Warp at your location with the name {2}" + args[0])
         }
     }
 

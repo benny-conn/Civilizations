@@ -5,7 +5,6 @@
 package net.tolmikarc.civilizations.conversation
 
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.MathUtil
 import org.bukkit.conversations.ConversationContext
 import org.bukkit.conversations.Prompt
@@ -18,7 +17,7 @@ class DepositPrompt(val civilization: Civ, val player: Player) : SimpleDecimalPr
     override fun acceptValidatedInput(context: ConversationContext?, input: Double): Prompt? {
         val cost = MathUtil.doubleToMoney(input)
         if (HookManager.getBalance(player) - cost < 0) {
-            tell("&cYou cannot deposit more money than you have")
+            tell("{3}You cannot deposit more money than you have")
             return null
         }
         HookManager.withdraw(player, cost)
@@ -28,7 +27,7 @@ class DepositPrompt(val civilization: Civ, val player: Player) : SimpleDecimalPr
     }
 
     override fun getPrompt(p0: ConversationContext?): String {
-        return "${Settings.PRIMARY_COLOR}How much would you like to deposit?"
+        return "{1}How much would you like to deposit?"
     }
 
     override fun getFailedValidationText(context: ConversationContext, invalidInput: String): String? {

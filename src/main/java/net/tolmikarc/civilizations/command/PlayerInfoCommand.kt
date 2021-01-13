@@ -23,11 +23,11 @@ class PlayerInfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
 
     private fun sendInfo(civPlayer: CPlayer) {
         tellNoPrefix(
-            "${Settings.PRIMARY_COLOR}============ ${Settings.SECONDARY_COLOR}" + civPlayer.playerName + "${Settings.PRIMARY_COLOR} ============",
-            "${Settings.PRIMARY_COLOR}Power: ${Settings.SECONDARY_COLOR}" + civPlayer.power,
-            "${Settings.PRIMARY_COLOR}Civilization: ${Settings.SECONDARY_COLOR}" + if (civPlayer.civilization != null) civPlayer.civilization!!.name else "None",
-            "${Settings.PRIMARY_COLOR}Raid Blocks Destroyed: ${Settings.SECONDARY_COLOR}" + civPlayer.raidBlocksDestroyed,
-            "${Settings.PRIMARY_COLOR}============================"
+            "{1}============ {2}" + civPlayer.playerName + "{1} ============",
+            "{1}Power: {2}" + civPlayer.power,
+            "{1}Civilization: {2}" + if (civPlayer.civilization != null) civPlayer.civilization!!.name else "None",
+            "{1}Raid Blocks Destroyed: {2}" + civPlayer.raidBlocksDestroyed,
+            "{1}============================"
         )
     }
 

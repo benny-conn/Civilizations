@@ -24,11 +24,11 @@ class CreateCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "new
             )
             CivManager.createCiv(name, it).also { civ ->
                 tellSuccess(
-                    "${Settings.SECONDARY_COLOR}Successfully created the Civilization ${Settings.PRIMARY_COLOR}" + civ.name + "${Settings.SECONDARY_COLOR} with you as its leader. " +
-                            "To claim land for your Civilization, use a " + "${Settings.PRIMARY_COLOR}${
+                    "{2}Successfully created the Civilization {1}" + civ.name + "{2} with you as its leader. " +
+                            "To claim land for your Civilization, use a " + "{1}${
                         Settings.CLAIM_TOOL.name.toLowerCase().capitalize().replace("_", " ")
-                    } ${Settings.SECONDARY_COLOR}to mark two corners and then use " + "${Settings.PRIMARY_COLOR}/civ claim${Settings.SECONDARY_COLOR}. " +
-                            "Type " + "${Settings.PRIMARY_COLOR}/civ claim ? ${Settings.SECONDARY_COLOR}for info on claiming"
+                    } {2}to mark two corners and then use " + "{1}/civ claim{2}. " +
+                            "Type " + "{1}/civ claim ? {2}for info on claiming"
                 )
                 Common.callEvent(CreateCivEvent(civ, player))
             }

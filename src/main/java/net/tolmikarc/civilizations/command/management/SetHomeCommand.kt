@@ -26,7 +26,7 @@ class SetHomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "se
                     "You must be in your Civilization to set the home."
                 )
                 home = player.location
-                tellSuccess("${Settings.SECONDARY_COLOR}Set the Civilization home location")
+                tellSuccess("{2}Set the Civilization home location")
             }
         }
     }

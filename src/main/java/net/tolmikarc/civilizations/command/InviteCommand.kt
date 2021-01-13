@@ -24,10 +24,10 @@ class InviteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "add
             "You cannot invite an outlaw of your Civilization."
         )
         inviteeCache.civilizationInvite = civilization
-        tellSuccess("${Settings.SECONDARY_COLOR}Successfully sent an invite to ${Settings.PRIMARY_COLOR}" + invitee.name)
+        tellSuccess("{2}Successfully sent an invite to {1}" + invitee.name)
         Common.tell(
             invitee,
-            "${Settings.SECONDARY_COLOR}Received a Civilization invite from ${Settings.PRIMARY_COLOR}" + inviteeCache.civilizationInvite!!.name
+            "{2}Received a Civilization invite from {1}" + inviteeCache.civilizationInvite!!.name
         )
     }
 

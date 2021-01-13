@@ -20,8 +20,8 @@ class AcceptCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "acc
                 this.addCitizen(civPlayer)
                 civPlayer.civilization = this
                 civPlayer.civilizationInvite = null
-                tell("${Settings.SECONDARY_COLOR}Accepted invite from the Civilization ${Settings.PRIMARY_COLOR}" + civPlayer.civilization!!.name)
-                tell("${Settings.SECONDARY_COLOR}Type " + "${Settings.PRIMARY_COLOR}/civ ? ${Settings.SECONDARY_COLOR}for a list of Civilizations commands.")
+                tell("{2}Accepted invite from the Civilization {1}" + civPlayer.civilization!!.name)
+                tell("{2}Type " + "{1}/civ ? {2}for a list of Civilizations commands.")
                 Common.callEvent(CivJoinEvent(this, player))
             }
         }

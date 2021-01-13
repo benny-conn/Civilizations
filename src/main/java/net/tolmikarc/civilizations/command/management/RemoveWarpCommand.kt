@@ -19,7 +19,7 @@ class RemoveWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
                 checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
                 checkBoolean(warps.containsKey(args[0]), "Please specify a valid warp")
                 removeWarp(args[0])
-                tellSuccess("${Settings.PRIMARY_COLOR}Set a Civilization Warp at your location with the name ${Settings.SECONDARY_COLOR}" + args[0])
+                tellSuccess("{1}Set a Civilization Warp at your location with the name {2}" + args[0])
             }
         }
     }

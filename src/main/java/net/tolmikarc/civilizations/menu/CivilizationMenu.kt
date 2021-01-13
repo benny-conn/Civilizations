@@ -93,7 +93,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
                 override fun getItem(): ItemStack {
                     return ItemCreator.of(
                         CompMaterial.IRON_SWORD,
-                        "&c&lToggle PVP",
+                        "{3}&lToggle PVP",
                         "",
                         "PVP: ${civilization.toggleables.pvp}"
                     ).build().make()
@@ -242,7 +242,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
                 override fun getItem(): ItemStack {
                     return ItemCreator.of(
                         CompMaterial.REDSTONE_BLOCK,
-                        "&c&lWithdraw",
+                        "{3}&lWithdraw",
                     ).build().make()
                 }
             }
@@ -320,7 +320,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
 
                 override fun getItem(): ItemStack {
                     return ItemCreator.of(
-                        CompMaterial.GOLDEN_APPLE, "&c&lLeader", "",
+                        CompMaterial.GOLDEN_APPLE, "{3}&lLeader", "",
                         "Leader: ${civilization.leader?.playerName ?: "None"}"
                     ).build().make()
                 }
@@ -418,19 +418,19 @@ class CivilizationMenu(civ: Civ) : Menu() {
             getBookButton = object : Button() {
                 override fun onClickedInMenu(player: Player, menu: Menu, clickType: ClickType) {
                     if (civilization.book == null) {
-                        Common.tell(player, "&cYour Civilization does not have a book.")
+                        Common.tell(player, "{3}Your Civilization does not have a book.")
                         player.closeInventory()
                         return
                     }
                     val book = civilization.book
                     if (HookManager.getBalance(player) < 100) {
-                        Common.tell(player, "&cYou need at least $100 to obtain this item.")
+                        Common.tell(player, "{3}You need at least $100 to obtain this item.")
                         return
                     }
                     HookManager.withdraw(player, 100.0)
                     Common.tell(
                         player,
-                        "${Settings.SECONDARY_COLOR}Successfully obtained your Civilization's Guiding Book"
+                        "{2}Successfully obtained your Civilization's Guiding Book"
                     )
                     player.inventory.addItem(book!!)
                     player.closeInventory()
@@ -449,19 +449,19 @@ class CivilizationMenu(civ: Civ) : Menu() {
             getBannerButton = object : Button() {
                 override fun onClickedInMenu(player: Player, menu: Menu, clickType: ClickType) {
                     if (civilization.banner == null) {
-                        Common.tell(player, "&cYour Civilization does not have a book.")
+                        Common.tell(player, "{3}Your Civilization does not have a book.")
                         player.closeInventory()
                         return
                     }
                     val banner = civilization.banner
                     if (HookManager.getBalance(player) < 200) {
-                        Common.tell(player, "&cYou need at least $100 to obtain this item.")
+                        Common.tell(player, "{3}You need at least $100 to obtain this item.")
                         return
                     }
                     HookManager.withdraw(player, 200.0)
                     Common.tell(
                         player,
-                        "${Settings.SECONDARY_COLOR}Successfully obtained your Civilization's Banner"
+                        "{2}Successfully obtained your Civilization's Banner"
                     )
                     player.inventory.addItem(banner!!)
                     player.closeInventory()
@@ -470,7 +470,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
                 override fun getItem(): ItemStack {
                     return ItemCreator.of(
                         CompMaterial.BLUE_BANNER,
-                        "&c&lGet Banner",
+                        "{3}&lGet Banner",
                         "",
                         "Get the symbol of",
                         "your Civilization"
@@ -517,8 +517,8 @@ class CivilizationMenu(civ: Civ) : Menu() {
                         civilization.removeCitizen(civPlayer)
                         civPlayer.civilization = null
                         Bukkit.getPlayer(civPlayer.uuid)
-                            ?.let { Common.tell(it, "&cYou have been kicked from your Civilization") }
-                        tell("${Settings.PRIMARY_COLOR}Successfully kicked${Settings.SECONDARY_COLOR} ${civPlayer.playerName}")
+                            ?.let { Common.tell(it, "{3}You have been kicked from your Civilization") }
+                        tell("{1}Successfully kicked{2} ${civPlayer.playerName}")
                     }
                     p0.closeInventory()
                     ConfirmMenu(
@@ -531,7 +531,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
                 override fun getItem(): ItemStack {
                     return ItemCreator.of(
                         CompMaterial.BARRIER,
-                        "&c&lKick Player"
+                        "{3}&lKick Player"
                     ).build().make()
                 }
 
@@ -563,7 +563,7 @@ class CivilizationMenu(civ: Civ) : Menu() {
             civPlayer.civilizationInvite = civilization
             Common.tell(
                 p1,
-                "${Settings.PRIMARY_COLOR}You have been invited to join the Civilization ${Settings.SECONDARY_COLOR}${civilization.name}${Settings.PRIMARY_COLOR}! Type ${Settings.SECONDARY_COLOR}/civ accept${Settings.PRIMARY_COLOR} to accept"
+                "{1}You have been invited to join the Civilization {2}${civilization.name}{1}! Type {2}/civ accept{1} to accept"
             )
         }
 

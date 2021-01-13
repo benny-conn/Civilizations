@@ -26,7 +26,7 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                         if (isAdmin(civPlayer) && civ.home != null) {
                             PaperLib.teleportAsync(player, civ.home!!).thenAccept {
                                 if (it)
-                                    tellSuccess("${Settings.PRIMARY_COLOR}Teleported to Civ Home!")
+                                    tellSuccess("{1}Teleported to Civ Home!")
                                 else
                                     tellError("Failed to teleport to Civ Home!")
                             }
@@ -42,14 +42,14 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                                 )
                                 PaperLib.teleportAsync(player, home).thenAccept {
                                     if (it)
-                                        tellSuccess("${Settings.PRIMARY_COLOR}Teleported to Civ Home!")
+                                        tellSuccess("{1}Teleported to Civ Home!")
                                     else
                                         tellError("Failed to teleport to Civ Home!")
                                 }
                                 addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
 
                             }
-                        } else tell("&cTown not public")
+                        } else tell("{3}Town not public")
                     }
                 return
             }
@@ -65,7 +65,7 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                 )
                 PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
                     if (it)
-                        tellSuccess("${Settings.PRIMARY_COLOR}Teleported to Civ Home!")
+                        tellSuccess("{1}Teleported to Civ Home!")
                     else
                         tellError("Failed to teleport to Civ Home!")
                 }

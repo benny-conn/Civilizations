@@ -6,7 +6,6 @@ package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.permissions.PermissionType
-import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -19,14 +18,14 @@ class APermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent,
             if (args.size == 1) {
                 if (args[0].equals("options", ignoreCase = true)) {
                     tell(
-                        "${Settings.PRIMARY_COLOR}Valid Groups: ${Settings.SECONDARY_COLOR}${
+                        "{1}Valid Groups: {2}${
                             Common.join(
                                 permissionGroups.groups.map { it.name },
                                 ", "
                             )
                         }",
-                        "${Settings.PRIMARY_COLOR}Valid Permissions: ${Settings.SECONDARY_COLOR}Build, Break, Switch, Interact",
-                        "${Settings.PRIMARY_COLOR}Valid values: ${Settings.SECONDARY_COLOR}True, False"
+                        "{1}Valid Permissions: {2}Build, Break, Switch, Interact",
+                        "{1}Valid values: {2}True, False"
                     )
                 } else returnInvalidArgs()
             }
@@ -34,7 +33,7 @@ class APermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent,
                 val group = permissionGroups.getGroupByName(args[0])
                 if (group == null) returnInvalidArgs()
                 group?.adjust(PermissionType.valueOf(args[1].toUpperCase()), args[2].toBoolean())
-                tellSuccess("${Settings.PRIMARY_COLOR}Successfully updated Civ Permissions")
+                tellSuccess("{1}Successfully updated Civ Permissions")
             } else
                 returnInvalidArgs()
 

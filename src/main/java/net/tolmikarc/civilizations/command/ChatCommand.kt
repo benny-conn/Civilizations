@@ -16,10 +16,10 @@ class ChatCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "chat"
         checkNotNull(civ, "You must have a civ to use this command")
         if (civ!!.channel.players.contains(player)) {
             civ.channel.players.remove(player)
-            tellSuccess("${Settings.PRIMARY_COLOR}Left Civ Chat")
+            tellSuccess("{1}Left Civ Chat")
         } else {
             civ.channel.players.add(player)
-            tellSuccess("${Settings.PRIMARY_COLOR}Entered Civ Chat")
+            tellSuccess("{1}Entered Civ Chat")
         }
     }
 

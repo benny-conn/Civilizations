@@ -54,7 +54,7 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
                         if (PlayerManager.fromBukkitPlayer(p).civilization == civRaiding)
                             onlinePlayersFromOppositeCiv.add(p)
                 }
-                NameTag.of("&c" + player.displayName).applyTo(player, onlinePlayersFromOppositeCiv)
+                NameTag.of("{3}" + player.displayName).applyTo(player, onlinePlayersFromOppositeCiv)
 
             }
         }
@@ -106,11 +106,11 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
             PlayerManager.fromBukkitPlayer(player).let {
                 if (civBeingRaided.citizens.contains(it)) Common.tell(
                     player,
-                    "${Settings.PRIMARY_COLOR}Raid over!"
+                    "{1}Raid over!"
                 )
                 if (civRaiding.citizens.contains(it)) Common.tell(
                     player,
-                    "${Settings.PRIMARY_COLOR}Raid over!"
+                    "{1}Raid over!"
                 )
             }
             for (civPlayer in playersInvolved.keys) {

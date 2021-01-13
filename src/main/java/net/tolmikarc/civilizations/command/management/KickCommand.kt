@@ -32,7 +32,7 @@ class KickCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "kick"
         checkNotNull(kickedCache, "Specify a valid player")
         checkBoolean(civilization.citizens.contains(kickedCache), "This player is not in your town.")
         civilization.removeCitizen(kickedCache)
-        tellSuccess("${Settings.SECONDARY_COLOR}Successfully kicked player ${Settings.PRIMARY_COLOR}${args[0]}")
+        tellSuccess("{2}Successfully kicked player {1}${args[0]}")
     }
 
     init {

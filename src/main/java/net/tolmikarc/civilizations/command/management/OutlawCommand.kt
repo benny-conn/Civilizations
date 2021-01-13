@@ -22,10 +22,10 @@ class OutlawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "out
                     checkBoolean(!this.citizens.contains(civOutlaw), "You cannot outlaw a player in your town.")
                     if (this.relationships.outlaws.contains(civOutlaw)) {
                         this.relationships.removeOutlaw(civOutlaw)
-                        tell("${Settings.SECONDARY_COLOR}Successfully removed ${Settings.PRIMARY_COLOR}${args[0]}${Settings.PRIMARY_COLOR} as an outlaw")
+                        tell("{2}Successfully removed {1}${args[0]}{1} as an outlaw")
                     } else {
                         this.relationships.addOutlaw(civOutlaw)
-                        tell("${Settings.SECONDARY_COLOR}Successfully outlawed player ${Settings.PRIMARY_COLOR}${args[0]}")
+                        tell("{2}Successfully outlawed player {1}${args[0]}")
                     }
                 }
             }

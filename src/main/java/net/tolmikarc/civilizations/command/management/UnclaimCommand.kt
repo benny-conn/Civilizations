@@ -25,7 +25,7 @@ class UnclaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "un
                 checkNotNull(regionToRemove, "There is no region at your location")
                 fun run() {
                     claims.removeClaim(regionToRemove!!)
-                    tellSuccess("&cRemoved region successfully")
+                    tellSuccess("{3}Removed region successfully")
                     Common.callEvent(
                         UnclaimEvent(
                             this,

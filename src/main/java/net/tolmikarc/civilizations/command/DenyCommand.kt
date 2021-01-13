@@ -14,7 +14,7 @@ class DenyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "deny"
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).apply {
             checkNotNull(civilizationInvite, "You do not have any pending invites")
-            tell("${Settings.SECONDARY_COLOR}Denied invite from the Civilization ${Settings.PRIMARY_COLOR}" + civilizationInvite!!.name)
+            tell("{2}Denied invite from the Civilization {1}" + civilizationInvite!!.name)
             civilizationInvite = null
         }
     }

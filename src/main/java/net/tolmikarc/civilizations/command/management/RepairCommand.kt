@@ -74,7 +74,7 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
                 damages.brokenBlocksMap.keys.removeAll(handledLocations)
                 if (damages.brokenBlocksMap.isEmpty()) civ.regionDamages = null
                 CivManager.queueForSaving(civ)
-                tellSuccess("${Settings.PRIMARY_COLOR}Successfully repaired " + handledLocations.size + " blocks for ${Settings.CURRENCY_SYMBOL}" + cost)
+                tellSuccess("{1}Successfully repaired " + handledLocations.size + " blocks for ${Settings.CURRENCY_SYMBOL}" + cost)
             }
         }.startChain()
     }

@@ -27,7 +27,7 @@ class BookCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "book"
                         "You must be the leader of the Civilization to set the Book"
                     )
                     this.book = book
-                    tellSuccess("${Settings.SECONDARY_COLOR}Successfully set your Civilization's Book to the Book in your hand")
+                    tellSuccess("{2}Successfully set your Civilization's Book to the Book in your hand")
                 } else if (param.equals("get", ignoreCase = true)) {
                     checkNotNull(this.book, "Your Civilization does not have a Book.")
                     this.book?.let { banner ->
@@ -36,7 +36,7 @@ class BookCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "book"
                             "You need at least $200 to obtain this item."
                         )
                         HookManager.withdraw(player, 200.0)
-                        tellSuccess("${Settings.SECONDARY_COLOR}Successfully obtained your Civilization's Banner")
+                        tellSuccess("{2}Successfully obtained your Civilization's Banner")
                         player.inventory.addItem(banner)
                     }
                 }

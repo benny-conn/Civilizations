@@ -6,7 +6,6 @@ package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
-import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -17,7 +16,7 @@ class ADeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "de
         civ?.apply {
             fun run() {
                 CivManager.removeCiv(this)
-                tellSuccess("${Settings.PRIMARY_COLOR}Successfully deleted the Civilization, ${Settings.SECONDARY_COLOR}$name")
+                tellSuccess("{1}Successfully deleted the Civilization, {2}$name")
             }
             ConfirmMenu("&4Delete Civ?", "Permanently remove this Civilization", ::run).displayTo(player)
         }

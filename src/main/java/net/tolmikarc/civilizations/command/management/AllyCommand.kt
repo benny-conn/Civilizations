@@ -32,7 +32,7 @@ class AllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally"
                             "You cannot ally an enemy Civilization."
                         )
                         relationships.addAlly(allyCiv!!)
-                        tell("${Settings.PRIMARY_COLOR}Your Civilization is now allies with ${Settings.SECONDARY_COLOR}" + allyCiv.name)
+                        tell("{1}Your Civilization is now allies with {2}" + allyCiv.name)
                     }
                     args[0].equals("remove", ignoreCase = true) -> {
                         checkBoolean(
@@ -40,7 +40,7 @@ class AllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally"
                             "This Civilization is not your ally."
                         )
                         relationships.removeAlly(allyCiv!!)
-                        tell("${Settings.PRIMARY_COLOR}Your Civilization is no longer allies with ${Settings.SECONDARY_COLOR}" + allyCiv.name)
+                        tell("{1}Your Civilization is no longer allies with {2}" + allyCiv.name)
                     }
                     else -> {
                         returnInvalidArgs()
