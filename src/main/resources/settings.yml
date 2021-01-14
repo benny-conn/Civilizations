@@ -107,6 +107,9 @@ Visualizing:
   # find particle names at https://minecraft.gamepedia.com/Particles
   Claim: END_ROD
   Plot: TOTEM
+  # how many seconds between particles spawning
+  # WARNING: higher numbers could lead to lag
+  Particle_Frequency: 4
 
 # cost for creating a warp sign
 # sign creation with first line = [CivWarp] second line = warpname

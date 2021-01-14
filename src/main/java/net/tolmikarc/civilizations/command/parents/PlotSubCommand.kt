@@ -128,7 +128,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             tell("{3}Stopping visualization...")
         }
         for (region in visualizedRegions) {
-            Common.runTimerAsync(20 * 4, object : BukkitRunnable() {
+            Common.runTimerAsync(20 * Settings.PARTICLE_FREQUENCY, object : BukkitRunnable() {
                 override fun run() {
                     for (location in region.boundingBox.filter { it.y in (player.location.y - 6)..(player.location.y + 6) }) {
                         if (isLocationConnected(location, civilization, region)) continue

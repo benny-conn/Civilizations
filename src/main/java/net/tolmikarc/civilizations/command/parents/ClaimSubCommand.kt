@@ -38,7 +38,7 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
             tell("{3}Stopping visualization...")
         }
         for (region in visualizedRegions) {
-            Common.runTimerAsync(20 * 4, object : BukkitRunnable() {
+            Common.runTimerAsync(20 * Settings.PARTICLE_FREQUENCY, object : BukkitRunnable() {
                 override fun run() {
                     if (civPlayer.civilization == null) civPlayer.visualizing = false
                     for (location in region.boundingBox.filter { it.y in (player.location.y - 6)..(player.location.y + 6) }) {

@@ -75,6 +75,8 @@ public class Settings extends SimpleSettings {
 	public static Integer NOTICE_TYPE;
 	public static CompParticle CLAIM_PARTICLE;
 	public static CompParticle PLOT_PARTICLE;
+	public static Integer PARTICLE_FREQUENCY;
+
 	public static Double WARP_SIGN_COST;
 
 	public static Integer BLOCKS_PER_SECONDS_REPAIR;
@@ -148,7 +150,8 @@ public class Settings extends SimpleSettings {
 		NOTICE_TYPE = getInteger("Notice_Type");
 		CLAIM_PARTICLE = CompParticle.valueOf(getString("Visualizing.Claim").toUpperCase());
 		PLOT_PARTICLE = CompParticle.valueOf(getString("Visualizing.Plot").toUpperCase());
-		
+		PARTICLE_FREQUENCY = getInteger("Visualizing.Particle_Frequency");
+
 		WARP_SIGN_COST = getDouble("Warp_Sign_Cost");
 
 		MAX_WARPS_FORMULA = getString("Extra_Settings.Max_Warps");

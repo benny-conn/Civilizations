@@ -7,6 +7,9 @@ import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.constants.Constants
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
+import net.tolmikarc.civilizations.task.CooldownTask
+import net.tolmikarc.civilizations.task.CooldownTask.Companion.getCooldownRemaining
+import net.tolmikarc.civilizations.task.CooldownTask.Companion.hasCooldown
 import net.tolmikarc.civilizations.util.ClaimUtil
 import org.bukkit.Tag
 import org.bukkit.block.Sign
@@ -60,16 +63,27 @@ class SignListener : Listener {
     @EventHandler
     fun onSignInteract(event: PlayerInteractEvent) {
         val player = event.player
+        val civPlayer = PlayerManager.fromBukkitPlayer(player)
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
         if (!Tag.SIGNS.isTagged(event.clickedBlock!!.type)) return
         val sign = event.clickedBlock!!.state as Sign
-        if (sign.getLine(0) == Common.colorize(Constants.WARP_SIGN_TAG))
+        if (sign.getLine(0) == Common.colorize(Constants.WARP_SIGN_TAG)) {
+            Valid.checkBoolean(
+                !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
+                "{3}You cannot teleport for another ${
+                    getCooldownRemaining(
+                        civPlayer,
+                        CooldownTask.CooldownType.TELEPORT
+                    )
+                } seconds."
+            )
             ClaimUtil.getCivFromLocation(sign.location)?.warps?.get(sign.getLine(1))?.let {
                 PaperLib.teleportAsync(
                     player,
                     it
                 ).thenAccept { result -> if (result) Messenger.success(player, "{1}Successfully teleported to warp!") }
             }
+        }
 
     }
 
