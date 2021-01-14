@@ -9,7 +9,7 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
-import net.tolmikarc.civilizations.war.RegionDamages
+import net.tolmikarc.civilizations.war.Damages
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -25,14 +25,14 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
             civPlayer.civilization?.let { civ ->
                 checkBoolean(canManageCiv(civPlayer, civ), "You are not permitted to perform this command.")
                 checkBoolean(
-                    civ.regionDamages != null,
+                    civ.damages != null,
                     "Your Civilization does not have any damages to repair"
                 )
                 var percentage = 100
                 if (args.isNotEmpty()) {
                     percentage = findNumber(0, 1, 100, "Please specify a valid number in between 1-100")
                 }
-                val damages: RegionDamages = civ.regionDamages!!
+                val damages: Damages = civ.damages!!
                 val locationList: List<Location> = ArrayList(damages.brokenBlocksMap.keys.sortedBy { it.y })
 
                 repairDamages(damages, civ, locationList, percentage)
@@ -42,7 +42,7 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
     }
 
     private fun repairDamages(
-        damages: RegionDamages,
+        damages: Damages,
         civ: Civ,
         locationList: List<Location>,
         percentage: Int
@@ -72,7 +72,7 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
 
             override fun onFinish() {
                 damages.brokenBlocksMap.keys.removeAll(handledLocations)
-                if (damages.brokenBlocksMap.isEmpty()) civ.regionDamages = null
+                if (damages.brokenBlocksMap.isEmpty()) civ.damages = null
                 CivManager.queueForSaving(civ)
                 tellSuccess("{1}Successfully repaired " + handledLocations.size + " blocks for ${Settings.CURRENCY_SYMBOL}" + cost)
             }

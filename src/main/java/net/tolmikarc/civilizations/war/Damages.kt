@@ -9,7 +9,7 @@ import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
 
-class RegionDamages : ConfigSerializable {
+class Damages : ConfigSerializable {
     // String = block data
     val brokenBlocksMap: MutableMap<Location, String> = LinkedHashMap()
     override fun serialize(): SerializedMap {
@@ -20,8 +20,8 @@ class RegionDamages : ConfigSerializable {
 
     companion object {
         @JvmStatic
-        fun deserialize(map: SerializedMap): RegionDamages {
-            val damages = RegionDamages()
+        fun deserialize(map: SerializedMap): Damages {
+            val damages = Damages()
             damages.brokenBlocksMap.putAll(map.getMap("Blocks_Map", Location::class.java, String::class.java))
             return damages
         }

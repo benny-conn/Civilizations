@@ -9,8 +9,8 @@ import net.tolmikarc.civilizations.model.impl.Claims
 import net.tolmikarc.civilizations.model.impl.Relationships
 import net.tolmikarc.civilizations.permissions.PermissionGroups
 import net.tolmikarc.civilizations.permissions.Toggleables
+import net.tolmikarc.civilizations.war.Damages
 import net.tolmikarc.civilizations.war.Raid
-import net.tolmikarc.civilizations.war.RegionDamages
 import org.bukkit.Location
 import org.bukkit.inventory.ItemStack
 import org.mineacademy.fo.model.ConfigSerializable
@@ -37,7 +37,7 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     val citizenCount
         get() = citizens.size
 
-    var regionDamages: RegionDamages?
+    var damages: Damages?
     var banner: ItemStack?
     var book: ItemStack?
     var permissionGroups: PermissionGroups

@@ -14,8 +14,8 @@ import net.tolmikarc.civilizations.permissions.PermissionGroups
 import net.tolmikarc.civilizations.permissions.Toggleables
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
+import net.tolmikarc.civilizations.war.Damages
 import net.tolmikarc.civilizations.war.Raid
-import net.tolmikarc.civilizations.war.RegionDamages
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
@@ -47,7 +47,7 @@ data class Civilization(override val uuid: UUID) : Civ {
     override val citizens = mutableSetOf<CPlayer>()
     override var relationships = Relationships(this)
 
-    override var regionDamages: RegionDamages? = null
+    override var damages: Damages? = null
 
     override var banner: ItemStack? = null
         set(value) {
@@ -138,7 +138,7 @@ data class Civilization(override val uuid: UUID) : Civ {
         map.putIfExist("Book", book)
         map.putIfExist("Groups", permissionGroups)
         map.putIfExist("Toggleables", toggleables)
-        map.putIfExist("Region_Damages", regionDamages)
+        map.putIfExist("Region_Damages", damages)
         return map
     }
 
@@ -172,7 +172,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             val book = map.getItem("Book")
             val groups = map.get("Groups", PermissionGroups::class.java)
             val toggleables = map.get("Toggleables", Toggleables::class.java)
-            val regionDamages = map.get("Region_Damages", RegionDamages::class.java)
+            val regionDamages = map.get("Region_Damages", Damages::class.java)
 
 
             cache.name = name
@@ -190,7 +190,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             if (book != null) cache.book = book
             if (groups != null) cache.permissionGroups = groups
             if (toggleables != null) cache.toggleables = toggleables
-            if (regionDamages != null) cache.regionDamages = regionDamages
+            if (regionDamages != null) cache.damages = regionDamages
             return cache
         }
 

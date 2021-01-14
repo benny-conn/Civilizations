@@ -9,7 +9,7 @@ import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.impl.Bank
 import net.tolmikarc.civilizations.model.impl.Civilization
-import net.tolmikarc.civilizations.war.RegionDamages
+import net.tolmikarc.civilizations.war.Damages
 import org.bukkit.Location
 import org.bukkit.inventory.ItemStack
 import org.mineacademy.fo.Common
@@ -59,7 +59,7 @@ object CivDatastore : Datastore() {
                     val book: ItemStack? = deserializedCiv.book
                     val permissions = deserializedCiv.permissionGroups
                     val toggleables = deserializedCiv.toggleables
-                    val regionDamages: RegionDamages? = deserializedCiv.regionDamages
+                    val damages: Damages? = deserializedCiv.damages
 
                     civ.apply {
                         if (name != null) this.name = name
@@ -76,7 +76,7 @@ object CivDatastore : Datastore() {
                         if (book != null) this.book = book
                         this.permissionGroups = permissions
                         this.toggleables = toggleables
-                        if (regionDamages != null) this.regionDamages = regionDamages
+                        if (damages != null) this.damages = damages
                     }
                 } else CivManager.removeCiv(civ)
             }

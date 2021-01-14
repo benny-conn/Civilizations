@@ -9,7 +9,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
-import net.tolmikarc.civilizations.war.RegionDamages
+import net.tolmikarc.civilizations.war.Damages
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.entity.FallingBlock
@@ -78,16 +78,16 @@ object WarUtil {
     }
 
     fun addDamages(attackedCiv: Civ, attackingCiv: Civ, block: Block) {
-        if (attackedCiv.regionDamages == null) attackedCiv.regionDamages = RegionDamages()
-        attackedCiv.regionDamages?.brokenBlocksMap?.set(block.location, block.blockData.asString)
+        if (attackedCiv.damages == null) attackedCiv.damages = Damages()
+        attackedCiv.damages?.brokenBlocksMap?.set(block.location, block.blockData.asString)
         attackedCiv.removePower(Settings.POWER_RAID_BLOCK)
         attackingCiv.addPower(Settings.POWER_BLOCKS_WEIGHT)
         CivManager.queueForSaving(attackedCiv, attackingCiv)
     }
 
     fun shootBlockAndAddDamages(attackedCiv: Civ, attackingCiv: Civ, block: Block) {
-        if (attackedCiv.regionDamages == null) attackedCiv.regionDamages = RegionDamages()
-        attackedCiv.regionDamages?.brokenBlocksMap?.set(block.location, block.blockData.asString)
+        if (attackedCiv.damages == null) attackedCiv.damages = Damages()
+        attackedCiv.damages?.brokenBlocksMap?.set(block.location, block.blockData.asString)
         shootBlock(
             block,
             Vector.getRandom()

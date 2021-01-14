@@ -108,6 +108,10 @@ Visualizing:
   Claim: END_ROD
   Plot: TOTEM
 
+# cost for creating a warp sign
+# sign creation with first line = [CivWarp] second line = warpname
+Warp_Sign_Cost: 0.00
+
 # how much power for a civilization added for every category
 Power:
   # per currency unit

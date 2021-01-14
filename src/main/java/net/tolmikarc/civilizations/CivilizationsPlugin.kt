@@ -12,10 +12,7 @@ import net.tolmikarc.civilizations.command.MapCommand
 import net.tolmikarc.civilizations.command.admin.AdminCommandGroup
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
-import net.tolmikarc.civilizations.listener.CivListener
-import net.tolmikarc.civilizations.listener.EntityListener
-import net.tolmikarc.civilizations.listener.PlayerListener
-import net.tolmikarc.civilizations.listener.WorldListener
+import net.tolmikarc.civilizations.listener.*
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
@@ -31,7 +28,6 @@ import org.mineacademy.fo.model.HookManager
 import org.mineacademy.fo.plugin.SimplePlugin
 import org.mineacademy.fo.settings.YamlStaticConfig
 import java.io.File
-import java.io.IOException
 import java.util.*
 
 class CivilizationsPlugin : SimplePlugin() {
@@ -116,6 +112,7 @@ class CivilizationsPlugin : SimplePlugin() {
         registerEvents(EntityListener())
         registerEvents(WorldListener())
         registerEvents(CivListener())
+        registerEvents(SignListener())
     }
 
     private fun loadDatabase() {
@@ -123,21 +120,10 @@ class CivilizationsPlugin : SimplePlugin() {
         when {
             Settings.DB_TYPE.equals("sqlite", ignoreCase = true) -> {
                 val playerFile = File(dataFolder, "players.db")
-                if (!playerFile.exists()) {
-                    try {
-                        playerFile.createNewFile()
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                    }
-                }
+                playerFile.createNewFile()
                 val civFile = File(dataFolder, "civilizations.db")
-                if (!civFile.exists()) {
-                    try {
-                        civFile.createNewFile()
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                    }
-                }
+                civFile.createNewFile()
+
                 PlayerDatastore.connect(
                     "jdbc:sqlite:${playerFile.absolutePath}",
                     "",
@@ -173,7 +159,6 @@ class CivilizationsPlugin : SimplePlugin() {
                     "civ_civs"
                 )
                 PlayerDatastore.loadAll()
-                return
             }
             else -> {
                 Common.error(Throwable("NoDataSource"), "No datasource for saving and loading, disabling plugin.")
@@ -202,8 +187,6 @@ class CivilizationsPlugin : SimplePlugin() {
     }
 
     companion object {
-        val instance: SimplePlugin
-            get() = getInstance()
 
         val dynmapApi: DynmapAPI?
             get() {
