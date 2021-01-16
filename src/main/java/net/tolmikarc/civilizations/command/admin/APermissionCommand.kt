@@ -21,7 +21,7 @@ class APermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent,
                     tell(
                         "{1}Valid Groups: {2}${
                             Common.join(
-                                permissionGroups.groups.map { it.name },
+                                ranks.ranks.map { it.name },
                                 ", "
                             )
                         }",
@@ -31,7 +31,7 @@ class APermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent,
                 } else returnInvalidArgs()
             }
             if (args.size == 4) {
-                val group = permissionGroups.getGroupByName(args[0])
+                val group = ranks.getGroupByName(args[0])
                 if (group == null) returnInvalidArgs()
                 group?.adjust(PermissionType.valueOf(args[1].toUpperCase()), args[2].toBoolean())
                 tellSuccess("{1}Successfully updated Civ Permissions")

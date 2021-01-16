@@ -7,7 +7,7 @@ import net.tolmikarc.civilizations.chat.CivChannel
 import net.tolmikarc.civilizations.model.impl.Bank
 import net.tolmikarc.civilizations.model.impl.Claims
 import net.tolmikarc.civilizations.model.impl.Relationships
-import net.tolmikarc.civilizations.permissions.PermissionGroups
+import net.tolmikarc.civilizations.permissions.Ranks
 import net.tolmikarc.civilizations.permissions.Toggleables
 import net.tolmikarc.civilizations.war.Damages
 import net.tolmikarc.civilizations.war.Raid
@@ -40,7 +40,7 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
     var damages: Damages?
     var banner: ItemStack?
     var book: ItemStack?
-    var permissionGroups: PermissionGroups
+    var ranks: Ranks
     var toggleables: Toggleables
     var raid: Raid?
 

@@ -8,6 +8,10 @@ import org.bukkit.ChatColor;
 import org.mineacademy.fo.settings.SimpleLocalization;
 
 public class Localization extends SimpleLocalization {
+
+
+	// TODO finish this
+
 	@Override
 	protected int getConfigVersion() {
 		return 0;

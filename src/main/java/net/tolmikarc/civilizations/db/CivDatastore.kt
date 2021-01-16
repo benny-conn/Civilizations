@@ -57,7 +57,7 @@ object CivDatastore : Datastore() {
                     val bank: Bank = deserializedCiv.bank
                     val banner: ItemStack? = deserializedCiv.banner
                     val book: ItemStack? = deserializedCiv.book
-                    val permissions = deserializedCiv.permissionGroups
+                    val permissions = deserializedCiv.ranks
                     val toggleables = deserializedCiv.toggleables
                     val damages: Damages? = deserializedCiv.damages
 
@@ -74,7 +74,7 @@ object CivDatastore : Datastore() {
                         this.bank = bank
                         if (banner != null) this.banner = banner
                         if (book != null) this.book = book
-                        this.permissionGroups = permissions
+                        this.ranks = permissions
                         this.toggleables = toggleables
                         if (damages != null) this.damages = damages
                     }

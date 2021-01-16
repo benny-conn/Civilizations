@@ -37,7 +37,7 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
     }
 
     private fun sendInfo(civilization: Civ) {
-        val permissions = civilization.permissionGroups
+        val permissions = civilization.ranks
         val toggleables = civilization.toggleables
         val citizenNames: MutableList<String?> = ArrayList()
         val canBuild: MutableList<String> = ArrayList()
@@ -64,13 +64,13 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
             outlaws.add(outlaw.playerName)
         }
 
-        canBuild.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.BUILD) }.map { it.name }
+        canBuild.addAll(permissions.ranks.filter { it.permissions.contains(PermissionType.BUILD) }.map { it.name }
             .toMutableList())
-        canBreak.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.BREAK) }.map { it.name }
+        canBreak.addAll(permissions.ranks.filter { it.permissions.contains(PermissionType.BREAK) }.map { it.name }
             .toMutableList())
-        canSwitch.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.SWITCH) }.map { it.name }
+        canSwitch.addAll(permissions.ranks.filter { it.permissions.contains(PermissionType.SWITCH) }.map { it.name }
             .toMutableList())
-        canInteract.addAll(permissions.groups.filter { it.permissions.contains(PermissionType.INTERACT) }
+        canInteract.addAll(permissions.ranks.filter { it.permissions.contains(PermissionType.INTERACT) }
             .map { it.name }.toMutableList())
 
 

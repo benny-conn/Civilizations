@@ -8,6 +8,9 @@ import net.tolmikarc.civilizations.constants.Constants
 import net.tolmikarc.civilizations.model.Civ
 
 object DynmapHook {
+
+    // TODO figure out how to make this work
+
     private val dynmapHook
         get() = CivilizationsPlugin.dynmapApi
     private val markerApi

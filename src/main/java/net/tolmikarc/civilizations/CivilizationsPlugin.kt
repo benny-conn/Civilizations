@@ -33,15 +33,8 @@ import java.util.*
 class CivilizationsPlugin : SimplePlugin() {
 
     // TODO
-    //  Permissions gui
     //  placeholder support
-    //  how to make perms and toggles better than towny
-    //  WAR
-    //  make sure players can get out of claims at all times
-    //  Towny and Factions adapter
-    //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
-    //  WG integration
-    //  teleport to civ outside of borders async for enemies during raid
+    //  more integrations
     //
     override fun onPluginStart() {
         loadDatabase()

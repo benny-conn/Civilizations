@@ -10,7 +10,7 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.permissions.PermissionGroups
+import net.tolmikarc.civilizations.permissions.Ranks
 import net.tolmikarc.civilizations.permissions.Toggleables
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
@@ -63,7 +63,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             field = value
         }
 
-    override var permissionGroups: PermissionGroups = PermissionGroups(this)
+    override var ranks: Ranks = Ranks(this)
     override var toggleables = Toggleables()
 
     override var raid: Raid? = null
@@ -97,7 +97,7 @@ data class Civilization(override val uuid: UUID) : Civ {
 
     override fun addCitizen(player: CPlayer) {
         citizens.add(player)
-        permissionGroups.setPlayerGroup(player, permissionGroups.defaultGroup)
+        ranks.setPlayerGroup(player, ranks.defaultRank)
         addPower(Settings.POWER_CITIZENS_WEIGHT)
         if (Settings.ADD_PLAYER_POWER_TO_CIV) {
             addPower(player.power)
@@ -108,7 +108,7 @@ data class Civilization(override val uuid: UUID) : Civ {
 
     override fun removeCitizen(player: CPlayer) {
         citizens.remove(player)
-        permissionGroups.playerGroupMap.remove(player.uuid)
+        ranks.playerGroupMap.remove(player.uuid)
         removePower(Settings.POWER_CITIZENS_WEIGHT)
         if (Settings.ADD_PLAYER_POWER_TO_CIV) {
             removePower(player.power)
@@ -136,7 +136,7 @@ data class Civilization(override val uuid: UUID) : Civ {
         map.putIfExist("Bank", bank)
         map.putIfExist("Banner", banner)
         map.putIfExist("Book", book)
-        map.putIfExist("Groups", permissionGroups)
+        map.putIfExist("Groups", ranks)
         map.putIfExist("Toggleables", toggleables)
         map.putIfExist("Region_Damages", damages)
         return map
@@ -170,7 +170,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             val bank = map.get("Bank", Bank::class.java)
             val banner = map.getItem("Banner")
             val book = map.getItem("Book")
-            val groups = map.get("Groups", PermissionGroups::class.java)
+            val groups = map.get("Groups", Ranks::class.java)
             val toggleables = map.get("Toggleables", Toggleables::class.java)
             val regionDamages = map.get("Region_Damages", Damages::class.java)
 
@@ -188,7 +188,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             if (bank != null) cache.bank = bank
             if (banner != null) cache.banner = banner
             if (book != null) cache.book = book
-            if (groups != null) cache.permissionGroups = groups
+            if (groups != null) cache.ranks = groups
             if (toggleables != null) cache.toggleables = toggleables
             if (regionDamages != null) cache.damages = regionDamages
             return cache

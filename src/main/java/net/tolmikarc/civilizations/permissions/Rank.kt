@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.permissions
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 
-data class PermissionGroup(var name: String, val permissions: MutableSet<PermissionType>) : ConfigSerializable {
+data class Rank(var name: String, val permissions: MutableSet<PermissionType>) : ConfigSerializable {
 
     fun adjust(type: PermissionType, value: Boolean) {
         if (value)
@@ -24,8 +24,8 @@ data class PermissionGroup(var name: String, val permissions: MutableSet<Permiss
 
     companion object {
         @JvmStatic
-        fun deserialize(map: SerializedMap): PermissionGroup {
-            return PermissionGroup(
+        fun deserialize(map: SerializedMap): Rank {
+            return Rank(
                 map.getString("Name"),
                 map.getStringList("Permissions").map { PermissionType.valueOf(it) }.toMutableSet()
             )

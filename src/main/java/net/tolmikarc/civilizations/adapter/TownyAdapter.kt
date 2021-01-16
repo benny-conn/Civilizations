@@ -4,22 +4,18 @@
 
 package net.tolmikarc.civilizations.adapter
 
-import com.palmergames.bukkit.towny.TownySettings
 import com.palmergames.bukkit.towny.TownyUniverse
-import com.palmergames.bukkit.towny.`object`.Nation
-import com.palmergames.bukkit.towny.`object`.Town
-import com.palmergames.bukkit.towny.`object`.TownBlock
-import com.palmergames.bukkit.towny.`object`.WorldCoord
-import com.palmergames.bukkit.towny.exceptions.EconomyException
+import com.palmergames.bukkit.towny.`object`.*
 import com.palmergames.bukkit.towny.exceptions.NotRegisteredException
-import com.palmergames.bukkit.towny.exceptions.TownyException
+import com.palmergames.bukkit.towny.permissions.TownyPerms
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.impl.Civilization
 import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.model.impl.Colony
-import net.tolmikarc.civilizations.permissions.PermissionGroups
+import net.tolmikarc.civilizations.permissions.PermissionType
+import net.tolmikarc.civilizations.permissions.Rank
+import net.tolmikarc.civilizations.permissions.Ranks
 import net.tolmikarc.civilizations.permissions.Toggleables
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Bukkit
@@ -33,9 +29,35 @@ import kotlin.collections.set
 
 object TownyAdapter {
 
-    // TODO handle settings adjustment to account for the amount of claims and land that there are
-    //  convert outlaws enemies and allies from the nations of each town
     private val convertedTowns: MutableMap<Town, Civ> = HashMap()
+
+
+    fun convertTownToCiv(town: Town, deleteAfterConversion: Boolean): Civ {
+        val civ = Civilization(town.getUUID())
+        civ.name = town.name
+        civ.home = town.spawn
+        for (resident in town.residents) {
+            val cache = PlayerManager.getByUUID(resident.uuid)
+            cache.civilization = civ
+            civ.addCitizen(cache)
+            if (town.mayor == resident)
+                civ.leader = cache
+        }
+        val newRegions = getConvertedRegions(town, civ)
+        civ.claims.claims.addAll(newRegions)
+        civ.claims.idNumber = newRegions.size + 1
+        civ.toggleables = convertToggleables(town)
+        civ.power = getConvertedPower(civ)
+        civ.ranks = getConvertedPermissions(town, civ)
+        civ.bank.balance = town.account.holdingBalance
+        civ.description = town.board
+        if (town.isTaxPercentage)
+            civ.bank.taxes = town.taxes
+        convertedTowns[town] = civ
+        if (deleteAfterConversion) TownyUniverse.getInstance().dataSource.removeTown(town)
+        return civ
+    }
+
 
     fun adaptEnemiesAndAllies() {
         for (town in convertedTowns.keys) {
@@ -71,41 +93,11 @@ object TownyAdapter {
         }
     }
 
-    fun convertSettingsToTowny() {
-        Settings.convert("Claim.Claim_Cost", (TownySettings.getClaimPrice() / (16 * 16)).toString())
+    private fun getConvertedPower(newCiv: Civ): Int {
+        return Settings.POWER_BLOCKS_WEIGHT * newCiv.claims.totalBlocksCount +
+                (Settings.POWER_MONEY_WEIGHT * newCiv.bank.balance).toInt()
     }
 
-
-    fun convertTownToCiv(town: Town, deleteAfterConversion: Boolean): Civ {
-        val civ = Civilization(town.getUUID())
-        civ.name = town.name
-        try {
-            civ.bank.balance = town.account.holdingBalance
-        } catch (e: EconomyException) {
-            Common.error(e, "Unable to convert town money for town " + town.name + ".")
-        }
-        try {
-            civ.home = town.spawn
-        } catch (e: TownyException) {
-            Common.error(e, "Unable to convert town spawn for town " + town.name)
-        }
-        val newCivMembers: MutableSet<CPlayer> = HashSet()
-        for (resident in town.residents) {
-            val cache: CPlayer =
-                PlayerManager.getByUUID(resident.uuid)
-            newCivMembers.add(cache)
-            cache.civilization = civ
-        }
-        civ.citizens.addAll(newCivMembers)
-        val newRegions = getConvertedRegions(town, civ)
-        civ.claims.claims.addAll(newRegions)
-        civ.claims.idNumber = newRegions.size + 1
-        civ.toggleables = convertToggleables(town)
-        convertedTowns[town] = civ
-        if (deleteAfterConversion) TownyUniverse.getInstance().dataSource.removeTown(town)
-        return civ
-        TODO("figure out how to make the power calculated")
-    }
 
     private fun getConvertedRegions(town: Town, civ: Civ): MutableSet<Claim> {
         val handledTownBlocks: MutableSet<TownBlock> = HashSet()
@@ -176,16 +168,53 @@ object TownyAdapter {
         return newRegions
     }
 
-    private fun convertPermissions(town: Town): PermissionGroups {
-        TODO()
+    private fun getConvertedPermissions(town: Town, civ: Civ): Ranks {
+        val ranks = Ranks(civ)
+        for (rank in TownyPerms.getTownRanks()) {
+            val newRank = Rank(rank.capitalize(), Settings.DEFAULT_GROUP.permissions)
+            ranks.ranks.add(newRank)
+        }
+        val defaultPerms = mutableSetOf<PermissionType>()
+        if (town.permissions.getResidentPerm(TownyPermission.ActionType.BUILD)) defaultPerms.add(PermissionType.BUILD)
+        if (town.permissions.getResidentPerm(TownyPermission.ActionType.DESTROY)) defaultPerms.add(PermissionType.BREAK)
+        if (town.permissions.getResidentPerm(TownyPermission.ActionType.SWITCH)) defaultPerms.add(PermissionType.SWITCH)
+        if (town.permissions.getResidentPerm(TownyPermission.ActionType.ITEM_USE)) defaultPerms.add(PermissionType.INTERACT)
+        val defaultRank = Rank(Settings.DEFAULT_GROUP.name, defaultPerms)
+        ranks.defaultRank = defaultRank
+
+        val outsiderPerms = mutableSetOf<PermissionType>()
+        if (town.permissions.getOutsiderPerm(TownyPermission.ActionType.BUILD)) outsiderPerms.add(PermissionType.BUILD)
+        if (town.permissions.getOutsiderPerm(TownyPermission.ActionType.DESTROY)) outsiderPerms.add(PermissionType.BREAK)
+        if (town.permissions.getOutsiderPerm(TownyPermission.ActionType.SWITCH)) outsiderPerms.add(PermissionType.SWITCH)
+        if (town.permissions.getOutsiderPerm(TownyPermission.ActionType.ITEM_USE)) outsiderPerms.add(PermissionType.INTERACT)
+        val outsiderRank = Rank(Settings.OUTSIDER_GROUP.name, outsiderPerms)
+        ranks.outsiderRank = outsiderRank
+
+        val allyPerms = mutableSetOf<PermissionType>()
+        if (town.permissions.getAllyPerm(TownyPermission.ActionType.BUILD)) allyPerms.add(PermissionType.BUILD)
+        if (town.permissions.getAllyPerm(TownyPermission.ActionType.DESTROY)) allyPerms.add(PermissionType.BREAK)
+        if (town.permissions.getAllyPerm(TownyPermission.ActionType.SWITCH)) allyPerms.add(PermissionType.SWITCH)
+        if (town.permissions.getAllyPerm(TownyPermission.ActionType.ITEM_USE)) allyPerms.add(PermissionType.INTERACT)
+        val allyRank = Rank(Settings.OUTSIDER_GROUP.name, allyPerms)
+        ranks.allyRank = allyRank
+
+        val enemyRank = Rank(Settings.OUTSIDER_GROUP.name, outsiderPerms)
+        ranks.enemyRank = enemyRank
+
+        ranks.ranks.add(defaultRank)
+        ranks.ranks.add(outsiderRank)
+        ranks.ranks.add(allyRank)
+        ranks.ranks.add(enemyRank)
+
+        return ranks
     }
 
     private fun convertToggleables(town: Town): Toggleables {
         val toggleables = Toggleables()
-        toggleables.explosion = town.permissions.explosion
-        toggleables.fire = town.permissions.fire
-        toggleables.pvp = town.permissions.pvp
-        toggleables.mobs = town.permissions.mobs
+        toggleables.explosion = town.isBANG
+        toggleables.fire = town.isFire
+        toggleables.pvp = town.isPVP
+        toggleables.mobs = town.hasMobs()
         toggleables.public = town.isPublic
         return toggleables
     }

@@ -27,6 +27,10 @@ import org.mineacademy.fo.remain.CompMaterial
 import kotlin.math.roundToInt
 
 class CivilizationMenu(civ: Civ) : Menu() {
+
+
+    // TODO finish this
+    
     private val infoButton: Button
     private val emptyButton: Button.DummyButton =
         Button.makeDummy(ItemCreator.of(CompMaterial.GRAY_STAINED_GLASS_PANE).name(" "))

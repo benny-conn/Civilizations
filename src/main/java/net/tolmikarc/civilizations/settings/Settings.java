@@ -4,8 +4,8 @@
 
 package net.tolmikarc.civilizations.settings;
 
-import net.tolmikarc.civilizations.permissions.PermissionGroup;
 import net.tolmikarc.civilizations.permissions.PermissionType;
+import net.tolmikarc.civilizations.permissions.Rank;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.mineacademy.fo.remain.CompParticle;
@@ -97,10 +97,10 @@ public class Settings extends SimpleSettings {
 	public static Boolean OUTLAW_PERMISSIONS_DISABLED;
 	public static Boolean OUTLAW_ENTER_DISABLED;
 
-	public static PermissionGroup DEFAULT_GROUP;
-	public static PermissionGroup OUTSIDER_GROUP;
-	public static PermissionGroup ALLY_GROUP;
-	public static PermissionGroup ENEMY_GROUP;
+	public static Rank DEFAULT_GROUP;
+	public static Rank OUTSIDER_GROUP;
+	public static Rank ALLY_GROUP;
+	public static Rank ENEMY_GROUP;
 
 	public static Boolean RESPAWN_CIV;
 
@@ -231,10 +231,10 @@ public class Settings extends SimpleSettings {
 		if (getBoolean("Permissions.Groups.Enemy.Switch")) defaultGroupPermissions.add(PermissionType.SWITCH);
 		if (getBoolean("Permissions.Groups.Enemy.Interact")) defaultGroupPermissions.add(PermissionType.INTERACT);
 
-		DEFAULT_GROUP = new PermissionGroup(defaultGroupName, defaultGroupPermissions);
-		OUTSIDER_GROUP = new PermissionGroup(outsiderGroupName, outsiderGroupPermissions);
-		ALLY_GROUP = new PermissionGroup(allyGroupName, allyGroupPermissions);
-		ENEMY_GROUP = new PermissionGroup(enemyGroupName, enemyGroupPermissions);
+		DEFAULT_GROUP = new Rank(defaultGroupName, defaultGroupPermissions);
+		OUTSIDER_GROUP = new Rank(outsiderGroupName, outsiderGroupPermissions);
+		ALLY_GROUP = new Rank(allyGroupName, allyGroupPermissions);
+		ENEMY_GROUP = new Rank(enemyGroupName, enemyGroupPermissions);
 
 		RESPAWN_CIV = getBoolean("Respawn.Civ_Home");
 

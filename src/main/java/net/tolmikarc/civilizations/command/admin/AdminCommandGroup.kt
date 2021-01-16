@@ -26,6 +26,7 @@ class AdminCommandGroup : SimpleCommandGroup() {
         registerSubcommand(AWarpCommand(this))
         registerSubcommand(AWarpsCommand(this))
         registerSubcommand(ARankCommand(this))
+        registerSubcommand(ATownyAdaptCommand(this))
     }
 
 
