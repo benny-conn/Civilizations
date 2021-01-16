@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.command
 import net.tolmikarc.civilizations.event.CreateCivEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -17,10 +18,10 @@ class CreateCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "new
         checkConsole()
         val name = args[0]
         PlayerManager.fromBukkitPlayer(player).let {
-            checkBoolean(!CivManager.civNames.contains(name), "A Civilization under that name already exists")
+            checkBoolean(!CivManager.civNames.contains(name), Localization.Warnings.CIV_NAME_EXISTS)
             checkBoolean(
                 it.civilization == null,
-                "You cannot create a Civilization if you already have one. Type /civ leave to leave your Civilization"
+                Localization.Warnings.CANNOT_CREATE_CIV
             )
             CivManager.createCiv(name, it).also { civ ->
                 tellSuccess(

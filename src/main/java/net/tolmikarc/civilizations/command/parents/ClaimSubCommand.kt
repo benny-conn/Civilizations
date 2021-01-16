@@ -9,6 +9,7 @@ import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.model.impl.Colony
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import net.tolmikarc.civilizations.util.ClaimUtil
@@ -17,7 +18,6 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
-import org.mineacademy.fo.model.HookManager
 import java.util.*
 import kotlin.math.abs
 
@@ -54,9 +54,9 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
     }
 
     fun claim(civilization: Civ, player: CPlayer, isColony: Boolean) {
-        checkBoolean(PermissionChecker.canManageCiv(player, civilization), "You cannot manage this Civilization")
-        checkBoolean(!player.visualizing, "Stop visualizing before you claim more land.")
-        checkBoolean(player.selection.bothPointsSelected(), "You must have both points selected to claim")
+        checkBoolean(PermissionChecker.canManageCiv(player, civilization), Localization.Warnings.CANNOT_MANAGE_CIV)
+        checkBoolean(!player.visualizing, Localization.Warnings.Claim.STOP_VISUALIZING)
+        checkBoolean(player.selection.bothPointsSelected(), Localization.Warnings.Claim.INCOMPLETE_SELECTION)
         val claim = Claim(
             civilization.claims.totalClaimCount,
             player.selection.primary!!,
@@ -67,72 +67,72 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
             ClaimUtil.isLocationInACiv(player.selection.primary!!) || ClaimUtil.isLocationInACiv(player.selection.secondary!!)
         checkBoolean(
             !isPointInOtherRegion,
-            "You may not claim a portion of another region. You can use /civ claim visualize to see your current claims."
+            Localization.Warnings.Claim.CLAIM_OVERLAP
         )
         val maxClaims = CivUtil.calculateFormulaForCiv(Settings.MAX_CLAIMS_FORMULA, civilization)
         if (maxClaims.toInt() != -1) checkBoolean(
             civilization.claims.totalClaimCount < maxClaims,
-            "You cannot have more than $maxClaims claims"
+            Localization.Warnings.Claim.MAX_CLAIMS.replace("{max}", maxClaims.toString())
         )
         if (Settings.MAX_BLOCKS_COUNT != -1) checkBoolean(
             civilization.claims.totalBlocksCount + totalArea < Settings.MAX_BLOCKS_COUNT,
-            "You cannot have more than " + Settings.MAX_BLOCKS_COUNT + " blocks claimed"
+            Localization.Warnings.Claim.MAX_BLOCKS.replace("{max}", Settings.MAX_BLOCKS_COUNT.toString())
         )
         if (Settings.MAX_CLAIM_SIZE != -1) checkBoolean(
             totalArea < Settings.MAX_CLAIM_SIZE,
-            "You cannot claim more than an area of " + Settings.MAX_CLAIM_SIZE + " at once"
+            Localization.Warnings.Claim.MAX_CLAIM_SIZE.replace("{max}", Settings.MAX_CLAIM_SIZE.toString())
         )
         if (Settings.MIN_DISTANCE_FROM_NEAREST_CLAIM != -1) checkBoolean(
             ClaimUtil.distanceFromNearestClaim(claim.center) > Settings.MIN_DISTANCE_FROM_NEAREST_CLAIM,
-            "You cannot claim so close to another Civilization's home"
+            Localization.Warnings.Claim.CIV_DISTANCE
         )
         if (civilization.claims.totalClaimCount > 0 && !isColony) checkBoolean(
             ClaimUtil.isRegionConnected(claim, civilization),
-            "Claim must be connected to existing claim."
+            Localization.Warnings.Claim.CONNECT_CLAIM
         )
         checkBoolean(
             ClaimUtil.regionsInSelection(claim).isEmpty(),
-            "You cannot claim with another claimed region inside of your selection."
+            Localization.Warnings.Claim.CLAIM_IN_CLAIM
         )
         val cost = CivUtil.calculateFormulaForCiv(Settings.COST_FORMULA, civilization, claim)
         checkBoolean(
-            HookManager.getBalance(getPlayer()) - cost > 0,
-            "You do not have enough money to claim this amount of land. Required cost: $cost"
+            civilization.bank.balance - cost > 0,
+            Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", cost.toString())
         )
         checkBoolean(
             ClaimUtil.isLocationInRegion(getPlayer().location, claim),
-            "You must be standing in your new claim to claim it."
+            Localization.Warnings.Claim.STAND_IN_CLAIM
         )
         if (civilization.claims.totalClaimCount == 0)
             checkBoolean(
                 !getPlayer().location.subtract(0.0, 1.0, 0.0).block.type.isAir,
-                "You be standing on solid ground to claim land"
+                Localization.Warnings.Claim.SOLID_GROUND
             )
         if (isColony) {
             checkBoolean(
                 civilization.claims.totalClaimCount > 0,
-                "You must have at least one regular claim before creating a colony."
+                Localization.Warnings.Claim.COLONY_PREREQUISITE
             )
             checkBoolean(
                 ClaimUtil.distanceFromNearestClaim(
                     claim.center,
                     civilization
                 ) > Settings.COLONY_MIN_DISTANCE_FROM_NEAREST_CLAIM,
-                "You cannot claim a colony so close to your civilization"
+                Localization.Warnings.Claim.COLONY_DISTANCE
             )
             val maxColonies = CivUtil.calculateFormulaForCiv(Settings.MAX_COLONIES_FORMULA, civilization)
             if (maxColonies.toInt() != -1) checkBoolean(
                 civilization.claims.colonyCount < maxColonies,
-                "You cannot have more than $maxColonies colonies."
+                Localization.Warnings.Claim.MAX_COLONIES.replace("{max}", maxColonies.toString())
             )
             val colony = Colony(civilization, civilization.claims.idNumber, getPlayer().location)
             civilization.claims.addColony(colony)
             tellSuccess("{1}Claimed colony at your location!")
         } else {
-            tellSuccess("{1}Claimed region at your location!")
+            tellSuccess("{1}Claimed a claim at your location!")
         }
         if (civilization.claims.totalClaimCount == 0) civilization.home = getPlayer().location
-        HookManager.withdraw(getPlayer(), cost)
+        civilization.bank.removeBalance(cost)
         player.selection.removeSelection(getPlayer())
         civilization.claims.addClaim(claim)
         Common.callEvent(

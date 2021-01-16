@@ -24,6 +24,7 @@ import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
 import net.tolmikarc.civilizations.util.WarUtil.addDamages
 import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
 import net.tolmikarc.civilizations.util.WarUtil.increaseBlocksBroken
+import net.tolmikarc.civilizations.util.WarUtil.isInRaid
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
@@ -121,7 +122,11 @@ class PlayerListener : Listener {
     fun onPlayerRespawn(event: PlayerRespawnEvent) {
         if (Settings.RESPAWN_CIV) {
             val player = PlayerManager.fromBukkitPlayer(event.player)
-            player.civilization?.home?.let { event.respawnLocation = it }
+            player.civilization?.let {
+                it.home?.let { home -> event.respawnLocation = home }
+                if (isInRaid(it) && player.lastLocationBeforeRaid != null)
+                    event.respawnLocation = player.lastLocationBeforeRaid!!
+            }
         }
     }
 
@@ -281,7 +286,8 @@ class PlayerListener : Listener {
                     if (!Common.callEvent(
                             CivEnterEvent(
                                 civTo,
-                                event.player
+                                event.player,
+                                from, to
                             )
                         )
                     ) event.isCancelled = true
@@ -289,7 +295,8 @@ class PlayerListener : Listener {
                     if (!Common.callEvent(
                             CivLeaveEvent(
                                 civFrom,
-                                event.player
+                                event.player,
+                                from, to
                             )
                         )
                     ) event.isCancelled = true
@@ -301,7 +308,8 @@ class PlayerListener : Listener {
                     if (!Common.callEvent(
                             PlotEnterEvent(
                                 plotTo,
-                                event.player
+                                event.player,
+                                from, to
                             )
                         )
                     ) event.isCancelled = true
@@ -327,7 +335,8 @@ class PlayerListener : Listener {
                 if (!Common.callEvent(
                         CivEnterEvent(
                             civTo,
-                            event.player
+                            event.player,
+                            from, to
                         )
                     )
                 ) event.isCancelled = true
@@ -335,7 +344,8 @@ class PlayerListener : Listener {
                 if (!Common.callEvent(
                         CivLeaveEvent(
                             civFrom,
-                            event.player
+                            event.player,
+                            from, to
                         )
                     )
                 ) event.isCancelled = true
@@ -347,7 +357,8 @@ class PlayerListener : Listener {
                 if (!Common.callEvent(
                         PlotEnterEvent(
                             plotTo,
-                            event.player
+                            event.player,
+                            from, to
                         )
                     )
                 ) event.isCancelled = true

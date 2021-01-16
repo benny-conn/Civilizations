@@ -4,6 +4,7 @@
 package net.tolmikarc.civilizations.model
 
 import net.tolmikarc.civilizations.model.impl.Selection
+import org.bukkit.Location
 
 interface CPlayer : UniquelyIdentifiable {
 
@@ -15,6 +16,7 @@ interface CPlayer : UniquelyIdentifiable {
     var visualizing: Boolean
     var flying: Boolean
     var raidBlocksDestroyed: Int
+    var lastLocationBeforeRaid: Location?
 
     fun addPower(power: Int)
     fun removePower(power: Int)

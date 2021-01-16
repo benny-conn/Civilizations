@@ -8,6 +8,7 @@ import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -16,22 +17,25 @@ class KickCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "kick"
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You must have a Civilization to manage it.")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
                 checkBoolean(
                     canManageCiv(civPlayer, this),
-                    "You must be the Leader or an Official of your Civilization to use this command."
+                    Localization.Warnings.CANNOT_MANAGE_CIV
                 )
-                checkBoolean(!args[0].equals(player.name, ignoreCase = true), "You cannot kick yourself")
-                PlayerManager.getByName(args[0])?.let { kicked -> executeCommand(this, kicked) }
+                checkBoolean(!args[0].equals(player.name, ignoreCase = true), Localization.Warnings.CANNOT_SPECIFY_SELF)
+                executeCommand(this, PlayerManager.getByName(args[0]))
             }
         }
     }
 
-    private fun executeCommand(civilization: Civ, kickedCache: CPlayer) {
-        checkNotNull(kickedCache, "Specify a valid player")
+    private fun executeCommand(civilization: Civ, kickedCache: CPlayer?) {
+        checkNotNull(
+            kickedCache,
+            Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER)
+        )
         checkBoolean(civilization.citizens.contains(kickedCache), "This player is not in your town.")
-        civilization.removeCitizen(kickedCache)
+        civilization.removeCitizen(kickedCache!!)
         tellSuccess("{2}Successfully kicked player {1}${args[0]}")
     }
 

@@ -8,6 +8,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
+import org.bukkit.Location
 import java.util.*
 
 data class CivPlayer(override val uuid: UUID) : CPlayer {
@@ -24,6 +25,7 @@ data class CivPlayer(override val uuid: UUID) : CPlayer {
     override var visualizing = false
     override var flying = false
     override var raidBlocksDestroyed = 0
+    override var lastLocationBeforeRaid: Location? = null
 
 
     override fun addPower(power: Int) {

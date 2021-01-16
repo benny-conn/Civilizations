@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.command.management
 import net.tolmikarc.civilizations.command.parents.ClaimSubCommand
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 
@@ -14,7 +15,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : ClaimSubCommand(parent) {
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let {
-            checkNotNull(it.civilization, "You do not have a civilization")
+            checkNotNull(it.civilization, Localization.Warnings.NO_CIV)
             it.civilization?.apply {
                 if (args.isNotEmpty()) {
                     when (args[0].toLowerCase()) {

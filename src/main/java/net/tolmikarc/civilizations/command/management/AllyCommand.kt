@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.command.management
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -15,21 +16,24 @@ class AllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally"
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let {
-            checkNotNull(it.civilization, "You do not have a Civilization")
+            checkNotNull(it.civilization, Localization.Warnings.NO_CIV)
             it.civilization?.apply {
-                checkBoolean(PermissionChecker.canManageCiv(it, this), "You cannot manage this Civilization")
+                checkBoolean(PermissionChecker.canManageCiv(it, this), Localization.Warnings.CANNOT_MANAGE_CIV)
                 val allyCiv = CivManager.getByName(args[1])
-                checkNotNull(allyCiv, "Please specify a valid enemy Civilization")
+                checkNotNull(
+                    allyCiv,
+                    Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
+                )
                 checkBoolean(allyCiv != this, "You cannot ally yourself")
                 when {
                     args[0].equals("add", ignoreCase = true) -> {
                         checkBoolean(
                             !relationships.allies.contains(allyCiv),
-                            "You are already allies with this civilization"
+                            Localization.Warnings.ALREADY_ALLIES
                         )
                         checkBoolean(
                             !relationships.enemies.contains(allyCiv),
-                            "You cannot ally an enemy Civilization."
+                            Localization.Warnings.ALLY_ENEMY
                         )
                         relationships.addAlly(allyCiv!!)
                         tell("{1}Your Civilization is now allies with {2}" + allyCiv.name)
@@ -37,7 +41,7 @@ class AllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally"
                     args[0].equals("remove", ignoreCase = true) -> {
                         checkBoolean(
                             relationships.allies.contains(allyCiv),
-                            "This Civilization is not your ally."
+                            Localization.Warnings.NOT_ALLY
                         )
                         relationships.removeAlly(allyCiv!!)
                         tell("{1}Your Civilization is no longer allies with {2}" + allyCiv.name)

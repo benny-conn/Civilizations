@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -14,10 +15,13 @@ class RemoveWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You do not have a civilization.")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
-                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
-                checkBoolean(warps.containsKey(args[0]), "Please specify a valid warp")
+                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
+                checkBoolean(
+                    warps.containsKey(args[0]),
+                    Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "warp")
+                )
                 removeWarp(args[0])
                 tellSuccess("{1}Set a Civilization Warp at your location with the name {2}" + args[0])
             }

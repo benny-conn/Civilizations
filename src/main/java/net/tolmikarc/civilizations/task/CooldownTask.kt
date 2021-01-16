@@ -53,7 +53,7 @@ class CooldownTask : BukkitRunnable() {
     }
 
     enum class CooldownType(val seconds: Int) {
-        PVP(Settings.PVP_TOGGLE_COOLDOWN), TELEPORT(Settings.TELEPORT_COOLDOWN), RAID(Settings.RAID_COOLDOWN), TNT(
+        TELEPORT(Settings.TELEPORT_COOLDOWN), TNT(
             Settings.RAID_TNT_COOLDOWN
         ),
         END_WAR(

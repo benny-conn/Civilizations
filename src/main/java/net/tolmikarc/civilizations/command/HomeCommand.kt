@@ -8,6 +8,7 @@ import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.PermissionChecker.isAdmin
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -35,39 +36,42 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                             civ.home?.let { home ->
                                 checkBoolean(
                                     !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
-                                    "Please wait " + getCooldownRemaining(
-                                        civPlayer,
-                                        CooldownTask.CooldownType.TELEPORT
-                                    ) + " seconds before teleporting again."
+                                    Localization.Warnings.COOLDOWN_WAIT.replace(
+                                        "{duration}",
+                                        getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
+                                    )
                                 )
                                 PaperLib.teleportAsync(player, home).thenAccept {
                                     if (it)
                                         tellSuccess("{1}Teleported to Civ Home!")
                                     else
-                                        tellError("Failed to teleport to Civ Home!")
+                                        tellError(Localization.Warnings.FAILED_TELEPORT)
                                 }
                                 addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
 
                             }
-                        } else tell("{3}Town not public")
+                        } else tell(Localization.Warnings.TOWN_NOT_PUBLIC)
                     }
                 return
             }
-            checkNotNull(civPlayer.civilization, "You do not have a Civilization")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.let { civilization ->
-                checkNotNull(civilization.home, "Your Civilization does not have a home.")
+                checkNotNull(
+                    civilization.home,
+                    Localization.Warnings.NULL_RESULT.replace("{item}", "${Localization.CIVILIZATION} home")
+                )
                 checkBoolean(
                     !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
-                    "Please wait " + getCooldownRemaining(
-                        civPlayer,
-                        CooldownTask.CooldownType.TELEPORT
-                    ) + " seconds before teleporting again."
+                    Localization.Warnings.COOLDOWN_WAIT.replace(
+                        "{duration}",
+                        getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
+                    )
                 )
                 PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
                     if (it)
                         tellSuccess("{1}Teleported to Civ Home!")
                     else
-                        tellError("Failed to teleport to Civ Home!")
+                        tellError(Localization.Warnings.FAILED_TELEPORT)
                 }
                 addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
             }

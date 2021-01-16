@@ -5,6 +5,7 @@
 package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.ClaimUtil
 import net.tolmikarc.civilizations.util.MathUtil.doubleToMoney
@@ -17,22 +18,25 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class ASetCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "set") {
     override fun onCommand() {
         val civ = CivManager.getByName(args[0])
-        checkNotNull(civ, "Please specify a valid Civilization.")
+        checkNotNull(civ, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION))
         civ?.apply {
             when (args[1].toLowerCase()) {
                 "money" -> {
-                    checkArgs(3, "Please specify an amount to apply")
-                    checkBoolean(isDouble(args[2]), "Please specify a valid number.")
+                    checkArgs(3, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.NUMBER))
+                    checkBoolean(
+                        isDouble(args[2]),
+                        Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.NUMBER)
+                    )
                     bank.balance = doubleToMoney(args[2].toDouble())
                     tellSuccess("{1}Successfully set {2}$name's {1}balance to {2}${bank.balance}")
                 }
                 "description" -> {
-                    checkArgs(3, "Please specify a description to apply")
+                    checkArgs(3, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "description"))
                     description = args[2]
                     tellSuccess("{1}Set {2}$name's {1}description to {2}$description")
                 }
                 "name" -> {
-                    checkArgs(3, "Please specify a name to apply")
+                    checkArgs(3, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "name"))
                     name = args[2]
                     tellSuccess("{1}Renamed Civ to {2}$name")
                 }
@@ -49,14 +53,14 @@ class ASetCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "set")
                 "banner" -> {
                     checkConsole()
                     val banner = player.inventory.itemInMainHand
-                    checkBoolean(Tag.BANNERS.isTagged(banner.type), "You must be holding a banner to use this command.")
+                    checkBoolean(Tag.BANNERS.isTagged(banner.type), Localization.Warnings.INVALID_HAND_ITEM)
                     this.banner = banner
                     tellSuccess("{1}Successfully set $name's Banner to the Banner in your hand")
                 }
                 "book" -> {
                     checkConsole()
                     val book = player.inventory.itemInMainHand
-                    checkBoolean(book.type == Material.WRITTEN_BOOK, "You must be holding a Book to use this command.")
+                    checkBoolean(book.type == Material.WRITTEN_BOOK, Localization.Warnings.INVALID_HAND_ITEM)
                     this.book = book
                     tellSuccess("{1}Successfully set $name's Book to the Book in your hand")
                 }
@@ -64,7 +68,7 @@ class ASetCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "set")
                     checkConsole()
                     checkBoolean(
                         ClaimUtil.isLocationInCiv(player.location, this),
-                        "You must be in your Civilization to set the home."
+                        Localization.Warnings.Claim.NO_CLAIM
                     )
                     home = player.location
                     tellSuccess("{1}Set the $name's home location")

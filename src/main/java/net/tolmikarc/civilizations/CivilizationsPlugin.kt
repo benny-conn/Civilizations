@@ -39,8 +39,6 @@ class CivilizationsPlugin : SimplePlugin() {
     //  WAR
     //  make sure players can get out of claims at all times
     //  Towny and Factions adapter
-    //  maybe a system to restore land to original state before players touched it
-    //  make the conversation canceller a variable
     //  different war modes, peaceful, anarchist, etc. maybe one where u can actually lose land
     //  WG integration
     //  teleport to civ outside of borders async for enemies during raid

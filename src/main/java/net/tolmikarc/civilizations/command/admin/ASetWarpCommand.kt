@@ -5,6 +5,7 @@
 package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
@@ -15,16 +16,16 @@ class ASetWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "s
     override fun onCommand() {
         checkConsole()
         val civ = CivManager.getByName(args[0])
-        checkNotNull(civ, "Please specify a valid Civilization.")
+        checkNotNull(civ, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION))
         civ?.apply {
             checkBoolean(
                 isLocationInCiv(player.location, this),
-                "You must be in your Civilization to set a Warp."
+                Localization.Warnings.Claim.NO_CLAIM
             )
             val maxWarps = calculateFormulaForCiv(Settings.MAX_WARPS_FORMULA, this)
             checkBoolean(
                 warps.keys.size.toDouble() < maxWarps,
-                "You cannot have more than $maxWarps total warps."
+                Localization.Warnings.MAXIMUM_WARPS.replace("{max}", maxWarps.toString())
             )
             addWarp(args[0], player.location)
             tellSuccess("{1}Set a Civilization Warp at your location with the name {2}" + args[0])

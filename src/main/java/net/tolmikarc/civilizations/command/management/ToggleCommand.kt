@@ -6,16 +6,18 @@ package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
+import java.util.concurrent.TimeUnit
 
 class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "toggle") {
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             civPlayer.civilization?.apply {
-                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
+                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
                 when (args[0].toLowerCase()) {
                     "fire" -> toggleables.fire =
                         !toggleables.fire.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.fire}") }
@@ -43,6 +45,7 @@ class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "togg
     }
 
     init {
+        setCooldown(Settings.PVP_TOGGLE_COOLDOWN, TimeUnit.SECONDS)
         minArguments = 1
         description = "Toggle settings for your Civilization"
         if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null

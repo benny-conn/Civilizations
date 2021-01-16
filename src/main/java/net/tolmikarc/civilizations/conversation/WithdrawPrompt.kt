@@ -5,6 +5,7 @@
 package net.tolmikarc.civilizations.conversation
 
 import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.util.MathUtil
 import org.bukkit.conversations.ConversationContext
 import org.bukkit.conversations.Prompt
@@ -31,8 +32,8 @@ class WithdrawPrompt(val civilization: Civ, val player: Player) : SimpleDecimalP
         return "{1}How much would you like to withdraw?"
     }
 
-    override fun getFailedValidationText(context: ConversationContext, invalidInput: String): String? {
-        return "Please specify a valid number"
+    override fun getFailedValidationText(context: ConversationContext, invalidInput: String): String {
+        return Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.NUMBER)
     }
 
 

@@ -8,6 +8,7 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.permissions.PermissionType
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -20,11 +21,14 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
             val civilization: Civ?
             if (args.isNotEmpty()) {
                 civilization = CivManager.getByName(args[0])
-                checkNotNull(civilization, "Please enter a valid Civilization")
+                checkNotNull(
+                    civilization,
+                    Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
+                )
             } else {
                 checkNotNull(
                     civPlayer.civilization,
-                    "You must have a civ to use this command without defining another Civilization"
+                    Localization.Warnings.NO_CIV
                 )
                 civilization = civPlayer.civilization
             }

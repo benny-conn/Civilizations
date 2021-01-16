@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.command.admin
 import net.tolmikarc.civilizations.command.parents.PlotSubCommand
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 
@@ -15,14 +16,14 @@ class APlotCommand(parent: SimpleCommandGroup?) : PlotSubCommand(parent) {
         checkConsole()
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         val civ = CivManager.getByName(args[0])
-        checkNotNull(civ, "Please specify a valid Civilization.")
+        checkNotNull(civ, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION))
         civ?.apply {
             if (args.isNotEmpty())
                 when (args[1].toLowerCase()) {
                     "visualize" -> visualize(civPlayer, this)
                     "define" -> definePlot(civPlayer, this)
                     "claim" -> claimPlot(civPlayer, this)
-                    "delete" -> TODO()
+                    "delete" -> deletePlot(civPlayer, this)
                     "forsale" -> setPlotForSale(civPlayer, this)
                     "add" -> addMemberToPlot(civPlayer, this)
                 }

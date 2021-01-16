@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.command
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -15,11 +16,11 @@ class LeaveCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "leav
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You do not have a Civilization to leave.")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             val civilization = civPlayer.civilization
             checkBoolean(
                 civilization!!.leader != civPlayer,
-                "If you would like to leave your Civilization as it's leader you must either bestow leadership upon someone else with /civ leader <player> or disband your civilization with /civ delete"
+                Localization.Warnings.LEAVE_CIV_AS_LEADER
             )
 
             fun run() {

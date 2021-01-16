@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.permissions.PermissionType
+import net.tolmikarc.civilizations.settings.Localization
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -13,7 +14,7 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class APermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "perms|permissions") {
     override fun onCommand() {
         val civ = CivManager.getByName(args[0])
-        checkNotNull(civ, "Please specify a valid Civilization.")
+        checkNotNull(civ, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION))
         civ?.apply {
             if (args.size == 1) {
                 if (args[0].equals("options", ignoreCase = true)) {

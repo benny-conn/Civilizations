@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command.management
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.permissions.PermissionGroup
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -16,20 +17,26 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
         checkConsole()
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         val civ = civPlayer.civilization
-        checkNotNull(civ, "You must have a civ to use this command.")
+        checkNotNull(civ, Localization.Warnings.NO_CIV)
         civ?.apply {
-            checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
+            checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
 
             when (args[0].toLowerCase()) {
                 "set" -> {
-                    checkArgs(3, "Please specify a player's name and a rank to apply to them")
+                    if (args.size < 3) returnInvalidArgs()
                     val player = PlayerManager.getByName(args[1])
                     val rank = permissionGroups.getGroupByName(args[2])
-                    checkNotNull(player, "Please specify a valid player")
-                    checkBoolean(citizens.contains(player), "Player is not a member of your Civilization")
+                    checkNotNull(
+                        player,
+                        Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER)
+                    )
+                    checkBoolean(citizens.contains(player), Localization.Warnings.NOT_IN_CIV)
                     checkNotNull(
                         rank,
-                        "Please specify a valid rank. Options: ${
+                        Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace(
+                            "{item}",
+                            "rank"
+                        ) + " ${Localization.OPTIONS}: ${
                             Common.join(
                                 permissionGroups.groups.map { it.name },
                                 ", "
@@ -43,15 +50,15 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
                     }
                 }
                 "new" -> {
-                    checkArgs(2, "Please specify a name for the new rank.")
+                    if (args.size < 2) returnInvalidArgs()
                     permissionGroups.groups.add(PermissionGroup(args[1], HashSet()))
                 }
                 "delete" -> {
-                    checkArgs(2, "Please specify a group to delete")
+                    if (args.size < 2) returnInvalidArgs()
                     val group = permissionGroups.getGroupByName(args[1])
-                    checkNotNull(group, "Please specify a valid group to delete")
+                    checkNotNull(group, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "rank"))
                     if (permissionGroups.defaultGroup == group || permissionGroups.outsiderGroup == group || permissionGroups.allyGroup == group || permissionGroups.enemyGroup == group) {
-                        returnTell("You cannot delete a default group")
+                        returnTell(Localization.Warnings.DELETE_DEFAULT)
                     }
                     permissionGroups.groups.remove(group)
                     permissionGroups.adminGroups.remove(group)
@@ -61,11 +68,11 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
                     }
                 }
                 "rename" -> {
-                    checkArgs(3, "Please specify a group to rename and the name to assign")
+                    if (args.size < 3) returnInvalidArgs()
                     val group = permissionGroups.getGroupByName(args[1])
-                    checkNotNull(group, "Please specify a valid group to rename")
+                    checkNotNull(group, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "rank"))
                     if (permissionGroups.defaultGroup == group || permissionGroups.outsiderGroup == group || permissionGroups.allyGroup == group || permissionGroups.enemyGroup == group) {
-                        returnTell("You cannot rename a default group")
+                        returnTell(Localization.Warnings.RENAME_DEFAULT)
                     }
                     group?.name = args[2]
                 }
@@ -90,7 +97,7 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
     init {
         minArguments = 1
         setDescription("Assign ranks to players and create new custom ranks")
-        usage = "<set | new | delete | rename> [...]"
+        usage = "<set | new | delete | rename> [rank | player] [rank | name]"
         if (Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 

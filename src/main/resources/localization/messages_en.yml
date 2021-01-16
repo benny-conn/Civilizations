@@ -1,3 +1,99 @@
-Confirm: "Confirm"
-Cancel: "Cancel"
+Confirm: "confirm"
+Cancel: "cancel"
+Number: "number"
+Civilization: "civilization"
+Player: "player"
+Options: "options"
+
+
+Warnings:
+  Cooldown_Wait: "{3}Wait {duration} seconds before doing this action again."
+  Cooldown_Wait_Minutes: "{3}Wait {duration} minutes before doing this action again."
+  Invalid_Specific_Argument: "{3}Please enter a valid {item}"
+  Null_Result: "{3}You do not have {item}"
+  Failed_Teleport: "{3}Failed to teleport!"
+  Town_Not_Public: "{3}Town not public"
+  No_Civ: "{3}You must have a Civilization to do this action."
+  Insufficient_Player_Funds: "You do not have enough money for this action. Required cost: {cost}"
+  Insufficient_Civ_Funds: "Your Civilization does not have enough money for this action. Required cost: {cost}"
+  Cannot_Invite_Outlaw: "{3}You cannot invite an outlaw of your Civilization."
+  Cannot_Specify_Self: "{3}You cannot choose yourself."
+  Leave_Civ_As_Leader: "{3}If you would like to leave your Civilization as it's leader you must either bestow leadership upon someone else with /civ leader <player> or disband your civilization with /civ delete"
+  Wrong_Map_Scale: "{3}Please use a map with a close scale"
+  Must_Hold_Map: "{3}Must be holding a map to use this command."
+  Cannot_Create_Civ: "{3}You cannot create a Civilization if you already have one. Type /civ leave to leave your Civilization"
+  Civ_Name_Exists: "{3}A Civilization under that name already exists"
+  Leader: "You must be the leader of your Civilization to perform this action."
+  Cannot_Manage_Civ: "{3}You cannot manage this Civilization"
+  Cannot_Manage_Plot: "{3}You cannot manage this Plot"
+  Minimum: "{3}The minimum amount is {min}"
+  Maximum: "{3}The maximum amount is {max}"
+  Maximum_Warps: "{3}You cannot have more than {max} total warps."
+  Rename_Default: "{3}You cannot rename a default group"
+  Delete_Default: "{3}You cannot delete a default group"
+  Outlaw_Citizen: "{3}You cannot outlaw a player in your town."
+  Not_In_Civ: "{3}This player is not in your town."
+  Enemy_Ally: "{3}You cannot enemy an ally Civilization."
+  Ally_Enemy: "{3}You cannot ally an enemy Civilization."
+  Already_Enemies: "You are already enemies with this civilization"
+  Already_Allies: "You are already allies with this civilization"
+  Not_Enemy: "{3}This Civilization is not your enemy."
+  Not_Ally: "{3}This Civilization is not your ally."
+  Surrender: "{3}You must use /civ surrender to end the war"
+  Invalid_Hand_Item: "{3}You must be holding the valid item type in your hand"
+  No_Banner: "{3}Your Civilization does not have a banner."
+  No_Book: "{3}Your Civilization does not have a book."
+  Not_Warring: "{3}You are not warring this Civilization"
+  Claim:
+    No_Claim: "{3}There is no claim at your location"
+    Stop_Visualizing: "{3}Stop visualizing before completing this action."
+    Incomplete_Selection: "{3}You must have both points selected to claim"
+    Claim_Overlap: "{3}You may overlap claims. You can use /civ claim visualize to see your current claims."
+    Max_Claims: "{3}You cannot have more than {max} claims"
+    Max_Blocks: "{3}You cannot have more than {max} blocks claimed"
+    Max_Claim_Size: "{3}You cannot claim more than an area of {max} at once"
+    Civ_Distance: "{3}You cannot claim so close to another Civilization"
+    Connect_Claim: "{3}Claim must be connected to existing claim."
+    Claim_In_Claim: "{3}You cannot claim with another claimed region inside of your selection."
+    Stand_In_Claim: "{3}You must be standing in your new claim to claim it."
+    Solid_Ground: "{3}You be standing on solid ground to claim land"
+    Colony_Prerequisite: "{3}You must have at least one regular claim before creating a colony."
+    Colony_Distance: "{3}You cannot claim a colony so close to your civilization"
+    Max_Colonies: "{3}You cannot have more than {max} colonies."
+    Plot_Overlap: "{3}You may overlap plots. You can use /civ plot visualize to see your current claims."
+    No_Plot: "{3}There is no plot at your location"
+    Max_Plots: "{3}You cannot define more than {max} total plots."
+    Not_For_Sale: "{3}This plot is not for sale"
+    Beyond_Borders: "{3}You cannot claim a new plot extending beyond your town"
+  Raid:
+    Not_Enough_Players: "{3}There are not enough enemy players online to start a raid."
+    In_Enemy_Land: "{3}You must not be in the enemy territory when you begin a raid"
+    No_Land: "{3}The enemy does not have any land"
+    No_War: "{3}You must first be at war to raid an enemy"
+    Already_In_Raid: "{3}This civilization is already in a Raid"
+  Event:
+    Cannot_Enter: ""
+  Admin:
+    Already_Enemies: ""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Version: 0

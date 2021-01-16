@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.command.management
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.CivilizationMenu
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -15,8 +16,8 @@ class MenuCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "menu|
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).run {
-            checkNotNull(civilization, "You must have a Civilization to use this command.")
-            checkBoolean(PermissionChecker.canManageCiv(this, civilization!!), "You cannot manage this Civilization")
+            checkNotNull(civilization, Localization.Warnings.NO_CIV)
+            checkBoolean(PermissionChecker.canManageCiv(this, civilization!!), Localization.Warnings.CANNOT_MANAGE_CIV)
             civilization?.run { CivilizationMenu(this).displayTo(player) }
         }
     }

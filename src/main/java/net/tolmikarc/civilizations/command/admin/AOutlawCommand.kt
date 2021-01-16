@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -13,9 +14,12 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class AOutlawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "outlaw") {
     override fun onCommand() {
         val civ = CivManager.getByName(args[0])
-        checkNotNull(civ, "Please specify a valid Civilization.")
+        checkNotNull(civ, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION))
         civ?.apply {
-            val outlaw = findPlayer(args[0], "Specify a valid and online player")
+            val outlaw = findPlayer(
+                args[0],
+                Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER)
+            )
             PlayerManager.fromBukkitPlayer(outlaw).let { civOutlaw ->
                 checkBoolean(!this.citizens.contains(civOutlaw), "You cannot outlaw a player in the town.")
                 if (this.relationships.outlaws.contains(civOutlaw)) {

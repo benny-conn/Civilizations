@@ -122,7 +122,6 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
             civRaiding.raid = null
             CooldownTask.addCooldownTimer(civBeingRaided, CooldownTask.CooldownType.END_WAR)
             CooldownTask.addCooldownTimer(civRaiding, CooldownTask.CooldownType.END_WAR)
-            CooldownTask.addCooldownTimer(civRaiding, CooldownTask.CooldownType.RAID)
         }
         Common.callEvent(RaidEndEvent(this))
     }

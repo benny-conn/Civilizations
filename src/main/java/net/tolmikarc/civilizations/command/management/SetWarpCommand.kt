@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil.calculateFormulaForCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
@@ -16,17 +17,17 @@ class SetWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "se
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You do not have a civilization.")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
-                checkBoolean(canManageCiv(civPlayer, this), "You cannot manage this Civilization")
+                checkBoolean(canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
                 checkBoolean(
                     isLocationInCiv(player.location, this),
-                    "You must be in your Civilization to set a Warp."
+                    Localization.Warnings.Claim.NO_CLAIM
                 )
                 val maxWarps = calculateFormulaForCiv(Settings.MAX_WARPS_FORMULA, this)
                 checkBoolean(
                     warps.keys.size.toDouble() < maxWarps,
-                    "You cannot have more than $maxWarps total warps."
+                    Localization.Warnings.MAXIMUM_WARPS.replace("{max}", maxWarps.toString())
                 )
                 addWarp(args[0], player.location)
                 tellSuccess("{1}Set a Civilization Warp at your location with the name {2}" + args[0])

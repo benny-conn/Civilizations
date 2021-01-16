@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command
 
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -16,7 +17,10 @@ class PlayerInfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
         val civPlayer: CPlayer?
         if (args.isNotEmpty()) {
             civPlayer = PlayerManager.getByName(args[0])
-            checkNotNull(civPlayer, "Please specify a valid player")
+            checkNotNull(
+                civPlayer,
+                Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER)
+            )
         } else civPlayer = PlayerManager.fromBukkitPlayer(player)
         civPlayer?.run { sendInfo(this) }
     }

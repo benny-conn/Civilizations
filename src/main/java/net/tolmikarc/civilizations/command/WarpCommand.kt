@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command
 
 import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -19,21 +20,21 @@ class WarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp"
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).run {
-            checkNotNull(civilization, "You do not have a Civilization")
+            checkNotNull(civilization, Localization.Warnings.NO_CIV)
             val warp = civilization!!.warps[args[0]]
-            checkNotNull(warp, "Please specify a valid warp.")
+            checkNotNull(warp, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "warp"))
             checkBoolean(
                 !hasCooldown(this, CooldownTask.CooldownType.TELEPORT),
-                "Please wait " + getCooldownRemaining(
-                    this,
-                    CooldownTask.CooldownType.TELEPORT
-                ) + " seconds before teleporting again."
+                Localization.Warnings.COOLDOWN_WAIT.replace(
+                    "{duration}",
+                    getCooldownRemaining(this, CooldownTask.CooldownType.TELEPORT).toString()
+                )
             )
             PaperLib.teleportAsync(player, warp!!).thenAccept {
                 if (it)
                     tellSuccess("Teleported to Warp!")
                 else
-                    tellError("Failed to teleport to Warp!")
+                    tellError(Localization.Warnings.FAILED_TELEPORT)
             }
             addCooldownTimer(this, CooldownTask.CooldownType.TELEPORT)
         }

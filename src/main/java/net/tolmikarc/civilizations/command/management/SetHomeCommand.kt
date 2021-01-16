@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -15,15 +16,15 @@ class SetHomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "se
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You do not have a civilization.")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
                 checkBoolean(
                     canManageCiv(civPlayer, this),
-                    "You must be the leader or official of your Civilization to set the home"
+                    Localization.Warnings.CANNOT_MANAGE_CIV
                 )
                 checkBoolean(
                     isLocationInCiv(player.location, this),
-                    "You must be in your Civilization to set the home."
+                    Localization.Warnings.Claim.NO_CLAIM
                 )
                 home = player.location
                 tellSuccess("{2}Set the Civilization home location")

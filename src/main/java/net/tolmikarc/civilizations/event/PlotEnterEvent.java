@@ -4,6 +4,7 @@
 package net.tolmikarc.civilizations.event;
 
 import net.tolmikarc.civilizations.model.impl.Plot;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
@@ -16,11 +17,15 @@ public class PlotEnterEvent extends Event implements Cancellable {
 	private final Plot plot;
 	private final Player player;
 	private boolean cancelled;
+	private final Location from;
+	private final Location to;
 
 
-	public PlotEnterEvent(Plot plot, Player player) {
+	public PlotEnterEvent(Plot plot, Player player, Location from, Location to) {
 		this.plot = plot;
 		this.player = player;
+		this.from = from;
+		this.to = to;
 	}
 
 
@@ -32,6 +37,13 @@ public class PlotEnterEvent extends Event implements Cancellable {
 		return plot;
 	}
 
+	public Location getFrom() {
+		return from;
+	}
+
+	public Location getTo() {
+		return to;
+	}
 
 	@Override
 	public boolean isCancelled() {

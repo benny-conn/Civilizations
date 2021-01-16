@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command
 
 import net.tolmikarc.civilizations.event.CivJoinEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -15,7 +16,7 @@ class AcceptCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "acc
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilizationInvite, "You do not have any pending invites")
+            checkNotNull(civPlayer.civilizationInvite, Localization.Warnings.NULL_RESULT.replace("{item}", "invites"))
             civPlayer.civilizationInvite?.apply {
                 this.addCitizen(civPlayer)
                 civPlayer.civilization = this

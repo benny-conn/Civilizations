@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.command.management
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.permissions.PermissionType
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -16,9 +17,9 @@ class PermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You do not have a Civilization to manage")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
-                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
+                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
                 if (args.size == 1) {
                     if (args[0].equals("options", ignoreCase = true)) {
                         tell(

@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.command.admin
 import net.tolmikarc.civilizations.event.UnclaimEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.util.ClaimUtil.getRegionFromLocation
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -16,10 +17,10 @@ class AUnclaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "u
     override fun onCommand() {
         checkConsole()
         val civ = CivManager.getByName(args[0])
-        checkNotNull(civ, "Please specify a valid Civilization.")
+        checkNotNull(civ, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION))
         civ?.apply {
             val regionToRemove = getRegionFromLocation(player.location, this)
-            checkNotNull(regionToRemove, "There is no region at your location")
+            checkNotNull(regionToRemove, Localization.Warnings.Claim.NO_CLAIM)
             fun run() {
                 claims.removeClaim(regionToRemove!!)
                 tellSuccess("{3}Removed region successfully")

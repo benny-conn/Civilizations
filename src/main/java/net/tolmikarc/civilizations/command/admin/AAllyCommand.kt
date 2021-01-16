@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -14,9 +15,15 @@ class AAllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally
         PlayerManager.fromBukkitPlayer(player).let {
             checkConsole()
             val civ = CivManager.getByName(args[0])
-            checkNotNull(civ, "Please specify a valid Civilization.")
+            checkNotNull(
+                civ,
+                Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
+            )
             val allyCiv = CivManager.getByName(args[1])
-            checkNotNull(allyCiv, "Please specify a valid enemy Civilization")
+            checkNotNull(
+                allyCiv,
+                Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
+            )
             checkBoolean(allyCiv != civ, "You cannot make this civ ally itself")
             civ?.apply {
                 when {

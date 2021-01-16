@@ -8,6 +8,7 @@ import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.war.Damages
 import org.bukkit.Bukkit
@@ -21,16 +22,24 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You must have a Civilization to use this command.")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.let { civ ->
-                checkBoolean(canManageCiv(civPlayer, civ), "You are not permitted to perform this command.")
+                checkBoolean(canManageCiv(civPlayer, civ), Localization.Warnings.CANNOT_MANAGE_CIV)
                 checkBoolean(
                     civ.damages != null,
-                    "Your Civilization does not have any damages to repair"
+                    Localization.Warnings.NULL_RESULT.replace("{item}", "damages")
                 )
                 var percentage = 100
                 if (args.isNotEmpty()) {
-                    percentage = findNumber(0, 1, 100, "Please specify a valid number in between 1-100")
+                    percentage = findNumber(
+                        0,
+                        1,
+                        100,
+                        Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace(
+                            "{item}",
+                            Localization.NUMBER + " 1-100"
+                        )
+                    )
                 }
                 val damages: Damages = civ.damages!!
                 val locationList: List<Location> = ArrayList(damages.brokenBlocksMap.keys.sortedBy { it.y })
@@ -51,7 +60,7 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
         val cost = locationList.size * Settings.REPAIR_COST_PER_BLOCK
         checkBoolean(
             civ.bank.balance - cost > 0,
-            "Your Civilization does not have enough money to perform this task. (Cost: $cost)"
+            Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", cost.toString())
         )
         civ.bank.removeBalance(cost)
 

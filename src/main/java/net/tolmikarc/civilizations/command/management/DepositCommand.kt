@@ -5,6 +5,7 @@
 package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.MathUtil.doubleToMoney
 import net.tolmikarc.civilizations.util.MathUtil.isDouble
@@ -18,12 +19,18 @@ class DepositCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "de
         PlayerManager.fromBukkitPlayer(player).let {
             checkNotNull(it.civilization, "You must have a civilization to put money into")
             it.civilization?.apply {
-                checkBoolean(isDouble(args[0]), "Please type in a valid number")
+                checkBoolean(
+                    isDouble(args[0]),
+                    Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.NUMBER)
+                )
                 val amount = doubleToMoney(args[0].toDouble())
-                checkBoolean(HookManager.getBalance(player) - amount > 0, "You do not have enough money to deposit")
+                checkBoolean(
+                    HookManager.getBalance(player) - amount > 0,
+                    Localization.Warnings.INSUFFICIENT_PLAYER_FUNDS.replace("{cost}", amount.toString())
+                )
                 HookManager.withdraw(player, amount)
                 bank.addBalance(amount)
-                tellSuccess("{1}Deposited {2}" + amount + "{1} into your Civilization's Bank")
+                tellSuccess("{1}Deposited {2}$amount{1} into your Civilization's Bank")
             }
         }
     }

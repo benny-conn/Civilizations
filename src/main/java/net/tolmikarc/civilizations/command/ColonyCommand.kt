@@ -7,6 +7,7 @@ package net.tolmikarc.civilizations.command
 import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.impl.Colony
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -22,7 +23,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You do not have a Civilization")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.let { civ ->
                 if (args[0].equals("?", ignoreCase = true)) {
                     val colonyIds: MutableList<String> = ArrayList()
@@ -32,24 +33,27 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
                     tell("Colonies: " + Common.join(colonyIds, ", "))
                     return
                 }
-                val id = findNumber(0, "Please specify a valid number")
+                val id = findNumber(
+                    0,
+                    Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.NUMBER)
+                )
                 var location: Location? = null
                 for (colony in civ.claims.colonies) {
                     if (colony.id == id) location = colony.warp
                 }
-                checkNotNull(location, "There is no Colony with the specified ID $id")
+                checkNotNull(location, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "colony"))
                 checkBoolean(
                     !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
-                    "Please wait " + getCooldownRemaining(
-                        civPlayer,
-                        CooldownTask.CooldownType.TELEPORT
-                    ) + " seconds before teleporting again."
+                    Localization.Warnings.COOLDOWN_WAIT.replace(
+                        "{duration}",
+                        getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
+                    )
                 )
                 PaperLib.teleportAsync(player, location!!).thenAccept {
                     if (it)
                         tellSuccess("Teleported to Colony!")
                     else
-                        tellError("Failed to teleport to Colony!")
+                        tellError(Localization.Warnings.FAILED_TELEPORT)
                 }
                 addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
             }

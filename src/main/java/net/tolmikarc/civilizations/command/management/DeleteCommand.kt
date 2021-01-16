@@ -8,6 +8,7 @@ import net.tolmikarc.civilizations.event.DeleteCivEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -17,10 +18,10 @@ class DeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "del
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You do not have a Civilization to delete.")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.let { civ ->
-                checkBoolean(civ.leader == civPlayer, "You may not delete a Civilization that is not yours.")
-                val info = "Are you sure you would like to delete your Civlization?"
+                checkBoolean(civ.leader == civPlayer, Localization.Warnings.LEADER)
+                val info = "Are you sure you would like to delete your Civilization?"
                 val title = "&4Delete Civ?"
 
 

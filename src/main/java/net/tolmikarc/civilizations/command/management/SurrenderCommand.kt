@@ -8,6 +8,7 @@ import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.hasCooldown
@@ -18,17 +19,23 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, "You must have a civilization to Raid another.")
+            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
-                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), "You cannot manage this Civilization")
+                checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
                 val enemyCiv = CivManager.getByName(args[0])
-                checkNotNull(enemyCiv, "Please specify a valid Civ to surrender to")
-                if (!relationships.warring.contains(enemyCiv)) returnTell("You are not warring this Civilization")
+                checkNotNull(
+                    enemyCiv,
+                    Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
+                )
+                if (!relationships.warring.contains(enemyCiv)) returnTell(Localization.Warnings.NOT_WARRING)
                 fun run() {
                     if (hasCooldown(this, CooldownTask.CooldownType.END_WAR)) {
                         checkBoolean(
                             bank.balance - Settings.SURRENDER_COST < 0,
-                            "You do not have enough money to surrender in your Civ. Required amount: ${Settings.SURRENDER_COST}"
+                            Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace(
+                                "{cost}",
+                                Settings.SURRENDER_COST.toString()
+                            )
                         )
                         bank.removeBalance(Settings.SURRENDER_COST)
                         enemyCiv?.bank?.addBalance(Settings.SURRENDER_COST)

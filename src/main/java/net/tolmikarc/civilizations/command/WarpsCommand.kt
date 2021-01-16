@@ -5,6 +5,7 @@
 package net.tolmikarc.civilizations.command
 
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -15,10 +16,10 @@ class WarpsCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).run {
-            checkNotNull(civilization, "You do not have a Civilization")
+            checkNotNull(civilization, Localization.Warnings.NO_CIV)
             val warpNames: List<String> = ArrayList(civilization!!.warps.keys)
             val warpNamesCombined = Common.join(warpNames, ", ")
-            tell("{1}Warps: {2}" + warpNamesCombined)
+            tell("{1}Warps: {2}$warpNamesCombined")
         }
     }
 
