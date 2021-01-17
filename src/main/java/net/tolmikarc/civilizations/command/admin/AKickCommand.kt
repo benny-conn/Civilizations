@@ -22,7 +22,7 @@ class AKickCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "kick
         civ?.apply {
             addedPlayer?.let {
                 removeCitizen(it)
-                tellSuccess("{1}Successfully removed {2}${it.playerName} {1}from {2}$name")
+                tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
             }
         }
     }

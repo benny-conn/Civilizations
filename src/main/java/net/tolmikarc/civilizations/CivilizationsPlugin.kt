@@ -58,6 +58,9 @@ class CivilizationsPlugin : SimplePlugin() {
 
     override fun onPluginStop() {
         removeMapRenderers()
+        for (task in Bukkit.getScheduler().pendingTasks) {
+            task.cancel()
+        }
         Common.log("Saving Data and Closing Datastore Connections")
         PlayerManager.saveQueuedForSaving()
         CivManager.saveQueuedForSaving()

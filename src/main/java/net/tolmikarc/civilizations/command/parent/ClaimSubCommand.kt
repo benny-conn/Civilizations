@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.command.parents
+package net.tolmikarc.civilizations.command.parent
 
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.event.ClaimEvent
@@ -30,12 +30,11 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
         val visualizedRegions: MutableSet<Claim> = HashSet()
         if (args.size > 1 && args[1].equals("here", ignoreCase = true)) {
             ClaimUtil.getRegionFromLocation(player.location)?.let { visualizedRegions.add(it) }
-
         } else visualizedRegions.addAll(civilization.claims.claims)
         if (civPlayer.visualizing) {
-            tell("{2}Beginning to visualize...")
+            tell(Localization.Notifications.VISUALIZE_START)
         } else {
-            tell("{3}Stopping visualization...")
+            tell(Localization.Notifications.VISUALIZE_END)
         }
         for (region in visualizedRegions) {
             Common.runTimerAsync(20 * Settings.PARTICLE_FREQUENCY, object : BukkitRunnable() {
@@ -96,7 +95,7 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
         )
         val cost = CivUtil.calculateFormulaForCiv(Settings.COST_FORMULA, civilization, claim)
         checkBoolean(
-            civilization.bank.balance - cost > 0,
+            civilization.bank.balance - cost >= 0,
             Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", cost.toString())
         )
         checkBoolean(
@@ -127,14 +126,12 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
             )
             val colony = Colony(civilization, civilization.claims.idNumber, getPlayer().location)
             civilization.claims.addColony(colony)
-            tellSuccess("{1}Claimed colony at your location!")
-        } else {
-            tellSuccess("{1}Claimed a claim at your location!")
         }
         if (civilization.claims.totalClaimCount == 0) civilization.home = getPlayer().location
         civilization.bank.removeBalance(cost)
         player.selection.removeSelection(getPlayer())
         civilization.claims.addClaim(claim)
+        tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
         Common.callEvent(
             ClaimEvent(
                 civilization,

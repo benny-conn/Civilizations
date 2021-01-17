@@ -37,7 +37,7 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
     }
 
     private fun sendInfo(civilization: Civ) {
-        val permissions = civilization.ranks
+        val permissions = civilization.permissions
         val toggleables = civilization.toggleables
         val citizenNames: MutableList<String?> = ArrayList()
         val canBuild: MutableList<String> = ArrayList()
@@ -75,57 +75,51 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
 
 
         tellNoPrefix(
-            "{1}============ {2}" + civilization.name + "{1} ============",
-            "{1}Description: {2}${civilization.description ?: "None"}",
-            "" + if (Settings.SHOW_COORDS_IN_INFO && civilization.home != null) "{1}Home: {2}" + civilization.home!!.blockX + ", " + civilization.home!!.blockZ else "",
-            "{1}Leader: {2}" + (civilization.leader?.playerName
+            "${Settings.PRIMARY_COLOR}============ ${Settings.SECONDARY_COLOR}" + civilization.name + "${Settings.PRIMARY_COLOR} ============",
+            "${Settings.PRIMARY_COLOR}Description: ${Settings.SECONDARY_COLOR}${civilization.description ?: "None"}",
+            "" + if (Settings.SHOW_COORDS_IN_INFO && civilization.home != null) "${Settings.PRIMARY_COLOR}Home: ${Settings.SECONDARY_COLOR}" + civilization.home!!.blockX + ", " + civilization.home!!.blockZ else "",
+            "${Settings.PRIMARY_COLOR}Leader: ${Settings.SECONDARY_COLOR}" + (civilization.leader?.playerName
                 ?: "None"),
-            "{1}Citizens: {2}" + Common.join(
+            "${Settings.PRIMARY_COLOR}Citizens: ${Settings.SECONDARY_COLOR}" + Common.join(
                 citizenNames,
                 ", "
-            ), "{1}Power: {2} ${civilization.power}",
-            "{1}Balance: {2} ${Settings.CURRENCY_SYMBOL}${civilization.bank.balance}",
-            "{1}Upkeep Cost: {2}${Settings.CURRENCY_SYMBOL}${civilization.bank.upkeep}",
-            "{1}Tax Amount: {2}${Settings.CURRENCY_SYMBOL}${civilization.bank.taxes}",
-            "{1}Total Blocks: {2}" + civilization.claims.totalBlocksCount,
-            "{1}============================",
-            "{1}PVP: {2}" + toggleables.pvp,
-            "{1}Mob Spawning: {2}" + toggleables.mobs,
-            "{1}Explosions: {2}" + toggleables.explosion,
-            "{1}Fire Spread: {2}" + toggleables.fire,
-            "{1}Public: {2}" + toggleables.public,
-            "{1}Invite Only: {2}" + toggleables.inviteOnly,
-            "{1}============================",
-            "{1}Build: {2}" + Common.join(
+            ), "${Settings.PRIMARY_COLOR}Power: ${Settings.SECONDARY_COLOR} ${civilization.power}",
+            "${Settings.PRIMARY_COLOR}Balance: ${Settings.SECONDARY_COLOR} ${Settings.CURRENCY_SYMBOL}${civilization.bank.balance}",
+            "${Settings.PRIMARY_COLOR}Upkeep Cost: ${Settings.SECONDARY_COLOR}${Settings.CURRENCY_SYMBOL}${civilization.bank.upkeep} ${Settings.PRIMARY_COLOR}Tax Amount: ${Settings.SECONDARY_COLOR}${Settings.CURRENCY_SYMBOL}${civilization.bank.taxes}",
+            "${Settings.PRIMARY_COLOR}Total Blocks: ${Settings.SECONDARY_COLOR}" + civilization.claims.totalBlocksCount,
+            "${Settings.PRIMARY_COLOR}============================",
+            "${Settings.PRIMARY_COLOR}PVP: ${Settings.SECONDARY_COLOR}" + toggleables.pvp + " ${Settings.PRIMARY_COLOR}Mob Spawning: ${Settings.SECONDARY_COLOR}" + toggleables.mobs + " ${Settings.PRIMARY_COLOR}Explosions: ${Settings.SECONDARY_COLOR}" + toggleables.explosion + " ${Settings.PRIMARY_COLOR}Fire Spread: ${Settings.SECONDARY_COLOR}" + toggleables.fire + " ${Settings.PRIMARY_COLOR}Public: ${Settings.SECONDARY_COLOR}" + toggleables.public + " ${Settings.PRIMARY_COLOR}Invite Only: ${Settings.SECONDARY_COLOR}" + toggleables.inviteOnly,
+            "${Settings.PRIMARY_COLOR}============================",
+            "${Settings.PRIMARY_COLOR}Build: ${Settings.SECONDARY_COLOR}" + Common.join(
                 canBuild,
                 ", "
             ),
-            "{1}Break: {2}" + Common.join(
+            "${Settings.PRIMARY_COLOR}Break: ${Settings.SECONDARY_COLOR}" + Common.join(
                 canBreak,
                 ", "
             ),
-            "{1}Switch: {2}" + Common.join(
+            "${Settings.PRIMARY_COLOR}Switch: ${Settings.SECONDARY_COLOR}" + Common.join(
                 canSwitch,
                 ", "
             ),
-            "{1}Interact: {2}" + Common.join(
+            "${Settings.PRIMARY_COLOR}Interact: ${Settings.SECONDARY_COLOR}" + Common.join(
                 canInteract,
                 ", "
             ),
-            "{1}============================",
-            "{1}Enemies: {2}" + Common.join(
+            "${Settings.PRIMARY_COLOR}============================",
+            "${Settings.PRIMARY_COLOR}Enemies: ${Settings.SECONDARY_COLOR}" + Common.join(
                 enemies,
                 ", "
-            ),
-            "{1}Warring: {2}" + Common.join(
+            ) +
+                    " ${Settings.PRIMARY_COLOR}Warring: ${Settings.SECONDARY_COLOR}" + Common.join(
                 warring,
                 ", "
-            ),
-            "{1}Allies: {2}" + Common.join(
+            ) +
+                    " ${Settings.PRIMARY_COLOR}Allies: ${Settings.SECONDARY_COLOR}" + Common.join(
                 allies,
                 ", "
-            ),
-            "{1}Outlaws: {2}" + Common.join(
+            ) +
+                    " ${Settings.PRIMARY_COLOR}Outlaws: ${Settings.SECONDARY_COLOR}" + Common.join(
                 outlaws,
                 ", "
             )

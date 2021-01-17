@@ -24,7 +24,7 @@ class AllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally"
                     allyCiv,
                     Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
                 )
-                checkBoolean(allyCiv != this, "You cannot ally yourself")
+                checkBoolean(allyCiv != this, Localization.Warnings.CANNOT_SPECIFY_SELF)
                 when {
                     args[0].equals("add", ignoreCase = true) -> {
                         checkBoolean(
@@ -36,7 +36,7 @@ class AllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally"
                             Localization.Warnings.ALLY_ENEMY
                         )
                         relationships.addAlly(allyCiv!!)
-                        tell("{1}Your Civilization is now allies with {2}" + allyCiv.name)
+                        tellSuccess(Localization.Notifications.ALLIES_TRUE.replace("{civ}", allyCiv.name!!))
                     }
                     args[0].equals("remove", ignoreCase = true) -> {
                         checkBoolean(
@@ -44,7 +44,7 @@ class AllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally"
                             Localization.Warnings.NOT_ALLY
                         )
                         relationships.removeAlly(allyCiv!!)
-                        tell("{1}Your Civilization is no longer allies with {2}" + allyCiv.name)
+                        tellSuccess(Localization.Notifications.ALLIES_FALSE.replace("{civ}", allyCiv.name!!))
                     }
                     else -> {
                         returnInvalidArgs()

@@ -42,9 +42,13 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
                     }
                     relationships.enemies.remove(enemyCiv)
                     enemyCiv?.addPower(Settings.POWER_WAR_WIN)
-                    tellSuccess("&4Surrendered to ${enemyCiv?.name}")
+                    tellSuccess(Localization.Notifications.SURRENDERED.replace("{civ}", enemyCiv?.name!!))
                 }
-                ConfirmMenu("&4Surrender?", "Give up the war with ${enemyCiv!!.name}", ::run).displayTo(player)
+                ConfirmMenu(
+                    "&4Surrender?",
+                    "Give up the war with ${enemyCiv!!.name}. If you end a war early you may have to pay.",
+                    ::run
+                ).displayTo(player)
             }
         }
     }

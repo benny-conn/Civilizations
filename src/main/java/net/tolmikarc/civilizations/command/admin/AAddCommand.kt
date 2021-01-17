@@ -24,7 +24,7 @@ class AAddCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "add")
         civ?.apply {
             addedPlayer?.let {
                 addCitizen(it)
-                tellSuccess("{1}Successfully added {2}${it.playerName} {1}to {2}$name")
+                tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                 Common.callEvent(CivJoinEvent(this, player))
             }
         }

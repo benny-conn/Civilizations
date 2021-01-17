@@ -30,7 +30,7 @@ class SetWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "se
                     Localization.Warnings.MAXIMUM_WARPS.replace("{max}", maxWarps.toString())
                 )
                 addWarp(args[0], player.location)
-                tellSuccess("{1}Set a Civilization Warp at your location with the name {2}" + args[0])
+                tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
             }
         }
     }

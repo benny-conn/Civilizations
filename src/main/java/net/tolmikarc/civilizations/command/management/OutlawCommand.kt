@@ -26,10 +26,10 @@ class OutlawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "out
                     checkBoolean(!this.citizens.contains(civOutlaw), Localization.Warnings.OUTLAW_CITIZEN)
                     if (this.relationships.outlaws.contains(civOutlaw)) {
                         this.relationships.removeOutlaw(civOutlaw)
-                        tell("{2}Successfully removed {1}${args[0]}{1} as an outlaw")
+                        tellSuccess(Localization.Notifications.OUTLAW_REMOVE.replace("{player}", args[0]))
                     } else {
                         this.relationships.addOutlaw(civOutlaw)
-                        tell("{2}Successfully outlawed player {1}${args[0]}")
+                        tellSuccess(Localization.Notifications.OUTLAW_ADD.replace("{player}", args[0]))
                     }
                 }
             }

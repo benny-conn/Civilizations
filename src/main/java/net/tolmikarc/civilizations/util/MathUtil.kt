@@ -16,7 +16,10 @@ import kotlin.math.abs
 
 object MathUtil {
 
-    private val df: DecimalFormat = DecimalFormat("#.##").apply { roundingMode = RoundingMode.DOWN }
+    private val df: DecimalFormat = DecimalFormat("#.##").apply {
+        roundingMode = RoundingMode.DOWN
+        isDecimalSeparatorAlwaysShown = false
+    }
 
     fun doubleToMoney(dubble: Double): Double {
         return df.format(dubble).toDouble()

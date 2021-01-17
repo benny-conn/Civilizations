@@ -296,5 +296,5 @@ Permissions:
 
 # Do not touch below this line
 # ---------------------------------------------------------------
-Debug: [ sql ]
+Debug: [ ]
 Version: 1

@@ -32,7 +32,7 @@ class WithdrawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "w
                 )
                 HookManager.deposit(player, amount)
                 bank.removeBalance(amount)
-                tellSuccess("{1}Withdrew {2}$amount{1} from your Civilization's Bank")
+                tellSuccess(Localization.Notifications.WITHDREW.replace("{cost}", amount.toString()))
             }
         }
     }

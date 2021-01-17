@@ -16,17 +16,59 @@ class AToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "tog
         civ?.apply {
             when (args[1].toLowerCase()) {
                 "fire" -> toggleables.fire =
-                    !toggleables.fire.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.fire}") }
+                    !toggleables.fire.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.fire.toString()
+                            )
+                        )
+                    }
                 "explosions" -> toggleables.explosion =
-                    !toggleables.explosion.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.explosion}") }
+                    !toggleables.explosion.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.explosion.toString()
+                            )
+                        )
+                    }
                 "mobs" -> toggleables.mobs =
-                    !toggleables.mobs.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.mobs}") }
+                    !toggleables.mobs.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.mobs.toString()
+                            )
+                        )
+                    }
                 "pvp" -> toggleables.pvp =
-                    !toggleables.pvp.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.pvp}") }
+                    !toggleables.pvp.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.pvp.toString()
+                            )
+                        )
+                    }
                 "public" -> toggleables.public =
-                    !toggleables.public.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.public}") }
+                    !toggleables.public.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.public.toString()
+                            )
+                        )
+                    }
                 "inviteonly" -> toggleables.inviteOnly =
-                    !toggleables.inviteOnly.also { tellSuccess("{1}Toggled ${args[0]}:{2} ${!toggleables.inviteOnly}") }
+                    !toggleables.inviteOnly.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.inviteOnly.toString()
+                            )
+                        )
+                    }
                 else -> returnInvalidArgs()
             }
         }

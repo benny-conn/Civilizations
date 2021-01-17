@@ -27,7 +27,7 @@ class SetHomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "se
                     Localization.Warnings.Claim.NO_CLAIM
                 )
                 home = player.location
-                tellSuccess("{2}Set the Civilization home location")
+                tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
             }
         }
     }

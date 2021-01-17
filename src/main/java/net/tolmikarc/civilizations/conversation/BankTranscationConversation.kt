@@ -5,11 +5,16 @@ package net.tolmikarc.civilizations.conversation
 
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Localization
+import net.tolmikarc.civilizations.util.MathUtil
 import org.bukkit.conversations.ConversationCanceller
+import org.bukkit.conversations.ConversationContext
 import org.bukkit.conversations.Prompt
 import org.bukkit.entity.Player
+import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.conversation.SimpleCanceller
 import org.mineacademy.fo.conversation.SimpleConversation
+import org.mineacademy.fo.conversation.SimpleDecimalPrompt
+import org.mineacademy.fo.model.HookManager
 
 class BankTranscationConversation(private val transaction: Transaction, val civ: Civ, val player: Player) :
     SimpleConversation() {
@@ -24,6 +29,56 @@ class BankTranscationConversation(private val transaction: Transaction, val civ:
 
     override fun getCanceller(): ConversationCanceller {
         return SimpleCanceller(Localization.CANCEL)
+    }
+
+    inner class DepositPrompt(val civilization: Civ, val player: Player) : SimpleDecimalPrompt() {
+
+        override fun acceptValidatedInput(context: ConversationContext?, input: Double): Prompt? {
+            val cost = MathUtil.doubleToMoney(input)
+            if (HookManager.getBalance(player) - cost < 0) {
+                tell(Localization.Warnings.INSUFFICIENT_PLAYER_FUNDS.replace("{cost}", cost.toString()))
+                return null
+            }
+            HookManager.withdraw(player, cost)
+            civilization.bank.addBalance(cost)
+            Messenger.success(player, Localization.Notifications.DEPOSITED.replace("{cost}", cost.toString()))
+            return null
+        }
+
+        override fun getPrompt(p0: ConversationContext?): String {
+            return "{1}How much would you like to deposit?"
+        }
+
+        override fun getFailedValidationText(context: ConversationContext, invalidInput: String): String {
+            return Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.NUMBER)
+        }
+
+    }
+
+    inner class WithdrawPrompt(val civilization: Civ, val player: Player) : SimpleDecimalPrompt() {
+
+        override fun acceptValidatedInput(p0: ConversationContext, p1: Double): Prompt? {
+            val cost = MathUtil.doubleToMoney(p1)
+            if (civilization.bank.balance - cost < 0) {
+                tell(Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", cost.toString()))
+                return null
+            }
+
+            HookManager.deposit(player, cost)
+            civilization.bank.removeBalance(cost)
+            Messenger.success(player, Localization.Notifications.WITHDREW.replace("{cost}", cost.toString()))
+            return null
+        }
+
+        override fun getPrompt(p0: ConversationContext?): String {
+            return "{1}How much would you like to withdraw?"
+        }
+
+        override fun getFailedValidationText(context: ConversationContext, invalidInput: String): String {
+            return Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.NUMBER)
+        }
+
+
     }
 
     enum class Transaction {

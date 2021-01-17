@@ -23,7 +23,7 @@ class RemoveWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
                     Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "warp")
                 )
                 removeWarp(args[0])
-                tellSuccess("{1}Set a Civilization Warp at your location with the name {2}" + args[0])
+                tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
             }
         }
     }

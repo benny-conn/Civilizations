@@ -7,11 +7,13 @@ package net.tolmikarc.civilizations.task
 import net.tolmikarc.civilizations.manager.CivManager
 import org.bukkit.Bukkit
 import org.bukkit.scheduler.BukkitRunnable
+import org.mineacademy.fo.Common
 import org.mineacademy.fo.model.HookManager
 import java.util.*
 
 class UpkeepTaxesTask : BukkitRunnable() {
     override fun run() {
+        Common.log("Collecting Upkeep and Taxes")
         if (Calendar.HOUR_OF_DAY % 12 == 0)
             CivManager.all.forEach { civ ->
                 civ.citizens.forEach { player ->

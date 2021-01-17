@@ -17,10 +17,10 @@ class ChatCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "chat"
         checkNotNull(civ, Localization.Warnings.NO_CIV)
         if (civ!!.channel.players.contains(player)) {
             civ.channel.players.remove(player)
-            tellSuccess("{1}Left Civ Chat")
+            tellSuccess(Localization.Notifications.LEFT_CHAT)
         } else {
             civ.channel.players.add(player)
-            tellSuccess("{1}Entered Civ Chat")
+            tellSuccess(Localization.Notifications.ENTERED_CHAT)
         }
     }
 

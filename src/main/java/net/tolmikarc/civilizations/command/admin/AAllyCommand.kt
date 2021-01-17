@@ -24,28 +24,28 @@ class AAllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally
                 allyCiv,
                 Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
             )
-            checkBoolean(allyCiv != civ, "You cannot make this civ ally itself")
+            checkBoolean(allyCiv != civ, Localization.Warnings.CANNOT_SPECIFY_SELF)
             civ?.apply {
                 when {
                     args[0].equals("add", ignoreCase = true) -> {
                         checkBoolean(
                             !relationships.allies.contains(allyCiv),
-                            "$name is already allies with this civilization"
+                            Localization.Warnings.ALREADY_ALLIES
                         )
                         checkBoolean(
                             !relationships.enemies.contains(allyCiv),
-                            "$name cannot ally an enemy Civilization."
+                            Localization.Warnings.ALLY_ENEMY
                         )
                         relationships.addAlly(allyCiv!!)
-                        tell("{1}$name is now allies with {2}" + allyCiv.name)
+                        tellSuccess(Localization.Notifications.ALLIES_TRUE.replace("{civ}", allyCiv.name!!))
                     }
                     args[0].equals("remove", ignoreCase = true) -> {
                         checkBoolean(
                             relationships.allies.contains(allyCiv),
-                            "This Civilization is not an ally."
+                            Localization.Warnings.NOT_ALLY
                         )
                         relationships.removeAlly(allyCiv!!)
-                        tell("{1}$name is no longer allies with {2}" + allyCiv.name)
+                        tellSuccess(Localization.Notifications.ALLIES_FALSE.replace("{civ}", allyCiv.name!!))
                     }
                     else -> {
                         returnInvalidArgs()

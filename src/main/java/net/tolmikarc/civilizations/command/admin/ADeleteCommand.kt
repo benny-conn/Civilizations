@@ -17,7 +17,7 @@ class ADeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "de
         civ?.apply {
             fun run() {
                 CivManager.removeCiv(this)
-                tellSuccess("{1}Successfully deleted the Civilization, {2}$name")
+                tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
             }
             ConfirmMenu("&4Delete Civ?", "Permanently remove this Civilization", ::run).displayTo(player)
         }

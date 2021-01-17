@@ -18,7 +18,7 @@ class FlyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "fly") 
         PlayerManager.fromBukkitPlayer(player).apply {
             checkNotNull(civilization, Localization.Warnings.NO_CIV)
             flying = !flying
-            tellSuccess("{1}Enabled flight while you are in your Civilization.")
+            tellSuccess(Localization.Notifications.FLIGHT.replace("{value}", flying.toString()))
             if (isLocationInCiv(player.location, civilization!!)) player.isFlying = flying
         }
     }

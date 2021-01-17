@@ -35,6 +35,11 @@ public class Localization extends SimpleLocalization {
 	}
 
 	public static class Warnings {
+		public static String BUILD;
+		public static String BREAK;
+		public static String SWITCH;
+		public static String INTERACT;
+		public static String PVP;
 		public static String COOLDOWN_WAIT;
 		public static String COOLDOWN_WAIT_MINUTES;
 		public static String INVALID_SPECIFIC_ARGUMENT;
@@ -72,10 +77,17 @@ public class Localization extends SimpleLocalization {
 		public static String NO_BOOK;
 		public static String NOT_WARRING;
 		public static String MAXIMUM;
+		public static String OUTLAW_ENTER;
+		public static String OUTLAW_ACTIONS;
 
 
 		private static void init() {
 			pathPrefix("Warnings");
+			BUILD = getStringColorized("Build");
+			BREAK = getStringColorized("Break");
+			SWITCH = getStringColorized("Switch");
+			INTERACT = getStringColorized("Interact");
+			PVP = getStringColorized("PVP");
 			COOLDOWN_WAIT = getStringColorized("Cooldown_Wait");
 			COOLDOWN_WAIT_MINUTES = getStringColorized("Cooldown_Wait_Minutes");
 			INVALID_SPECIFIC_ARGUMENT = getStringColorized("Invalid_Specific_Argument");
@@ -113,6 +125,8 @@ public class Localization extends SimpleLocalization {
 			NO_BOOK = getStringColorized("No_Book");
 			NOT_WARRING = getStringColorized("Not_Warring");
 			MAXIMUM = getStringColorized("Maximum");
+			OUTLAW_ENTER = getStringColorized("Outlaw_Enter");
+			OUTLAW_ACTIONS = getStringColorized("Outlaw_Actions");
 		}
 
 		public static class Claim {
@@ -169,6 +183,9 @@ public class Localization extends SimpleLocalization {
 			public static String NO_LAND;
 			public static String NO_WAR;
 			public static String ALREADY_IN_RAID;
+			public static String TOO_MANY_PLAYERS;
+			public static String NO_LIVES;
+			public static String DEATH_COST;
 
 			private static void init() {
 				pathPrefix("Warnings.Raid");
@@ -177,10 +194,86 @@ public class Localization extends SimpleLocalization {
 				NO_LAND = getStringColorized("No_Land");
 				NO_WAR = getStringColorized("No_War");
 				ALREADY_IN_RAID = getStringColorized("Already_In_Raid");
+				TOO_MANY_PLAYERS = getStringColorized("Too_Many_Players");
+				NO_LIVES = getStringColorized("No_Lives");
+				DEATH_COST = getStringColorized("Death_Cost");
 			}
 
 		}
 
+	}
+
+
+	public static class Notifications {
+
+		public static String ENTER_CIV;
+		public static String LEAVING_CIV;
+		public static String ALLIES_TRUE;
+		public static String ALLIES_FALSE;
+		public static String ENEMIES_TRUE;
+		public static String ENEMIES_FALSE;
+		public static String WAR;
+		public static String SUCCESS_COMMAND;
+		public static String SUCCESS_ITEM;
+		public static String SUCCESS_OBTAIN;
+		public static String SUCCESS_TOGGLE;
+		public static String SUCCESS_TELEPORT;
+		public static String DEPOSITED;
+		public static String WITHDREW;
+		public static String OUTLAW_ADD;
+		public static String OUTLAW_REMOVE;
+		public static String SUCCESS_REPAIR;
+		public static String SURRENDERED;
+		public static String VISUALIZE_START;
+		public static String VISUALIZE_END;
+		public static String ACCEPTED_INVITE;
+		public static String INFO;
+		public static String ENTERED_CHAT;
+		public static String LEFT_CHAT;
+		public static String CIV_CREATION;
+		public static String DENIED_INVITE;
+		public static String FLIGHT;
+		public static String INVITE_RECEIVED;
+		public static String TUTORIAL;
+		public static String SELECT_PRIMARY;
+		public static String SELECT_SECONDARY;
+
+
+		private static void init() {
+			pathPrefix("Notifications");
+			ENTER_CIV = getStringColorized("Enter_Civ");
+			LEAVING_CIV = getStringColorized("Leaving_Civ");
+			ALLIES_TRUE = getStringColorized("Allies_True");
+			ALLIES_FALSE = getStringColorized("Allies_False");
+			ENEMIES_TRUE = getStringColorized("Enemies_True");
+			ENEMIES_FALSE = getStringColorized("Enemies_False");
+			WAR = getStringColorized("War");
+			SUCCESS_COMMAND = getStringColorized("Success_Command");
+			SUCCESS_ITEM = getStringColorized("Success_Item");
+			SUCCESS_OBTAIN = getStringColorized("Success_Obtain");
+			SUCCESS_TOGGLE = getStringColorized("Success_Toggle");
+			SUCCESS_TELEPORT = getStringColorized("Success_Teleport");
+			DEPOSITED = getStringColorized("Deposited");
+			WITHDREW = getStringColorized("Withdrew");
+			OUTLAW_ADD = getStringColorized("Outlaw_Add");
+			OUTLAW_REMOVE = getStringColorized("Outlaw_Remove");
+			SUCCESS_REPAIR = getStringColorized("Success_Repair");
+			SURRENDERED = getStringColorized("Surrendered");
+			VISUALIZE_START = getStringColorized("Visualize_Start");
+			VISUALIZE_END = getStringColorized("Visualize_End");
+			ACCEPTED_INVITE = getStringColorized("Accepted_Invite");
+			INFO = getStringColorized("Info");
+			ENTERED_CHAT = getStringColorized("Entered_Chat");
+			LEFT_CHAT = getStringColorized("Left_Chat");
+			CIV_CREATION = getStringColorized("Civ_Creation");
+			DENIED_INVITE = getStringColorized("Denied_Invite");
+			FLIGHT = getStringColorized("Flight");
+			INVITE_RECEIVED = getStringColorized("Invite_Received");
+			TUTORIAL = getStringColorized("Tutorial");
+			SELECT_PRIMARY = getStringColorized("Select_Primary");
+			SELECT_SECONDARY = getStringColorized("Select_Secondary");
+
+		}
 	}
 
 

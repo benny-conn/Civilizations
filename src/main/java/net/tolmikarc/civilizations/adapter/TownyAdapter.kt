@@ -14,8 +14,8 @@ import net.tolmikarc.civilizations.model.impl.Civilization
 import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.model.impl.Colony
 import net.tolmikarc.civilizations.permissions.PermissionType
+import net.tolmikarc.civilizations.permissions.Permissions
 import net.tolmikarc.civilizations.permissions.Rank
-import net.tolmikarc.civilizations.permissions.Ranks
 import net.tolmikarc.civilizations.permissions.Toggleables
 import net.tolmikarc.civilizations.settings.Settings
 import org.bukkit.Bukkit
@@ -48,7 +48,7 @@ object TownyAdapter {
         civ.claims.idNumber = newRegions.size + 1
         civ.toggleables = convertToggleables(town)
         civ.power = getConvertedPower(civ)
-        civ.ranks = getConvertedPermissions(town, civ)
+        civ.permissions = getConvertedPermissions(town, civ)
         civ.bank.balance = town.account.holdingBalance
         civ.description = town.board
         if (town.isTaxPercentage)
@@ -100,6 +100,7 @@ object TownyAdapter {
 
 
     private fun getConvertedRegions(town: Town, civ: Civ): MutableSet<Claim> {
+        TODO("why is this not visualizing correctly????")
         val handledTownBlocks: MutableSet<TownBlock> = HashSet()
         val newRegions: MutableSet<Claim> = HashSet()
         val newColonies: MutableSet<Colony> = HashSet()
@@ -117,49 +118,48 @@ object TownyAdapter {
                 }
             }
             if (handledTownBlocks.contains(townBlock)) continue
-            var lowestLocation: WorldCoord = townBlock.worldCoord
-            var highestLocation: WorldCoord = townBlock.worldCoord
-            while (town.townBlockMap[highestLocation.add(1, 0)] != null) {
-                val nextTownBlock: TownBlock? = town.townBlockMap[highestLocation.add(1, 0)]
+            val bottomLeftCorner: WorldCoord = townBlock.worldCoord
+            var leftPointer: WorldCoord = townBlock.worldCoord
+            var topRightCorner: WorldCoord = townBlock.worldCoord
+            while (town.townBlockMap[topRightCorner.add(1, 0)] != null) {
+                val nextTownBlock: TownBlock? = town.townBlockMap[topRightCorner.add(1, 0)]
                 if (nextTownBlock != null) {
-                    highestLocation = nextTownBlock.worldCoord
+                    topRightCorner = nextTownBlock.worldCoord
                     handledTownBlocks.add(nextTownBlock)
                 }
             }
-            while (town.townBlockMap[lowestLocation.add(0, 1)] != null) {
-                val nextTownBlock: TownBlock = town.townBlockMap[lowestLocation.add(0, 1)]!!
+            while (town.townBlockMap[leftPointer.add(0, 1)] != null) {
+                val nextTownBlock: TownBlock = town.townBlockMap[leftPointer.add(0, 1)]!!
                 var nextTownBlockWorldCoord: WorldCoord = nextTownBlock.worldCoord
                 val handledTownBlocksMovingRight: MutableSet<TownBlock> = HashSet()
                 while (town.townBlockMap[nextTownBlockWorldCoord.add(1, 0)] != null) {
                     val nextNextTownBlock: TownBlock? = town.townBlockMap[nextTownBlockWorldCoord.add(1, 0)]
                     if (nextNextTownBlock != null) {
                         nextTownBlockWorldCoord = nextNextTownBlock.worldCoord
-
                         handledTownBlocksMovingRight.add(nextNextTownBlock)
                     }
-                    if (nextTownBlockWorldCoord == highestLocation.add(0, 1)) break
+                    if (nextTownBlockWorldCoord == topRightCorner.add(0, 1)) break
                 }
-                if (nextTownBlockWorldCoord != highestLocation.add(0, 1)) break
-                highestLocation = nextTownBlockWorldCoord.add(0, 1)
-                lowestLocation = lowestLocation.add(0, 1)
+                if (nextTownBlockWorldCoord != topRightCorner.add(0, 1)) break
+                topRightCorner = nextTownBlockWorldCoord.add(0, 1)
+                leftPointer = leftPointer.add(0, 1)
                 handledTownBlocks.add(nextTownBlock)
                 handledTownBlocks.addAll(handledTownBlocksMovingRight)
             }
-            lowestLocation = townBlock.worldCoord
             val newRegion = Claim(
                 id,
                 Location(
-                    lowestLocation.bukkitWorld,
-                    (lowestLocation.x * 16).toDouble(),
-                    0.0,
-                    (lowestLocation.z * 16).toDouble()
-                ),
+                    bottomLeftCorner.bukkitWorld,
+                    (bottomLeftCorner.x * 16.0),
+                    1.0,
+                    (bottomLeftCorner.z * 16.0)
+                ).block.location,
                 Location(
-                    highestLocation.bukkitWorld,
-                    (highestLocation.x * 16 + 15).toDouble(),
-                    256.0,
-                    (highestLocation.z * 16 + 15).toDouble()
-                )
+                    topRightCorner.bukkitWorld,
+                    (topRightCorner.x * 16.0 + 15),
+                    1.0,
+                    (topRightCorner.z * 16.0 + 15)
+                ).block.location
             )
             newRegions.add(newRegion)
             id++
@@ -168,8 +168,8 @@ object TownyAdapter {
         return newRegions
     }
 
-    private fun getConvertedPermissions(town: Town, civ: Civ): Ranks {
-        val ranks = Ranks(civ)
+    private fun getConvertedPermissions(town: Town, civ: Civ): Permissions {
+        val ranks = Permissions(civ)
         for (rank in TownyPerms.getTownRanks()) {
             val newRank = Rank(rank.capitalize(), Settings.DEFAULT_GROUP.permissions)
             ranks.ranks.add(newRank)

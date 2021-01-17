@@ -26,6 +26,7 @@ class CivilizationsCommandGroup : SimpleCommandGroup() {
         registerSubcommand(RankCommand(this))
         registerSubcommand(ToggleCommand(this))
         registerSubcommand(KickCommand(this))
+        registerSubcommand(LeaderCommand(this))
         registerSubcommand(ChatCommand(this))
         registerSubcommand(InfoCommand(this))
         registerSubcommand(PlotCommand(this))
@@ -47,8 +48,6 @@ class CivilizationsCommandGroup : SimpleCommandGroup() {
         registerSubcommand(WarpCommand(this))
         registerSubcommand(WarpsCommand(this))
         registerSubcommand(MapCommand(this))
-        registerSubcommand(BookCommand(this))
-        registerSubcommand(BannerCommand(this))
         if (Settings.FLY_ENABLED) registerSubcommand(FlyCommand(this))
         registerSubcommand(TestCommand(this))
     }

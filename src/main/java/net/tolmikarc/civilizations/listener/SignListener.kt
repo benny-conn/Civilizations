@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.listener
 import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.constants.Constants
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.getCooldownRemaining
@@ -38,14 +39,17 @@ class SignListener : Listener {
 
         if (firstLine.equals("[CivWarp]", true)) {
             if (!civ.warps.containsKey(secondLine)) {
-                Messenger.error(player, "Please specify a valid warp.")
+                Messenger.error(player, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "warp"))
                 event.isCancelled = true
                 return
             }
             if (Settings.WARP_SIGN_COST > 0) {
                 Valid.checkBoolean(
                     HookManager.getBalance(player) - Settings.WARP_SIGN_COST > 0,
-                    "{3}You cannot afford to create this sign. Cost: ${Settings.WARP_SIGN_COST}"
+                    Localization.Warnings.INSUFFICIENT_PLAYER_FUNDS.replace(
+                        "{cost}",
+                        Settings.WARP_SIGN_COST.toString()
+                    )
                 )
                 HookManager.withdraw(player, Settings.WARP_SIGN_COST)
             }
@@ -70,12 +74,10 @@ class SignListener : Listener {
         if (sign.getLine(0) == Common.colorize(Constants.WARP_SIGN_TAG)) {
             Valid.checkBoolean(
                 !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
-                "{3}You cannot teleport for another ${
-                    getCooldownRemaining(
-                        civPlayer,
-                        CooldownTask.CooldownType.TELEPORT
-                    )
-                } seconds."
+                Localization.Warnings.COOLDOWN_WAIT.replace(
+                    "{duration}",
+                    getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
+                )
             )
             ClaimUtil.getCivFromLocation(sign.location)?.warps?.get(sign.getLine(1))?.let {
                 PaperLib.teleportAsync(

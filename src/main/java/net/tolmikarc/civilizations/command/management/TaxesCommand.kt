@@ -24,7 +24,7 @@ class TaxesCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "taxes
             if (amount > Settings.MAX_TAXES)
                 returnTell(Localization.Warnings.MAXIMUM.replace("{max}", Settings.MAX_TAXES.toString()))
             bank.taxes = amount
-            tellSuccess("Successfully set the tax amount to ${Settings.CURRENCY_SYMBOL}$amount")
+            tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
         }
     }
 

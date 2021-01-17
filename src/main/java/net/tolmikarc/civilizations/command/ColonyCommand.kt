@@ -51,7 +51,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
                 )
                 PaperLib.teleportAsync(player, location!!).thenAccept {
                     if (it)
-                        tellSuccess("Teleported to Colony!")
+                        tellSuccess(Localization.Notifications.SUCCESS_TELEPORT)
                     else
                         tellError(Localization.Warnings.FAILED_TELEPORT)
                 }

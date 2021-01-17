@@ -11,7 +11,6 @@ import net.tolmikarc.civilizations.model.impl.Bank
 import net.tolmikarc.civilizations.model.impl.Civilization
 import net.tolmikarc.civilizations.war.Damages
 import org.bukkit.Location
-import org.bukkit.inventory.ItemStack
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.debug.Debugger
@@ -55,9 +54,7 @@ object CivDatastore : Datastore() {
                     val citizens: MutableSet<CPlayer> = deserializedCiv.citizens
                     val relationships = deserializedCiv.relationships
                     val bank: Bank = deserializedCiv.bank
-                    val banner: ItemStack? = deserializedCiv.banner
-                    val book: ItemStack? = deserializedCiv.book
-                    val permissions = deserializedCiv.ranks
+                    val permissions = deserializedCiv.permissions
                     val toggleables = deserializedCiv.toggleables
                     val damages: Damages? = deserializedCiv.damages
 
@@ -72,9 +69,7 @@ object CivDatastore : Datastore() {
                         this.citizens.addAll(citizens)
                         this.relationships = relationships
                         this.bank = bank
-                        if (banner != null) this.banner = banner
-                        if (book != null) this.book = book
-                        this.ranks = permissions
+                        this.permissions = permissions
                         this.toggleables = toggleables
                         if (damages != null) this.damages = damages
                     }

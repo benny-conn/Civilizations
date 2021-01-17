@@ -7,12 +7,11 @@ import net.tolmikarc.civilizations.chat.CivChannel
 import net.tolmikarc.civilizations.model.impl.Bank
 import net.tolmikarc.civilizations.model.impl.Claims
 import net.tolmikarc.civilizations.model.impl.Relationships
-import net.tolmikarc.civilizations.permissions.Ranks
+import net.tolmikarc.civilizations.permissions.Permissions
 import net.tolmikarc.civilizations.permissions.Toggleables
 import net.tolmikarc.civilizations.war.Damages
 import net.tolmikarc.civilizations.war.Raid
 import org.bukkit.Location
-import org.bukkit.inventory.ItemStack
 import org.mineacademy.fo.model.ConfigSerializable
 
 interface Civ : UniquelyIdentifiable, ConfigSerializable {
@@ -38,10 +37,10 @@ interface Civ : UniquelyIdentifiable, ConfigSerializable {
         get() = citizens.size
 
     var damages: Damages?
-    var banner: ItemStack?
-    var book: ItemStack?
-    var ranks: Ranks
+
+    var permissions: Permissions
     var toggleables: Toggleables
+
     var raid: Raid?
 
     val channel: CivChannel

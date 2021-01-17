@@ -23,7 +23,7 @@ class AUnclaimCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "u
             checkNotNull(regionToRemove, Localization.Warnings.Claim.NO_CLAIM)
             fun run() {
                 claims.removeClaim(regionToRemove!!)
-                tellSuccess("{3}Removed region successfully")
+                tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                 Common.callEvent(
                     UnclaimEvent(
                         this,

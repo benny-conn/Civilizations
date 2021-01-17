@@ -28,6 +28,7 @@ class MapCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "map") {
         )
         map.addRenderer(MapDrawer(region))
         drawnMaps.add(map)
+        tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
     }
 
     companion object {

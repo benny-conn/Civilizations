@@ -19,7 +19,7 @@ class AWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp
         checkNotNull(warp, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "warp"))
         PaperLib.teleportAsync(player, warp!!).thenAccept {
             if (it)
-                tellSuccess("Teleported to Warp!")
+                tellSuccess(Localization.Notifications.SUCCESS_TELEPORT)
             else
                 tellError(Localization.Warnings.FAILED_TELEPORT)
         }

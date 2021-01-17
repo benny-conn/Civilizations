@@ -27,9 +27,9 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                         if (isAdmin(civPlayer) && civ.home != null) {
                             PaperLib.teleportAsync(player, civ.home!!).thenAccept {
                                 if (it)
-                                    tellSuccess("{1}Teleported to Civ Home!")
+                                    tellSuccess(Localization.Notifications.SUCCESS_TELEPORT)
                                 else
-                                    tellError("Failed to teleport to Civ Home!")
+                                    tellError(Localization.Warnings.FAILED_TELEPORT)
                             }
                         }
                         if (civ.toggleables.public) {
@@ -43,7 +43,7 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                                 )
                                 PaperLib.teleportAsync(player, home).thenAccept {
                                     if (it)
-                                        tellSuccess("{1}Teleported to Civ Home!")
+                                        tellSuccess(Localization.Notifications.SUCCESS_TELEPORT)
                                     else
                                         tellError(Localization.Warnings.FAILED_TELEPORT)
                                 }
@@ -69,7 +69,7 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                 )
                 PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
                     if (it)
-                        tellSuccess("{1}Teleported to Civ Home!")
+                        tellSuccess(Localization.Notifications.SUCCESS_TELEPORT)
                     else
                         tellError(Localization.Warnings.FAILED_TELEPORT)
                 }

@@ -26,10 +26,10 @@ class DeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "del
 
 
                 fun run() {
-                    tell("{3}Successfully deleted the Civilization " + civPlayer.civilization!!.name)
+                    tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                     for (citizen in civ.citizens) {
                         citizen.civilization = null
-                        PlayerManager.queueForSaving(civPlayer)
+                        PlayerManager.queueForSaving(citizen)
                     }
                     CivManager.removeCiv(civ)
                     Common.callEvent(DeleteCivEvent(civ, player))

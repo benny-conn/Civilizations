@@ -21,7 +21,7 @@ import org.bukkit.entity.Player
 object PermissionChecker {
 
     fun can(permType: PermissionType, player: Player, civilization: Civ): Boolean {
-        val claimPermissions = civilization.ranks
+        val claimPermissions = civilization.permissions
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         if (canBypass(permType, civPlayer)) return true
         val permissionGroup = claimPermissions.getPlayerGroup(civPlayer)
@@ -54,8 +54,8 @@ object PermissionChecker {
 
     fun canManageCiv(player: CPlayer, civilization: Civ): Boolean {
         if (isAdmin(player)) return true
-        return civilization.ranks.adminGroups.contains(
-            civilization.ranks.getPlayerGroup(
+        return civilization.permissions.adminGroups.contains(
+            civilization.permissions.getPlayerGroup(
                 player
             )
         ) || civilization.leader == player

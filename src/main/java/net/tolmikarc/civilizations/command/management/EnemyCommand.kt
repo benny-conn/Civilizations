@@ -9,8 +9,7 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
-import org.bukkit.Bukkit
-import org.mineacademy.fo.Common
+import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -35,20 +34,21 @@ class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enem
                         )
                         checkBoolean(!relationships.allies.contains(enemyCiv), Localization.Warnings.ENEMY_ALLY)
                         relationships.addEnemy(enemyCiv!!)
-                        tell("{1}Your Civilization is now enemies with {2}" + enemyCiv.name)
-                        if (enemyCiv.relationships.enemies.contains(this)) {
-                            Bukkit.getOnlinePlayers().forEach {
-                                Common.tell(it, "&4${enemyCiv.name} {3}is now at war with &4${this.name}")
-                            }
-                        }
+                        tellSuccess(Localization.Notifications.ENEMIES_TRUE.replace("{civ}", enemyCiv.name!!))
+                        if (enemyCiv.relationships.enemies.contains(this))
+                            Messenger.broadcastWarn(
+                                Localization.Notifications.WAR.replace("{civ1}", this.name!!)
+                                    .replace("{civ2}", enemyCiv.name!!)
+                            )
+
                     }
                     "remove" -> {
                         checkBoolean(relationships.enemies.contains(enemyCiv), Localization.Warnings.ALLY_ENEMY)
                         // TODO make sure that there is no cooldown
                         if (relationships.warring.contains(enemyCiv))
-                            returnTell("{3}You must use /civ surrender to end the war")
+                            returnTell(Localization.Warnings.SURRENDER)
                         relationships.removeEnemy(enemyCiv!!)
-                        tell("{1}Your Civilization is no longer enemies with {2}" + enemyCiv.name)
+                        tellSuccess(Localization.Notifications.ENEMIES_FALSE.replace("{civ}", enemyCiv.name!!))
                     }
                     else -> {
                         returnInvalidArgs()

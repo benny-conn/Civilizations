@@ -25,11 +25,8 @@ class CreateCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "new
             )
             CivManager.createCiv(name, it).also { civ ->
                 tellSuccess(
-                    "{2}Successfully created the Civilization {1}" + civ.name + "{2} with you as its leader. " +
-                            "To claim land for your Civilization, use a " + "{1}${
-                        Settings.CLAIM_TOOL.name.toLowerCase().capitalize().replace("_", " ")
-                    } {2}to mark two corners and then use " + "{1}/civ claim{2}. " +
-                            "Type " + "{1}/civ claim ? {2}for info on claiming"
+                    Localization.Notifications.CIV_CREATION.replace("{name}", civ.name!!)
+                        .replace("{tool}", Settings.CLAIM_TOOL.name.toLowerCase().capitalize().replace("_", " "))
                 )
                 Common.callEvent(CreateCivEvent(civ, player))
             }
@@ -42,4 +39,5 @@ class CreateCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "new
         setDescription("Create a new Civilization!")
         if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
+
 }

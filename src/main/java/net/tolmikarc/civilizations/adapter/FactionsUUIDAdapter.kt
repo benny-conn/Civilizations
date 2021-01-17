@@ -12,17 +12,14 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.impl.Civilization
 import net.tolmikarc.civilizations.model.impl.Claim
-import net.tolmikarc.civilizations.permissions.Ranks
+import net.tolmikarc.civilizations.permissions.Permissions
 import org.bukkit.Location
-import org.bukkit.Material
-import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.BookMeta
 import java.util.*
 
 object FactionsUUIDAdapter {
 
     // TODO fix all of this
-    
+
 
     private val convertedFactions: MutableMap<Faction, Civ> = HashMap()
 
@@ -30,17 +27,12 @@ object FactionsUUIDAdapter {
         val civ = Civilization(UUID.randomUUID())
         civ.name = faction.tag
         civ.leader = PlayerManager.getByUUID(faction.getFPlayersWhereRole(Role.ADMIN)[0].player.uniqueId)
-        civ.ranks = convertPermissions(faction)
+        civ.permissions = convertPermissions(faction)
         civ.claims.claims.addAll(getConvertedRegions(faction, civ))
         civ.citizens.addAll(faction.fPlayers.map { fPlayer: FPlayer -> PlayerManager.getByUUID(fPlayer.player.uniqueId) })
         civ.claims.idNumber = civ.claims.totalClaimCount + 1
         civ.power = faction.power.toInt()
         civ.home = faction.home
-        val book = ItemStack(Material.WRITTEN_BOOK)
-        val bookMeta = book.itemMeta as BookMeta?
-        bookMeta!!.addPage("Civ: " + civ.name.toString() + " Description: " + faction.description)
-        book.itemMeta = bookMeta
-        civ.book = book
         convertedFactions[faction] = civ
         if (deleteAfterConversion) faction.remove()
         return civ
@@ -96,7 +88,7 @@ object FactionsUUIDAdapter {
     }
 
 
-    private fun convertPermissions(faction: Faction): Ranks {
+    private fun convertPermissions(faction: Faction): Permissions {
         TODO()
     }
 }

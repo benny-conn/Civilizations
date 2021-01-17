@@ -7,6 +7,11 @@ Options: "options"
 
 
 Warnings:
+  Build: "{3}You cannot build here."
+  Break: "{3}You cannot break here."
+  Switch: "{3}You cannot switch here."
+  Interact: "{3}You cannot interact here."
+  PVP: "{3}You cannot PVP here."
   Cooldown_Wait: "{3}Wait {duration} seconds before doing this action again."
   Cooldown_Wait_Minutes: "{3}Wait {duration} minutes before doing this action again."
   Invalid_Specific_Argument: "{3}Please enter a valid {item}"
@@ -44,6 +49,8 @@ Warnings:
   No_Banner: "{3}Your Civilization does not have a banner."
   No_Book: "{3}Your Civilization does not have a book."
   Not_Warring: "{3}You are not warring this Civilization"
+  Outlaw_Enter: "{3}You are an outlaw in this town and cannot enter."
+  Outlaw_Actions: "{3}You are an outlaw in this town and cannot do anything."
   Claim:
     No_Claim: "{3}There is no claim at your location"
     Stop_Visualizing: "{3}Stop visualizing before completing this action."
@@ -71,10 +78,42 @@ Warnings:
     No_Land: "{3}The enemy does not have any land"
     No_War: "{3}You must first be at war to raid an enemy"
     Already_In_Raid: "{3}This civilization is already in a Raid"
-  Event:
-    Cannot_Enter: ""
-  Admin:
-    Already_Enemies: ""
+    Too_Many_Players: "{3}There are too many players in this raid for you to participate"
+    No_Lives: "{3}You do not have any more lives left and can no longer participate in the raid"
+    Death_Cost: "You lost {cost} and {power} power for dying during a raid. You have {lives} lives left"
+Notifications:
+  Enter_Civ: "{1}Now entering {2}{civ}"
+  Leaving_Civ: "{1}Now leaving {2}{civ}"
+  Allies_True: "{1}Your Civilization is now allies with {2}{civ}"
+  Allies_False: "{1}Your Civilization is no longer allies with {2}{civ}"
+  Enemies_True: "{1}Your Civilization is now enemies with {2}{civ}"
+  Enemies_False: "{1}Your Civilization is no longer enemies with {2}{civ}"
+  War: "{3}{civ1} is now at war with {civ2}"
+  Success_Command: "{1}Command executed successfully."
+  Success_Item: "{1}Successfully set Civilization item"
+  Success_Obtain: "{1}Successfully obtained Civilization item"
+  Success_Toggle: "{1}Successfully toggled setting. Value: {value}"
+  Success_Teleport: "{1}Successfully teleported!"
+  Deposited: "{1}Deposited {2}{cost}{1} into your Civilization's Bank"
+  Withdrew: "{1}Withdrew {2}{cost}{1} into your Civilization's Bank"
+  Outlaw_Add: "{1}Successfully added {2}{player}{1} as an outlaw"
+  Outlaw_Remove: "{1}Successfully removed {1}{player} as an outlaw"
+  Success_Repair: "{1}Successfully repaired {amount} blocks for {cost}"
+  Surrendered: "{3}Surrendered to {civ}"
+  Visualize_Start: "{1}Beginning to visualize..."
+  Visualize_End: "{3}Stopping visualization..."
+  Accepted_Invite: "{2}Accepted invite from the Civilization {1}{civ}"
+  Info: "{2}Type {1}/civ ? {2}for a list of Civilizations commands."
+  Entered_Chat: "{1}Entered Civ Chat"
+  Left_Chat: "{3}Left Civ Chat"
+  Civ_Creation: "{1}Successfully created the Civilization {2}{name}{1} with you as its leader. To claim land for your Civilization, use a {2}{tool} {1}to mark two corners and then use {2}/civ claim{1}. Type {2}/civ claim ? {1}for info on claiming"
+  Denied_Invite: "{3}Denied invite from the Civilization {civ}"
+  Flight: "{1}Toggled flight: {value}!"
+  Invite_Received: "{2}Received a Civilization invite from {1}{civ}"
+  Tutorial: "{1}Use /civ create to create a Civilization and protect your land!"
+  Select_Primary: "{1}Set first point to {x}, {z}"
+  Select_Secondary: "{1}Set second point to {x}, {z}"
+
 
 
 

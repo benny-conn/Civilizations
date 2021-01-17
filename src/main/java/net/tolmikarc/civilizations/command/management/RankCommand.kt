@@ -4,6 +4,7 @@
 package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.PermissionChecker
+import net.tolmikarc.civilizations.conversation.RankCreationConversation
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.permissions.Rank
 import net.tolmikarc.civilizations.settings.Localization
@@ -25,7 +26,7 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
                 "set" -> {
                     if (args.size < 3) returnInvalidArgs()
                     val player = PlayerManager.getByName(args[1])
-                    val rank = ranks.getGroupByName(args[2])
+                    val rank = permissions.getGroupByName(args[2])
                     checkNotNull(
                         player,
                         Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER)
@@ -38,43 +39,50 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
                             "rank"
                         ) + " ${Localization.OPTIONS}: ${
                             Common.join(
-                                ranks.ranks.map { it.name },
+                                permissions.ranks.map { it.name },
                                 ", "
                             )
                         }"
                     )
                     player?.let { p ->
                         rank?.let { g ->
-                            ranks.setPlayerGroup(p, g)
+                            permissions.setPlayerGroup(p, g)
                         }
                     }
+                    tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                 }
                 "new" -> {
-                    if (args.size < 2) returnInvalidArgs()
-                    ranks.ranks.add(Rank(args[1], HashSet()))
+                    if (args.size < 2) {
+                        RankCreationConversation(civ, player).start(player)
+                        return
+                    }
+                    permissions.ranks.add(Rank(args[1], HashSet()))
+                    tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                 }
                 "delete" -> {
                     if (args.size < 2) returnInvalidArgs()
-                    val group = ranks.getGroupByName(args[1])
+                    val group = permissions.getGroupByName(args[1])
                     checkNotNull(group, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "rank"))
-                    if (ranks.defaultRank == group || ranks.outsiderRank == group || ranks.allyRank == group || ranks.enemyRank == group) {
+                    if (permissions.defaultRank == group || permissions.outsiderRank == group || permissions.allyRank == group || permissions.enemyRank == group) {
                         returnTell(Localization.Warnings.DELETE_DEFAULT)
                     }
-                    ranks.ranks.remove(group)
-                    ranks.adminGroups.remove(group)
-                    for (player in ranks.playerGroupMap.keys) {
-                        if (ranks.playerGroupMap[player] == group)
-                            ranks.playerGroupMap[player] = ranks.defaultRank
+                    permissions.ranks.remove(group)
+                    permissions.adminGroups.remove(group)
+                    for (player in permissions.playerGroupMap.keys) {
+                        if (permissions.playerGroupMap[player] == group)
+                            permissions.playerGroupMap[player] = permissions.defaultRank
                     }
+                    tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                 }
                 "rename" -> {
                     if (args.size < 3) returnInvalidArgs()
-                    val group = ranks.getGroupByName(args[1])
+                    val group = permissions.getGroupByName(args[1])
                     checkNotNull(group, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "rank"))
-                    if (ranks.defaultRank == group || ranks.outsiderRank == group || ranks.allyRank == group || ranks.enemyRank == group) {
+                    if (permissions.defaultRank == group || permissions.outsiderRank == group || permissions.allyRank == group || permissions.enemyRank == group) {
                         returnTell(Localization.Warnings.RENAME_DEFAULT)
                     }
                     group?.name = args[2]
+                    tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                 }
             }
         }
@@ -86,7 +94,7 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
             1 -> listOf("set", "new", "delete", "rename")
             2 -> {
                 if (args[0].equals("delete", true) || args[0].equals("rename", true))
-                    civ?.ranks?.ranks?.map { it.name }?.toList() ?: super.tabComplete()
+                    civ?.permissions?.ranks?.map { it.name }?.toList() ?: super.tabComplete()
                 else super.tabComplete()
             }
             else -> super.tabComplete()

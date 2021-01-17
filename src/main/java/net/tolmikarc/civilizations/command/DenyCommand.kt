@@ -15,7 +15,7 @@ class DenyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "deny"
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).apply {
             checkNotNull(civilizationInvite, Localization.Warnings.NULL_RESULT.replace("{item}", "invites"))
-            tell("{2}Denied invite from the Civilization {1}" + civilizationInvite!!.name)
+            tell(Localization.Notifications.DENIED_INVITE.replace("{civ}", civilization?.name!!))
             civilizationInvite = null
         }
     }

@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command.admin
 
-import net.tolmikarc.civilizations.command.parents.ClaimSubCommand
+import net.tolmikarc.civilizations.command.parent.ClaimSubCommand
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization

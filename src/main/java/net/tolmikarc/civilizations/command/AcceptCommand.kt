@@ -21,8 +21,8 @@ class AcceptCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "acc
                 this.addCitizen(civPlayer)
                 civPlayer.civilization = this
                 civPlayer.civilizationInvite = null
-                tell("{2}Accepted invite from the Civilization {1}" + civPlayer.civilization!!.name)
-                tell("{2}Type " + "{1}/civ ? {2}for a list of Civilizations commands.")
+                tellSuccess(Localization.Notifications.ACCEPTED_INVITE.replace("{civ}", this.name!!))
+                tellInfo(Localization.Notifications.INFO)
                 Common.callEvent(CivJoinEvent(this, player))
             }
         }

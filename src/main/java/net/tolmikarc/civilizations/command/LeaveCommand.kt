@@ -28,7 +28,7 @@ class LeaveCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "leav
                 civPlayer.civilization = null
                 PlayerManager.queueForSaving(civPlayer)
                 CivManager.queueForSaving(civilization)
-                tell("{3}Left the Civilization " + civPlayer.civilization)
+                tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
             }
 
             ConfirmMenu("&4Leave Civilization?", "You cannot undo this decision.", ::run).displayTo(player)

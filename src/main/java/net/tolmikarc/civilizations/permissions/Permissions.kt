@@ -13,31 +13,21 @@ import java.util.*
 import kotlin.collections.HashSet
 import kotlin.collections.LinkedHashMap
 
-data class Ranks(val civ: Civ) : ConfigSerializable {
+data class Permissions(val civ: Civ) : ConfigSerializable {
     val ranks: MutableSet<Rank> = HashSet()
     val adminGroups: MutableSet<Rank> = HashSet()
     var playerGroupMap: MutableMap<UUID, Rank> = LinkedHashMap()
     var defaultRank: Rank = Rank(Settings.DEFAULT_GROUP.name, Settings.DEFAULT_GROUP.permissions)
-        set(value) {
-            field = value
-            ranks.add(value)
-        }
-    var outsiderRank: Rank =
-        Rank(Settings.OUTSIDER_GROUP.name, Settings.OUTSIDER_GROUP.permissions)
-        set(value) {
-            field = value
-            ranks.add(value)
-        }
+    var outsiderRank: Rank = Rank(Settings.OUTSIDER_GROUP.name, Settings.OUTSIDER_GROUP.permissions)
     var allyRank: Rank = Rank(Settings.ALLY_GROUP.name, Settings.ALLY_GROUP.permissions)
-        set(value) {
-            field = value
-            ranks.add(value)
-        }
     var enemyRank: Rank = Rank(Settings.ENEMY_GROUP.name, Settings.ENEMY_GROUP.permissions)
-        set(value) {
-            field = value
-            ranks.add(value)
-        }
+
+    init {
+        ranks.add(defaultRank)
+        ranks.add(outsiderRank)
+        ranks.add(allyRank)
+        ranks.add(enemyRank)
+    }
 
 
     fun getGroupByName(name: String): Rank? {
@@ -74,8 +64,8 @@ data class Ranks(val civ: Civ) : ConfigSerializable {
 
     companion object {
         @JvmStatic
-        fun deserialize(map: SerializedMap): Ranks {
-            val groups = Ranks(CivManager.getByUUID(map.get("Civ", UUID::class.java)))
+        fun deserialize(map: SerializedMap): Permissions {
+            val groups = Permissions(CivManager.getByUUID(map.get("Civ", UUID::class.java)))
             groups.ranks.addAll(map.getSet("Groups", Rank::class.java))
             groups.adminGroups.addAll(map.getSet("Admin_Groups", Rank::class.java))
             groups.playerGroupMap = map.getMap("Player_Groups", UUID::class.java, Rank::class.java)

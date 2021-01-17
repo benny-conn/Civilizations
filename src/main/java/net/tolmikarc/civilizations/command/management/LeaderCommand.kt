@@ -6,14 +6,13 @@ package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.menu.ConfirmMenu
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
-class KickCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "kick") {
+class LeaderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "leader") {
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
@@ -24,20 +23,21 @@ class KickCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "kick"
                     Localization.Warnings.CANNOT_MANAGE_CIV
                 )
                 checkBoolean(!args[0].equals(player.name, ignoreCase = true), Localization.Warnings.CANNOT_SPECIFY_SELF)
-                executeCommand(this, PlayerManager.getByName(args[0]))
+                val newLeader = PlayerManager.getByName(args[0])
+                fun run() {
+                    checkNotNull(
+                        newLeader,
+                        Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER)
+                    )
+                    checkBoolean(citizens.contains(newLeader), Localization.Warnings.NOT_IN_CIV)
+                    leader = newLeader
+                    tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
+                }
+                ConfirmMenu("&4&lSet New Leader?", "WARNING: Irreversible", ::run)
             }
         }
     }
 
-    private fun executeCommand(civilization: Civ, kickedCache: CPlayer?) {
-        checkNotNull(
-            kickedCache,
-            Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER)
-        )
-        checkBoolean(civilization.citizens.contains(kickedCache), Localization.Warnings.NOT_IN_CIV)
-        civilization.removeCitizen(kickedCache!!)
-        tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
-    }
 
     init {
         minArguments = 1

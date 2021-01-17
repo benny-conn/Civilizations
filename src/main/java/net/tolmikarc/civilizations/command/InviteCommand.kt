@@ -7,7 +7,7 @@ package net.tolmikarc.civilizations.command
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
-import org.mineacademy.fo.Common
+import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -26,10 +26,10 @@ class InviteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "add
             Localization.Warnings.CANNOT_INVITE_OUTLAW
         )
         inviteeCache.civilizationInvite = civilization
-        tellSuccess("{2}Successfully sent an invite to {1}" + invitee.name)
-        Common.tell(
+        tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
+        Messenger.info(
             invitee,
-            "{2}Received a Civilization invite from {1}" + inviteeCache.civilizationInvite!!.name
+            Localization.Notifications.INVITE_RECEIVED.replace("{civ}", civilization.name!!)
         )
     }
 

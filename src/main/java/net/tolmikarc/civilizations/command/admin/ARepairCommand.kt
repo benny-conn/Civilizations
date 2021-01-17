@@ -2,11 +2,9 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.command.management
+package net.tolmikarc.civilizations.command.admin
 
-import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.CivManager
-import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -18,36 +16,33 @@ import org.mineacademy.fo.command.SimpleSubCommand
 import org.mineacademy.fo.model.ChunkedTask
 import java.util.*
 
-class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "repair") {
+class ARepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "repair") {
     override fun onCommand() {
-        checkConsole()
-        PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
-            civPlayer.civilization?.let { civ ->
-                checkBoolean(canManageCiv(civPlayer, civ), Localization.Warnings.CANNOT_MANAGE_CIV)
-                checkBoolean(
-                    civ.damages != null,
-                    Localization.Warnings.NULL_RESULT.replace("{item}", "damages")
+        val civ = CivManager.getByName(args[0])
+        checkNotNull(civ, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION))
+
+        checkBoolean(
+            civ!!.damages != null,
+            Localization.Warnings.NULL_RESULT.replace("{item}", "damages")
+        )
+        var percentage = 100
+        if (args.isNotEmpty()) {
+            percentage = findNumber(
+                0,
+                1,
+                100,
+                Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace(
+                    "{item}",
+                    Localization.NUMBER + " 1-100"
                 )
-                var percentage = 100
-                if (args.isNotEmpty()) {
-                    percentage = findNumber(
-                        0,
-                        1,
-                        100,
-                        Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace(
-                            "{item}",
-                            Localization.NUMBER + " 1-100"
-                        )
-                    )
-                }
-                val damages: Damages = civ.damages!!
-                val locationList: List<Location> = ArrayList(damages.brokenBlocksMap.keys.sortedBy { it.y })
-
-                repairDamages(damages, civ, locationList, percentage)
-
-            }
+            )
         }
+        val damages: Damages = civ.damages!!
+        val locationList: List<Location> = ArrayList(damages.brokenBlocksMap.keys.sortedBy { it.y })
+
+        repairDamages(damages, civ, locationList, percentage)
+
+
     }
 
     private fun repairDamages(
@@ -58,11 +53,6 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
     ) {
 
         val cost = locationList.size * Settings.REPAIR_COST_PER_BLOCK
-        checkBoolean(
-            civ.bank.balance - cost >= 0,
-            Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", cost.toString())
-        )
-        civ.bank.removeBalance(cost)
 
 
         object : ChunkedTask(Settings.BLOCKS_PER_SECONDS_REPAIR) {

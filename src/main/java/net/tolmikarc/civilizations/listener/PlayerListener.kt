@@ -14,6 +14,7 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.impl.Selection
 import net.tolmikarc.civilizations.permissions.PermissionType
+import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -88,9 +89,9 @@ class PlayerListener : Listener {
                 raid.playersInvolved[civPlayer] = playerLives
                 // if they have no lives left let them know
                 if (raid.playersInvolved[civPlayer]!! <= 0) {
-                    Common.tell(
+                    Messenger.warn(
                         player,
-                        "{3}You do not have any more lives left and can no longer participate in the raid"
+                        Localization.Warnings.Raid.NO_LIVES
                     )
                     NameTag.remove(player)
                     return
@@ -101,7 +102,9 @@ class PlayerListener : Listener {
                 addCooldownTimer(civPlayer, CooldownTask.CooldownType.RESPAWN_PROTECTION)
                 Messenger.warn(
                     player,
-                    "You lost ${Settings.CURRENCY_SYMBOL}${Settings.MONEY_PVP_TRANSACTION} and ${Settings.POWER_PVP_TRANSACTION} power for dying during a raid. You have ${raid.playersInvolved[civPlayer]} lives left"
+                    Localization.Warnings.Raid.DEATH_COST.replace("{cost}", Settings.MONEY_PVP_TRANSACTION.toString())
+                        .replace("{power}", Settings.POWER_PVP_TRANSACTION.toString())
+                        .replace("{lives}", playerLives.toString())
                 )
                 Messenger.success(
                     killer,
@@ -139,18 +142,22 @@ class PlayerListener : Listener {
             if (event.action == Action.LEFT_CLICK_BLOCK) {
                 val block = event.clickedBlock!!
                 civPlayer.selection.select(block, player, Selection.ClickType.LEFT)
-                Common.tell(
+                Messenger.success(
                     player,
-                    "{1}Set first point to " + civPlayer.selection.primary!!.x.toString() + " " + civPlayer.selection.primary!!.z.toString()
+                    Localization.Notifications.SELECT_PRIMARY.replace("{x}", civPlayer.selection.primary!!.x.toString())
+                        .replace("{z}", civPlayer.selection.primary!!.z.toString())
                 )
             }
             if (event.action == Action.RIGHT_CLICK_BLOCK) {
                 val block = event.clickedBlock!!
                 if (event.hand == EquipmentSlot.HAND) {
                     civPlayer.selection.select(block, player, Selection.ClickType.RIGHT)
-                    Common.tell(
+                    Messenger.success(
                         player,
-                        "{1}Set second point to " + civPlayer.selection.secondary!!.x.toString() + " " + civPlayer.selection.secondary!!.z.toString()
+                        Localization.Notifications.SELECT_SECONDARY.replace(
+                            "{x}",
+                            civPlayer.selection.secondary!!.x.toString()
+                        ).replace("{z}", civPlayer.selection.secondary!!.z.toString())
                     )
                 }
             }
@@ -177,7 +184,7 @@ class PlayerListener : Listener {
                 event.isCancelled = !can(PermissionType.INTERACT, player, civilization)
             }
             if (event.isCancelled) {
-                Common.tell(player, "{3}You cannot Interact here.")
+                Common.tell(player, Localization.Warnings.INTERACT)
             }
         } finally {
             LagCatcher.end("use")
@@ -206,7 +213,7 @@ class PlayerListener : Listener {
                 } else {
                     event.isCancelled = !can(PermissionType.BREAK, player, civilization)
                     if (event.isCancelled)
-                        Common.tell(player, "{3}You cannot break here.")
+                        Common.tell(player, Localization.Warnings.BREAK)
                     else
                         return
                 }
@@ -230,7 +237,7 @@ class PlayerListener : Listener {
                     if (Settings.TUTORIAL)
                         if (player.getStatistic(Statistic.CHEST_OPENED) <= 1)
                             if (civPlayer.civilization == null)
-                                Common.tell(player, "Use /civ create to create a Civilization and protect your land!")
+                                Common.tell(player, Localization.Notifications.TUTORIAL)
 
 
                 val civilization = getCivFromLocation(block.location) ?: return
@@ -242,10 +249,10 @@ class PlayerListener : Listener {
                             if (hasCooldown(civPlayer, CooldownTask.CooldownType.TNT)) {
                                 Common.tell(
                                     player,
-                                    "Please wait " + getCooldownRemaining(
-                                        civPlayer,
-                                        CooldownTask.CooldownType.TNT
-                                    ) + " settings before using TNT again"
+                                    Localization.Warnings.COOLDOWN_WAIT.replace(
+                                        "{duration}",
+                                        getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TNT).toString()
+                                    )
                                 )
                                 event.isCancelled = true
                                 return
@@ -261,7 +268,7 @@ class PlayerListener : Listener {
                     }
                 } else {
                     event.isCancelled = !can(PermissionType.BUILD, player, civilization)
-                    if (event.isCancelled) Common.tell(player, "{3}You cannot place here")
+                    if (event.isCancelled) Common.tell(player, Localization.Warnings.BUILD)
                 }
             }
         } finally {
@@ -372,9 +379,9 @@ class PlayerListener : Listener {
     @EventHandler(priority = EventPriority.LOW)
     fun onPVP(event: EntityDamageByEntityEvent) {
         LagCatcher.start("pvp")
+        val damaged = event.entity
+        val damager = event.damager
         try {
-            val damaged = event.entity
-            val damager = event.damager
             if (damaged !is Player || damager !is Player) return
             val civDamaged = PlayerManager.fromBukkitPlayer(damaged)
             // check if player has spawn protection
@@ -393,25 +400,20 @@ class PlayerListener : Listener {
                         civDamaged,
                         CooldownTask.CooldownType.TELEPORT
                     )
-                } else {
-                    Common.tell(damager, "{3}You cannot PVP here.")
                 }
                 return
             }
             val plot = getPlotFromLocation(location, civilization)
             if (plot != null) {
                 if (!plot.claimToggleables.pvp) event.isCancelled = true
-                if (event.isCancelled) {
-                    Common.tell(damager, "{3}You cannot PVP here.")
-                }
                 return
             }
             event.isCancelled = !civilization.toggleables.pvp
-            if (event.isCancelled) {
-                Common.tell(damager, "{3}You cannot PVP here.")
-            }
         } finally {
             LagCatcher.end("pvp")
+            if (event.isCancelled) {
+                Common.tell(damager, Localization.Warnings.PVP)
+            }
         }
     }
 

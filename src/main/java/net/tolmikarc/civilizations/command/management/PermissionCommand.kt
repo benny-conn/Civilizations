@@ -23,22 +23,22 @@ class PermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
                 if (args.size == 1) {
                     if (args[0].equals("options", ignoreCase = true)) {
                         tell(
-                            "{1}Valid Groups: {2}${
+                            "${Settings.PRIMARY_COLOR}Valid Groups: ${Settings.SECONDARY_COLOR}${
                                 Common.join(
-                                    ranks.ranks.map { it.name },
+                                    permissions.ranks.map { it.name },
                                     ", "
                                 )
                             }",
-                            "{1}Valid Permissions: {2}Build, Break, Switch, Interact",
-                            "{1}Valid values: {2}True, False"
+                            "${Settings.PRIMARY_COLOR}Valid Permissions: ${Settings.SECONDARY_COLOR}Build, Break, Switch, Interact",
+                            "${Settings.PRIMARY_COLOR}Valid values: ${Settings.SECONDARY_COLOR}True, False"
                         )
                     } else returnInvalidArgs()
                 }
                 if (args.size == 3) {
-                    val group = ranks.getGroupByName(args[0])
+                    val group = permissions.getGroupByName(args[0])
                     if (group == null) returnInvalidArgs()
                     group?.adjust(PermissionType.valueOf(args[1].toUpperCase()), args[2].toBoolean())
-                    tellSuccess("{1}Successfully updated Civ Permissions")
+                    tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                 } else
                     returnInvalidArgs()
             }

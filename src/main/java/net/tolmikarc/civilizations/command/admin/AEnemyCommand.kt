@@ -6,8 +6,7 @@ package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.settings.Localization
-import org.bukkit.Bukkit
-import org.mineacademy.fo.Common
+import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 
@@ -22,26 +21,27 @@ class AEnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ene
                 enemyCiv,
                 Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
             )
-            checkBoolean(enemyCiv != this, "You cannot enemy yourself")
+            checkBoolean(enemyCiv != this, Localization.Warnings.CANNOT_SPECIFY_SELF)
             when (args[1].toLowerCase()) {
                 "add" -> {
                     checkBoolean(
                         !relationships.enemies.contains(enemyCiv),
-                        "You are already enemies with this civilization"
+                        Localization.Warnings.ALREADY_ENEMIES
                     )
-                    checkBoolean(!relationships.allies.contains(enemyCiv), "You cannot enemy an ally Civilization.")
+                    checkBoolean(!relationships.allies.contains(enemyCiv), Localization.Warnings.ENEMY_ALLY)
                     relationships.addEnemy(enemyCiv!!)
-                    tell("{1}$name is now enemies with {2}" + enemyCiv.name)
+                    tellSuccess(Localization.Notifications.ENEMIES_TRUE.replace("{civ}", enemyCiv.name!!))
                     if (enemyCiv.relationships.enemies.contains(this)) {
-                        Bukkit.getOnlinePlayers().forEach {
-                            Common.tell(it, "&4${enemyCiv.name} {3}is now at war with &4${this.name}")
-                        }
+                        Messenger.broadcastWarn(
+                            Localization.Notifications.WAR.replace("{civ1}", this.name!!)
+                                .replace("{civ2}", enemyCiv.name!!)
+                        )
                     }
                 }
                 "remove" -> {
-                    checkBoolean(relationships.enemies.contains(enemyCiv), "This Civilization is not an enemy.")
+                    checkBoolean(relationships.enemies.contains(enemyCiv), Localization.Warnings.NOT_ENEMY)
                     relationships.removeEnemy(enemyCiv!!)
-                    tell("{1}$name is no longer enemies with {2}" + enemyCiv.name)
+                    tellSuccess(Localization.Notifications.ENEMIES_FALSE.replace("{civ}", enemyCiv.name!!))
                 }
                 else -> {
                     returnInvalidArgs()

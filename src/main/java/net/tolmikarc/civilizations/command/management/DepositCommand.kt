@@ -17,7 +17,7 @@ class DepositCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "de
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let {
-            checkNotNull(it.civilization, "You must have a civilization to put money into")
+            checkNotNull(it.civilization, Localization.Warnings.NO_CIV)
             it.civilization?.apply {
                 checkBoolean(
                     isDouble(args[0]),
@@ -30,7 +30,7 @@ class DepositCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "de
                 )
                 HookManager.withdraw(player, amount)
                 bank.addBalance(amount)
-                tellSuccess("{1}Deposited {2}$amount{1} into your Civilization's Bank")
+                tellSuccess(Localization.Notifications.DEPOSITED.replace("{cost}", amount.toString()))
             }
         }
     }

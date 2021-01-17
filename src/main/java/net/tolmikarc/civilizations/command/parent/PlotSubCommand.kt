@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.command.parents
+package net.tolmikarc.civilizations.command.parent
 
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
@@ -39,7 +39,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             )
             val civNewPlayer = PlayerManager.fromBukkitPlayer(newPlayer)
             addMember(civNewPlayer)
-            tellSuccess("{1}Added {2}" + newPlayer.displayName + "{1} to your plot")
+            tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
         }
     }
 
@@ -59,7 +59,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
                 price = MathUtil.doubleToMoney(args[1].toDouble())
             }
             forSale = true
-            tellSuccess("{1}Successfully put this plot up for sale at the price {2}$price")
+            tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
         }
     }
 
@@ -77,7 +77,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             price = 0.0
             forSale = false
             addMember(civPlayer)
-            tellSuccess("{1}Successfully claimed this plot.")
+            tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
         }
     }
 
@@ -108,7 +108,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
                 this
             )
         }
-            .also { tellSuccess("{1}Successfully defined new plot with id {2}" + civilization.claims.plotCount) }
+            .also { tellSuccess(Localization.Notifications.SUCCESS_COMMAND) }
     }
 
     fun deletePlot(civPlayer: CPlayer, civilization: Civ) {
@@ -117,7 +117,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         checkNotNull(plot, Localization.Warnings.Claim.NO_PLOT)
         plot?.apply {
             civilization.claims.removePlot(this)
-            tellSuccess("Successfully deleted the plot at your location.")
+            tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
         }
     }
 
@@ -132,9 +132,9 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             if (!civPlayer.visualizing) civPlayer.visualizing = true
         } else civilization.claims.plots.forEach { claimedPlot -> visualizedRegions.add(claimedPlot.region) }
         if (civPlayer.visualizing) {
-            tell("{1}Beginning to visualize...")
+            tell(Localization.Notifications.VISUALIZE_START)
         } else {
-            tell("{3}Stopping visualization...")
+            tell(Localization.Notifications.VISUALIZE_END)
         }
         for (region in visualizedRegions) {
             Common.runTimerAsync(20 * Settings.PARTICLE_FREQUENCY, object : BukkitRunnable() {
