@@ -7,8 +7,8 @@ import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.model.impl.Plot
+import net.tolmikarc.civilizations.model.impl.Region
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
@@ -90,7 +90,11 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             Localization.Warnings.Claim.MAX_PLOTS.replace("{max}", maxPlots.toString())
         )
         val plotRegion =
-            Claim(civilization.claims.plotCount, civPlayer.selection.primary!!, civPlayer.selection.secondary!!)
+            Region(
+                civilization.claims.plotCount,
+                civPlayer.selection.primary!!,
+                civPlayer.selection.secondary!!
+            )
         checkBoolean(
             ClaimUtil.isLocationInCiv(plotRegion.primary, civilization) && ClaimUtil.isLocationInCiv(
                 plotRegion.secondary,
@@ -123,7 +127,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
 
     fun visualize(civPlayer: CPlayer, civilization: Civ) {
         civPlayer.visualizing = !civPlayer.visualizing
-        val visualizedRegions: MutableSet<Claim> = HashSet()
+        val visualizedRegions: MutableSet<Region> = HashSet()
         if (args.size > 1) {
             checkBoolean(args[1].equals("here", ignoreCase = true), usageMessage)
             val plotHere = ClaimUtil.getPlotFromLocation(player.location, civilization)
@@ -149,7 +153,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         }
     }
 
-    fun isLocationConnected(location: Location, civilization: Civ, excludedRegion: Claim): Boolean {
+    fun isLocationConnected(location: Location, civilization: Civ, excludedRegion: Region): Boolean {
         for (plot in civilization.claims.plots) {
             if (plot.region == excludedRegion) continue
             if (plot.region.boundingBox.contains(location)) return true

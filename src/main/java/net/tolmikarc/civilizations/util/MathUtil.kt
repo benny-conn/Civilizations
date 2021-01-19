@@ -5,7 +5,7 @@
 package net.tolmikarc.civilizations.util
 
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Claim
+import net.tolmikarc.civilizations.model.impl.Region
 import org.bukkit.Location
 import org.mineacademy.fo.MathUtil
 import java.math.RoundingMode
@@ -25,7 +25,7 @@ object MathUtil {
         return df.format(dubble).toDouble()
     }
 
-    fun replaceVariablesAndCalculateFormula(formula: String, civilization: Civ, region: Claim?): Double {
+    fun replaceVariablesAndCalculateFormula(formula: String, civilization: Civ, region: Region?): Double {
         var replacedVariables = formula
             .replace("{citizens}", civilization.citizens.size.toString())
             .replace("{power}", civilization.power.toString())
@@ -89,7 +89,7 @@ object MathUtil {
         return x in xBL..xTR && y in yBL..yTR
     }
 
-    fun isPointInRegion(region: Claim, x: Int, y: Int): Boolean {
+    fun isPointInRegion(region: Region, x: Int, y: Int): Boolean {
         return isPointInRegion(
             region.primary.blockX,
             region.primary.blockZ,
@@ -100,7 +100,7 @@ object MathUtil {
         )
     }
 
-    fun isRegionInRegion(regionBig: Claim, regionSmall: Claim): Boolean {
+    fun isRegionInRegion(regionBig: Region, regionSmall: Region): Boolean {
         val xBL = regionBig.primary.blockX.coerceAtMost(regionBig.secondary.blockX)
         val xTR = regionBig.primary.blockX.coerceAtLeast(regionBig.secondary.blockX)
         val yBL = regionBig.primary.blockZ.coerceAtMost(regionBig.secondary.blockZ)

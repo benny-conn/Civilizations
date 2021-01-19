@@ -29,7 +29,7 @@ class Selection {
                 secondary = block.location
             }
         }
-        Common.runLaterAsync(10) {
+        Common.runLaterAsync(5) {
             player.sendBlockChange(block.location, Bukkit.createBlockData(Material.DIAMOND_BLOCK))
         }
     }

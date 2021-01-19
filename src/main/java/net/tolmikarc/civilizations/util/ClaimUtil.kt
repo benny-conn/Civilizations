@@ -7,16 +7,14 @@ package net.tolmikarc.civilizations.util
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.model.impl.Plot
-import net.tolmikarc.civilizations.util.MathUtil.isPointInRegion
+import net.tolmikarc.civilizations.model.impl.Region
 import net.tolmikarc.civilizations.util.MathUtil.isRegionInRegion
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import java.util.*
-import java.util.stream.Collectors
 
 object ClaimUtil {
     fun playersInCivClaims(civilization: Civ): Int {
@@ -66,25 +64,22 @@ object ClaimUtil {
 
     fun isLocationInACiv(location: Location): Boolean {
         for (civilization in CivManager.all) for (region in civilization.claims.claims) {
-            if (isPointInRegion(region, location.blockX, location.blockZ)) return true
+            if (region.isWithin(location)) return true
         }
         return false
     }
 
-    fun isLocationInRegion(location: Location, region: Claim): Boolean {
-        return isPointInRegion(region, location.blockX, location.blockZ)
-    }
 
     fun isLocationInCiv(location: Location, civilization: Civ): Boolean {
         for (region in civilization.claims.claims) {
-            if (isPointInRegion(region, location.blockX, location.blockZ)) return true
+            if (region.isWithin(location)) return true
         }
         return false
     }
 
-    fun getRegionFromLocation(location: Location): Claim? {
+    fun getRegionFromLocation(location: Location): Region? {
         for (civilization in CivManager.all) for (region in civilization.claims.claims) {
-            if (isPointInRegion(region, location.blockX, location.blockZ)) return region
+            if (region.isWithin(location)) return region
         }
         return null
     }
@@ -96,36 +91,36 @@ object ClaimUtil {
 
     fun getPlotFromLocation(location: Location, civilization: Civ): Plot? {
         for (plot in civilization.claims.plots) {
-            if (isPointInRegion(plot.region, location.blockX, location.blockZ)) return plot
+            if (plot.region.isWithin(location)) return plot
         }
         return null
     }
 
-    fun getRegionFromLocation(location: Location, excludedRegion: Claim): Claim? {
+    fun getRegionFromLocation(location: Location, excludedRegion: Region): Region? {
         for (civilization in CivManager.all) for (region in civilization.claims.claims) {
             if (region == excludedRegion) continue
-            if (isPointInRegion(region, location.blockX, location.blockZ)) return region
+            if (region.isWithin(location)) return region
         }
         return null
     }
 
-    fun getRegionFromLocation(location: Location, civilization: Civ): Claim? {
+    fun getRegionFromLocation(location: Location, civilization: Civ): Region? {
         for (region in civilization.claims.claims) {
-            if (isPointInRegion(region, location.blockX, location.blockZ)) return region
+            if (region.isWithin(location)) return region
         }
         return null
     }
 
     fun getCivFromLocation(location: Location): Civ? {
         for (civilization in CivManager.all) for (region in civilization.claims.claims) {
-            if (isPointInRegion(region, location.x.toInt(), location.z.toInt())) return civilization
+            if (region.isWithin(location)) return civilization
         }
         return null
     }
 
 
-    fun regionsInSelection(region: Claim, civilization: Civ): List<Claim> {
-        val regions: MutableList<Claim> = ArrayList()
+    fun regionsInSelection(region: Region, civilization: Civ): List<Region> {
+        val regions: MutableList<Region> = ArrayList()
         for (claimedRegion in civilization.claims.claims) {
             if (claimedRegion == region) continue
             if (isRegionInRegion(region, claimedRegion)) regions.add(claimedRegion)
@@ -133,8 +128,8 @@ object ClaimUtil {
         return regions
     }
 
-    fun regionsInSelection(region: Claim): List<Claim> {
-        val regions: MutableList<Claim> = ArrayList()
+    fun regionsInSelection(region: Region): List<Region> {
+        val regions: MutableList<Region> = ArrayList()
         for (civilization in CivManager.all) regions.addAll(
             regionsInSelection(
                 region,
@@ -144,7 +139,7 @@ object ClaimUtil {
         return regions
     }
 
-    fun plotsInSelection(region: Claim?): List<Plot> {
+    fun plotsInSelection(region: Region?): List<Plot> {
         val plots: MutableList<Plot> = ArrayList()
         for (civilization in CivManager.all) for (plot in civilization.claims.plots) {
             if (isRegionInRegion(plot.region, region!!)) plots.add(plot)
@@ -152,28 +147,26 @@ object ClaimUtil {
         return plots
     }
 
-    fun isRegionConnected(region: Claim, civilization: Civ): Boolean {
-        val squareBox1 = region.boundingBox.stream().filter { location: Location -> location.blockY == 1 }
-            .collect(Collectors.toSet())
+    fun isRegionConnected(region: Region, civilization: Civ): Boolean {
+        val boundingBox = region.boundingBox.filter { it.y == 1.0 }
         for (claimedRegion in civilization.claims.claims) {
-            val squareBox2 = claimedRegion.boundingBox.stream().filter { location: Location -> location.blockY == 1 }
-                .collect(Collectors.toSet())
-            if (squareBox1.stream().anyMatch { o: Location -> squareBox2.contains(o) }) return true
+            val borderingBoundingBox = claimedRegion.boundingBox.filter { it.y == 1.0 }
+            if (borderingBoundingBox.any { boundingBox.contains(it) }) return true
         }
         return false
     }
 
 
-    fun isLocationConnected(location: Location, civilization: Civ, excludedRegion: Claim): Boolean {
+    fun isLocationConnected(location: Location, civilization: Civ, excludedRegion: Region): Boolean {
         for (claimedRegion in civilization.claims.claims) {
             if (claimedRegion == excludedRegion) continue
-            val squareBox1 = claimedRegion.boundingBox.stream().filter { location1: Location -> location1.blockY == 1 }
-                .collect(Collectors.toSet())
-            for (borderLocation in squareBox1) {
-                if (location.x == borderLocation.x && location.z == borderLocation.z) return true
+            val boundingBox =
+                claimedRegion.boundingBox.filter { borderLocation: Location -> borderLocation.y == location.y }
+            for (borderLocation in boundingBox) {
+                if (location == borderLocation) return true
             }
         }
         return false
-
     }
+
 }

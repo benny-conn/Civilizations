@@ -4,7 +4,7 @@
 package net.tolmikarc.civilizations.event;
 
 import net.tolmikarc.civilizations.model.Civ;
-import net.tolmikarc.civilizations.model.impl.Claim;
+import net.tolmikarc.civilizations.model.impl.Region;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -14,13 +14,13 @@ public class ClaimEvent extends Event {
 	private static final HandlerList handlers = new HandlerList();
 
 	private final Civ civ;
-	private final Claim claim;
+	private final Region region;
 	private final Player player;
 
 
-	public ClaimEvent(Civ civ, Claim claim, Player player) {
+	public ClaimEvent(Civ civ, Region region, Player player) {
 		this.civ = civ;
-		this.claim = claim;
+		this.region = region;
 		this.player = player;
 	}
 
@@ -29,8 +29,8 @@ public class ClaimEvent extends Event {
 	}
 
 
-	public Claim getClaim() {
-		return claim;
+	public Region getClaim() {
+		return region;
 	}
 
 	public Civ getCiv() {

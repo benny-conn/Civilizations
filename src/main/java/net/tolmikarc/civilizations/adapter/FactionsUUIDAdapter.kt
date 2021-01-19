@@ -11,7 +11,7 @@ import com.massivecraft.factions.perms.Role
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.impl.Civilization
-import net.tolmikarc.civilizations.model.impl.Claim
+import net.tolmikarc.civilizations.model.impl.Region
 import net.tolmikarc.civilizations.permissions.Permissions
 import org.bukkit.Location
 import java.util.*
@@ -38,9 +38,9 @@ object FactionsUUIDAdapter {
         return civ
     }
 
-    private fun getConvertedRegions(faction: Faction, civ: Civ): MutableSet<Claim> {
+    private fun getConvertedRegions(faction: Faction, civ: Civ): MutableSet<Region> {
         val handledFactionLocations: MutableSet<FLocation> = HashSet()
-        val newRegions: MutableSet<Claim> = HashSet()
+        val newRegions: MutableSet<Region> = HashSet()
         var id = 0
         for (fLocation in faction.allClaims) {
             if (handledFactionLocations.contains(fLocation)) continue
@@ -66,7 +66,7 @@ object FactionsUUIDAdapter {
                 handledFactionLocations.addAll(handledLocationsMovingRight)
             }
             lowestLocation = fLocation
-            val newRegion = Claim(
+            val newRegion = Region(
                 id,
                 Location(
                     lowestLocation.world,

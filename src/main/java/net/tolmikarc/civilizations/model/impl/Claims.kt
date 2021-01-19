@@ -5,6 +5,7 @@ package net.tolmikarc.civilizations.model.impl
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.impl.Region
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
@@ -13,7 +14,7 @@ import java.util.*
 class Claims(val civ: Civ) : ConfigSerializable {
 
 
-    val claims = mutableSetOf<Claim>()
+    val claims = mutableSetOf<Region>()
     val colonies = mutableSetOf<Colony>()
     val plots = mutableSetOf<Plot>()
 
@@ -51,23 +52,23 @@ class Claims(val civ: Civ) : ConfigSerializable {
         CivManager.saveAsync(civ)
     }
 
-    fun addClaim(claim: Claim) {
-        claims.add(claim)
+    fun addClaim(region: Region) {
+        claims.add(region)
         idNumber++
         val amount = net.tolmikarc.civilizations.util.MathUtil.areaBetweenTwoPoints(
-            claim.primary,
-            claim.secondary
+            region.primary,
+            region.secondary
         )
         addTotalBlocks(amount)
         CivManager.saveAsync(civ)
     }
 
 
-    fun removeClaim(claim: Claim) {
-        claims.remove(claim)
+    fun removeClaim(region: Region) {
+        claims.remove(region)
         val area = net.tolmikarc.civilizations.util.MathUtil.areaBetweenTwoPoints(
-            claim.primary,
-            claim.secondary
+            region.primary,
+            region.secondary
         )
         removeTotalBlocks(area)
         CivManager.saveAsync(civ)
@@ -99,7 +100,7 @@ class Claims(val civ: Civ) : ConfigSerializable {
         @JvmStatic
         fun deserialize(map: SerializedMap): Claims {
             val claims = Claims(CivManager.getByUUID(map.get("Civ", UUID::class.java)))
-            claims.claims.addAll(map.getSet("Claims", Claim::class.java))
+            claims.claims.addAll(map.getSet("Claims", Region::class.java))
             claims.colonies.addAll(map.getSet("Colonies", Colony::class.java))
             claims.plots.addAll(map.getSet("Plots", Plot::class.java))
             claims.idNumber = map.getInteger("ID_Number")

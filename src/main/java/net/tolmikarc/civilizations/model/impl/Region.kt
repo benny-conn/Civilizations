@@ -15,29 +15,28 @@ import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
 
-class Claim(val id: Int, val primary: Location, val secondary: Location) : ConfigSerializable {
+class Region(val id: Int, val primary: Location, val secondary: Location) : ConfigSerializable {
 
     private val correctedPoints: Array<Location>
         get() = run {
             Valid.checkBoolean(
                 primary.world!!.name == secondary.world!!.name,
                 "Points must be in one world! Primary: $primary != secondary: $secondary",
-                *arrayOfNulls(0)
             )
-            val x1 = primary.blockX
-            val x2 = secondary.blockX
-            val y1 = primary.blockY
-            val y2 = secondary.blockY
-            val z1 = primary.blockZ
-            val z2 = secondary.blockZ
+            val x1 = primary.x
+            val x2 = secondary.x
+            val y1 = 0.0
+            val y2 = 256.0
+            val z1 = primary.z
+            val z2 = secondary.z
             val primary = primary.clone()
             val secondary = secondary.clone()
-            primary.x = x1.coerceAtMost(x2).toDouble()
-            primary.y = y1.coerceAtMost(y2).toDouble()
-            primary.z = z1.coerceAtMost(z2).toDouble()
-            secondary.x = x1.coerceAtLeast(x2).toDouble()
-            secondary.y = y1.coerceAtLeast(y2).toDouble()
-            secondary.z = z1.coerceAtLeast(z2).toDouble()
+            primary.x = x1.coerceAtMost(x2)
+            primary.y = y1.coerceAtMost(y2)
+            primary.z = z1.coerceAtMost(z2)
+            secondary.x = x1.coerceAtLeast(x2)
+            secondary.y = y1.coerceAtLeast(y2)
+            secondary.z = z1.coerceAtLeast(z2)
             arrayOf(primary, secondary)
         }
     val center: Location
@@ -53,15 +52,10 @@ class Claim(val id: Int, val primary: Location, val secondary: Location) : Confi
             )
         }
     val blocks: List<Block>
-        get() {
-            val centered = correctedPoints
-            return BlockUtil.getBlocks(centered[0], centered[1])
-        }
+        get() = BlockUtil.getBlocks(correctedPoints[0], correctedPoints[1])
+
     val boundingBox: Set<Location>
-        get() = BlockUtil.getBoundingBox(
-            Location(primary.world, primary.x, 0.0, primary.z),
-            Location(secondary.world, secondary.x, 256.0, secondary.z)
-        )
+        get() = BlockUtil.getBoundingBox(correctedPoints[0], correctedPoints[1])
 
     val entities: List<Entity?>
         get() {
@@ -98,18 +92,15 @@ class Claim(val id: Int, val primary: Location, val secondary: Location) : Confi
         }
 
     fun isWithin(location: Location): Boolean {
-        return run {
-            if (location.world!!.name != primary.world!!.name) {
-                false
-            } else {
-                val centered = correctedPoints
-                val primary = centered[0]
-                val secondary = centered[1]
-                val x = location.x.toInt()
-                val y = location.y.toInt()
-                val z = location.z.toInt()
-                x.toDouble() >= primary.x && x.toDouble() <= secondary.x && y.toDouble() >= primary.y && y.toDouble() <= secondary.y && z.toDouble() >= primary.z && z.toDouble() <= secondary.z
-            }
+        return if (location.world!!.name != primary.world!!.name) {
+            false
+        } else {
+            val primary = correctedPoints[0]
+            val secondary = correctedPoints[1]
+            val x = location.x
+            val z = location.z
+            x in primary.x..secondary.x && z in primary.z..secondary.z
+            x >= primary.x && x <= secondary.x && z >= primary.z && z <= secondary.z
         }
     }
 
@@ -130,11 +121,11 @@ class Claim(val id: Int, val primary: Location, val secondary: Location) : Confi
     companion object {
 
         @JvmStatic
-        fun deserialize(map: SerializedMap): Claim {
+        fun deserialize(map: SerializedMap): Region {
             val id = map.getInteger("ID")
             val prim = map.getLocation("Primary")
             val sec = map.getLocation("Secondary")
-            return Claim(id, prim, sec)
+            return Region(id, prim, sec)
         }
     }
 }

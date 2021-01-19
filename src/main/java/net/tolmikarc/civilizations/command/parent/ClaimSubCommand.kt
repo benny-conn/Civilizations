@@ -3,52 +3,53 @@
  */
 package net.tolmikarc.civilizations.command.parent
 
+import kotlinx.coroutines.delay
+import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.event.ClaimEvent
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Claim
 import net.tolmikarc.civilizations.model.impl.Colony
+import net.tolmikarc.civilizations.model.impl.Region
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import net.tolmikarc.civilizations.util.ClaimUtil
 import net.tolmikarc.civilizations.util.MathUtil
-import org.bukkit.scheduler.BukkitRunnable
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import java.util.*
 import kotlin.math.abs
 
+
 open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "claim") {
     override fun onCommand() {
     }
 
+
     fun visualize(civPlayer: CPlayer, civilization: Civ) {
         civPlayer.visualizing = !civPlayer.visualizing
-        val visualizedRegions: MutableSet<Claim> = HashSet()
-        if (args.size > 1 && args[1].equals("here", ignoreCase = true)) {
+        val visualizedRegions: MutableSet<Region> = HashSet()
+        if (args.size > 1 && args[1].equals("here", ignoreCase = true))
             ClaimUtil.getRegionFromLocation(player.location)?.let { visualizedRegions.add(it) }
-        } else visualizedRegions.addAll(civilization.claims.claims)
+        else
+            visualizedRegions.addAll(civilization.claims.claims)
         if (civPlayer.visualizing) {
             tell(Localization.Notifications.VISUALIZE_START)
         } else {
             tell(Localization.Notifications.VISUALIZE_END)
         }
-        for (region in visualizedRegions) {
-            Common.runTimerAsync(20 * Settings.PARTICLE_FREQUENCY, object : BukkitRunnable() {
-                override fun run() {
-                    if (civPlayer.civilization == null) civPlayer.visualizing = false
-                    for (location in region.boundingBox.filter { it.y in (player.location.y - 6)..(player.location.y + 6) }) {
-                        if (!civPlayer.visualizing) break
-                        if (ClaimUtil.isLocationConnected(location, civilization, region)) continue
-                        Settings.CLAIM_PARTICLE.spawnFor(player, location)
+        AsyncEnvironment.run {
+            while (civPlayer.visualizing) {
+                for (region in visualizedRegions) {
+                    for (loc in region.boundingBox.filter { it.y in player.location.y - 5..player.location.y + 5 }) {
+                        if (ClaimUtil.isLocationConnected(loc, civilization, region)) continue
+                        Settings.CLAIM_PARTICLE.spawnFor(player, loc)
                     }
-                    if (!civPlayer.visualizing) cancel()
                 }
-            })
-
+                delay(((1000 * Settings.PARTICLE_FREQUENCY) / visualizedRegions.size).toLong())
+            }
         }
     }
 
@@ -56,7 +57,7 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
         checkBoolean(PermissionChecker.canManageCiv(player, civilization), Localization.Warnings.CANNOT_MANAGE_CIV)
         checkBoolean(!player.visualizing, Localization.Warnings.Claim.STOP_VISUALIZING)
         checkBoolean(player.selection.bothPointsSelected(), Localization.Warnings.Claim.INCOMPLETE_SELECTION)
-        val claim = Claim(
+        val claim = Region(
             civilization.claims.totalClaimCount,
             player.selection.primary!!,
             player.selection.secondary!!
@@ -99,7 +100,7 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
             Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", cost.toString())
         )
         checkBoolean(
-            ClaimUtil.isLocationInRegion(getPlayer().location, claim),
+            claim.isWithin(getPlayer().location),
             Localization.Warnings.Claim.STAND_IN_CLAIM
         )
         if (civilization.claims.totalClaimCount == 0)

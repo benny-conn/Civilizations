@@ -284,8 +284,8 @@ class PlayerListener : Listener {
         try {
             // Are we going into a new block?
             if (from.blockX != to.blockX || from.blockZ != to.blockZ) {
-                val civTo = getCivFromLocation(to)
-                val civFrom = getCivFromLocation(from)
+                val civTo = getCivFromLocation(to.block.location)
+                val civFrom = getCivFromLocation(from.block.location)
                 // make sure some civilization is involved, else what would this code be for?
                 if (civTo == null && civFrom == null) return
                 // are we entering a new civ?

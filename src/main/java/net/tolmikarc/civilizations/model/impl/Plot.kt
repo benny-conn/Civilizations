@@ -8,6 +8,7 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.impl.Region
 import net.tolmikarc.civilizations.permissions.Toggleables
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
@@ -17,7 +18,7 @@ import java.util.stream.Collectors
 data class Plot(
     val civ: Civ,
     val id: Int,
-    val region: Claim,
+    val region: Region,
     var owner: CPlayer
 ) : ConfigSerializable {
     var price = 0.0
@@ -48,7 +49,7 @@ data class Plot(
         @JvmStatic
         fun deserialize(map: SerializedMap): Plot {
             val civ = CivManager.getByUUID(map["Civilization", UUID::class.java])
-            val region = map.get("Region", Claim::class.java)
+            val region = map.get("Region", Region::class.java)
             val id = map.getInteger("ID")
             val owner = PlayerManager.getByUUID(map["Owner", UUID::class.java])
             val plot = Plot(civ, id, region, owner)
