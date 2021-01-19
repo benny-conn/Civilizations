@@ -162,9 +162,7 @@ object ClaimUtil {
             if (claimedRegion == excludedRegion) continue
             val boundingBox =
                 claimedRegion.boundingBox.filter { borderLocation: Location -> borderLocation.y == location.y }
-            for (borderLocation in boundingBox) {
-                if (location == borderLocation) return true
-            }
+            return boundingBox.contains(location)
         }
         return false
     }

@@ -97,10 +97,9 @@ class Region(val id: Int, val primary: Location, val secondary: Location) : Conf
         } else {
             val primary = correctedPoints[0]
             val secondary = correctedPoints[1]
-            val x = location.x
-            val z = location.z
-            x in primary.x..secondary.x && z in primary.z..secondary.z
-            x >= primary.x && x <= secondary.x && z >= primary.z && z <= secondary.z
+            val x = location.x.toInt()
+            val z = location.z.toInt()
+            x in primary.blockX..secondary.blockX && z in primary.blockZ..secondary.blockZ
         }
     }
 
