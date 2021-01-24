@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.admin
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Localization
@@ -14,6 +15,7 @@ import org.bukkit.Location
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import org.mineacademy.fo.model.ChunkedTask
+import java.text.DecimalFormat
 import java.util.*
 
 class ARepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "repair") {
@@ -59,7 +61,7 @@ class ARepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "re
             val handledLocations: MutableList<Location> = ArrayList()
             override fun onProcess(index: Int) {
                 val location = locationList[index]
-                if (Settings.SWITCHABLES.contains(location.block.type))
+                if (PermissionChecker.isSwitchable(location.block.type))
                     return
                 location.block.blockData = Bukkit.createBlockData(damages.brokenBlocksMap[location]!!)
                 handledLocations.add(location)
@@ -77,7 +79,7 @@ class ARepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "re
                     Localization.Notifications.SUCCESS_REPAIR.replace(
                         "{blocks}",
                         handledLocations.size.toString()
-                    ).replace("{cost}", cost.toString())
+                    ).replace("{cost}", cost.toString().format(DecimalFormat.getCurrencyInstance()))
                 )
             }
         }.startChain()

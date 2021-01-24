@@ -25,7 +25,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.let { civ ->
-                if (args[0].equals("?", ignoreCase = true)) {
+                if (args[0].equals("list", ignoreCase = true)) {
                     val colonyIds: MutableList<String> = ArrayList()
                     for (colony in civ.claims.colonies) {
                         colonyIds.add(colony.id.toString())
@@ -72,7 +72,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
 
     init {
         setDescription("Teleport to a Civilization Colony")
-        usage = "<id # | ?>"
+        usage = "<id # | list>"
         minArguments = 1
         if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }

@@ -35,7 +35,6 @@ object CivDatastore : Datastore() {
             if (results != null) {
                 if (results.next()) {
                     val dataRaw = results.getString("Data")
-                    println(dataRaw)
                     val data = SerializedMap.fromJson(dataRaw)
                     if (data.isEmpty) return
                     val deserializedCiv = Civilization.deserialize(data)

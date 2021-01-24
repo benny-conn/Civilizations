@@ -31,6 +31,7 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                                 else
                                     tellError(Localization.Warnings.FAILED_TELEPORT)
                             }
+                            return
                         }
                         if (civ.toggleables.public) {
                             civ.home?.let { home ->

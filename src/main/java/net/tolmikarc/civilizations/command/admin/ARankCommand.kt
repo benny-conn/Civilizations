@@ -20,8 +20,8 @@ class ARankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank"
             when (args[1].toLowerCase()) {
                 "set" -> {
                     checkArgs(3, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER))
-                    val player = PlayerManager.getByName(args[1])
-                    val rank = permissions.getGroupByName(args[2])
+                    val player = PlayerManager.getByName(args[2])
+                    val rank = permissions.getGroupByName(args[3])
                     checkNotNull(
                         player,
                         Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER)
@@ -81,11 +81,7 @@ class ARankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank"
         val civ = PlayerManager.fromBukkitPlayer(player).civilization
         return when (args.size) {
             1 -> listOf("set", "new", "delete", "rename")
-            2 -> {
-                if (args[0].equals("delete", true) || args[0].equals("rename", true))
-                    civ?.permissions?.ranks?.map { it.name }?.toList() ?: super.tabComplete()
-                else super.tabComplete()
-            }
+            3 -> civ?.permissions?.ranks?.map { it.name }?.toList() ?: super.tabComplete()
             else -> super.tabComplete()
         }
 
@@ -95,7 +91,7 @@ class ARankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank"
         minArguments = 1
         setDescription("Assign ranks to players and create new custom ranks")
         usage = "<set | new | delete | rename> [...]"
-        if (Settings.ALL_PERMISSIONS_ENABLED) permission = null
+        if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 
 }

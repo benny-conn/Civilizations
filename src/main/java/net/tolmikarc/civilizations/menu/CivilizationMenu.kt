@@ -72,7 +72,18 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
         }
     }
 
-    inner class PermissionsMenu : MenuPagged<Rank>(civilization.permissions.ranks) {
+    val ranks: MutableList<Rank>
+        get() {
+            val list: MutableList<Rank> = ArrayList()
+            list.addAll(civilization.permissions.ranks)
+            list.add(civilization.permissions.defaultRank)
+            list.add(civilization.permissions.allyRank)
+            list.add(civilization.permissions.enemyRank)
+            list.add(civilization.permissions.outsiderRank)
+            return list
+        }
+
+    inner class PermissionsMenu : MenuPagged<Rank>(ranks) {
 
         override fun convertToItemStack(rank: Rank): ItemStack {
             val color = RandomUtil.nextChatColor()

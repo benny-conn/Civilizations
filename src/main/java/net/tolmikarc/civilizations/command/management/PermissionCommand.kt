@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -46,9 +47,15 @@ class PermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
     }
 
     override fun tabComplete(): List<String>? {
-        if (args.size == 1) return listOf("build", "break", "switch", "interact")
-        if (args.size == 2) return listOf("options", "outsider", "member", "ally", "official")
-        return if (args.size == 3) listOf("true", "false") else super.tabComplete()
+        var civ: Civ? = null
+        if (PlayerManager.fromBukkitPlayer(player).civilization != null)
+            civ = PlayerManager.fromBukkitPlayer(player).civilization
+        return when (args.size) {
+            1 -> civ?.permissions?.ranks?.map { it.name } ?: super.tabComplete()
+            2 -> listOf("build", "break", "switch", "interact")
+            3 -> listOf("true", "false")
+            else -> super.tabComplete()
+        }
     }
 
     init {

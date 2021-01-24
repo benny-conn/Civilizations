@@ -6,7 +6,6 @@ package net.tolmikarc.civilizations.command
 
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
-import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -25,6 +24,5 @@ class FlyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "fly") 
 
     init {
         setDescription("Allows flight within your Civilization's Borders")
-        if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 }

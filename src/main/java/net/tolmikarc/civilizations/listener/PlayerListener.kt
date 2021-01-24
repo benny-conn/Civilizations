@@ -5,6 +5,7 @@
 package net.tolmikarc.civilizations.listener
 
 import net.tolmikarc.civilizations.NameTag
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.PermissionChecker.can
 import net.tolmikarc.civilizations.api.event.CivEnterEvent
 import net.tolmikarc.civilizations.api.event.CivLeaveEvent
@@ -31,6 +32,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.Statistic
 import org.bukkit.entity.EntityType
+import org.bukkit.entity.Monster
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -165,22 +167,28 @@ class PlayerListener : Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     fun onInteract(event: PlayerInteractEvent) {
         LagCatcher.start("use")
         try {
+            if (event.action == Action.LEFT_CLICK_AIR) return
             if (event.action == Action.LEFT_CLICK_BLOCK) return
             val player = event.player
             val civilization = getCivFromLocation(player.location) ?: return
-            if (event.hasBlock()) {
-                val block = event.clickedBlock
-                if (block != null) {
-                    if (Settings.SWITCHABLES.contains(block.type)) event.isCancelled =
-                        !can(PermissionType.SWITCH, player, civilization) else {
-                        event.isCancelled = !can(PermissionType.INTERACT, player, civilization)
-                    }
+            val block = event.clickedBlock
+            if (block != null) {
+                val type = block.type
+                if (!type.isInteractable) return
+                if (PermissionChecker.isSwitchable(type)) {
+                    Common.log("${can(PermissionType.SWITCH, player, civilization)}")
+                    Common.log(civilization.permissions.getPlayerGroup(PlayerManager.fromBukkitPlayer(player)).name)
+                    event.isCancelled = !can(PermissionType.SWITCH, player, civilization)
+                } else {
+                    event.isCancelled = !can(PermissionType.INTERACT, player, civilization)
                 }
-            } else {
+            } else if (event.item != null) {
+                if (player.inventory.itemInMainHand.type == Material.FIREWORK_ROCKET) return
+                if (player.inventory.itemInMainHand.type.isEdible) return
                 event.isCancelled = !can(PermissionType.INTERACT, player, civilization)
             }
             if (event.isCancelled) {
@@ -202,7 +210,7 @@ class PlayerListener : Listener {
                 // if a player is raiding he can break
                 if (canAttackCivilization(civPlayer, civilization)) {
                     // except player cannot break things that are defined in settings so long as the settings says player cant
-                    if (!Settings.RAID_BREAK_SWITCHABLES) if (Settings.SWITCHABLES.contains(block.type)) {
+                    if (!Settings.RAID_BREAK_SWITCHABLES) if (PermissionChecker.isSwitchable(block.type)) {
                         event.isCancelled = true
                         return
                     }
@@ -425,6 +433,12 @@ class PlayerListener : Listener {
             val damager = event.damager
             if (damager !is Player || damaged is Player) return
             val civ = getCivFromLocation(damaged.location) ?: return
+            if (damaged is Monster) {
+                if (!civ.toggleables.mobs)
+                    damaged.remove()
+                else
+                    return
+            }
             event.isCancelled = !can(PermissionType.INTERACT, damager, civ)
         } finally {
             LagCatcher.end("entity-damage-by-player")

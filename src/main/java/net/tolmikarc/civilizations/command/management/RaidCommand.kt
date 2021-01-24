@@ -46,13 +46,13 @@ class RaidCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "raid")
                 val raid = Raid(enemyCiv, this)
                 enemyCiv.raid = raid
                 this.raid = raid
+                setCooldown(Settings.RAID_COOLDOWN, TimeUnit.MINUTES)
             }
         }
     }
 
     init {
         minArguments = 1
-        setCooldown(Settings.RAID_COOLDOWN, TimeUnit.MINUTES)
         if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 }

@@ -13,9 +13,11 @@ import org.mineacademy.fo.model.ChunkedTask
 import java.util.*
 
 class TownyAdapterTask(processAmount: Int) : ChunkedTask(processAmount) {
-    var towns: List<Town> = ArrayList(TownyUniverse.getInstance().towns)
+    private val towns: List<Town> = ArrayList(TownyUniverse.getInstance().towns.filter { it.hasValidUUID() && it.hasSpawn() })
     override fun onProcess(i: Int) {
-        CivManager.createCiv(TownyAdapter.convertTownToCiv(towns[i]))
+        val civ = TownyAdapter.convertTownToCiv(towns[i])
+        if (civ != null)
+        CivManager.createCiv(civ)
     }
 
     override fun canContinue(i: Int): Boolean {

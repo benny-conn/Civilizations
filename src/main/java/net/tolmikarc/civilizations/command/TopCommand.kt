@@ -25,8 +25,8 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
         val page = if (args.size > 1) args[1].toInt() else 1
         if (!args[0].equals("players", ignoreCase = true)) {
             AsyncEnvironment.run {
-                val civilizationsSorted = ArrayList(CivManager.all).sortedBy {
-                    return@sortedBy when (args[0]) {
+                val civilizationsSorted = ArrayList(CivManager.all).sortedByDescending {
+                    when (args[0]) {
                         "power" -> it.power
                         "balance" -> it.bank.balance.toInt()
                         "land" -> it.claims.totalBlocksCount
@@ -39,52 +39,52 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                 tellNoPrefix("${Settings.PRIMARY_COLOR}======= ${Settings.SECONDARY_COLOR}Top Civs: ${args[0].capitalize()} ($page) ${Settings.PRIMARY_COLOR}=======")
                 when (args[0]) {
                     "power" -> {
-                        for (i in lowerLimit..(upperLimit + 1)) {
+                        for (i in lowerLimit..upperLimit) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].power} ")
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i - 1].name}: ${civilizationsSorted[i - 1].power} ")
                         }
                     }
                     "balance" -> {
-                        for (i in lowerLimit..(upperLimit + 1)) {
+                        for (i in lowerLimit..upperLimit) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].bank.balance} ")
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i - 1].name}: ${civilizationsSorted[i - 1].bank.balance} ")
                         }
                     }
                     "land" -> {
-                        for (i in lowerLimit..(upperLimit + 1)) {
+                        for (i in lowerLimit..upperLimit) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].claims.totalBlocksCount} ")
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i - 1].name}: ${civilizationsSorted[i - 1].claims.totalBlocksCount} ")
                         }
                     }
                     "citizens" -> {
-                        for (i in lowerLimit..(upperLimit + 1)) {
+                        for (i in lowerLimit..upperLimit) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].citizenCount} ")
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i - 1].name}: ${civilizationsSorted[i - 1].citizenCount} ")
                         }
                     }
                     else -> {
-                        for (i in lowerLimit..(upperLimit + 1)) {
+                        for (i in lowerLimit..upperLimit) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i].name}: ${civilizationsSorted[i].power} ")
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i - 1].name}: ${civilizationsSorted[i - 1].power} ")
                         }
                     }
                 }
             }
         } else {
             AsyncEnvironment.run {
-                val topPlayers = ArrayList(PlayerManager.cacheMap.values).sortedBy { it.power }
+                val topPlayers = ArrayList(PlayerManager.cacheMap.values).sortedByDescending { it.power }
                 val lowerLimit = (page * 10) - 9
                 val upperLimit = page * 10
                 tellNoPrefix("${Settings.PRIMARY_COLOR}======= ${Settings.SECONDARY_COLOR}Top Players ($page) ${Settings.PRIMARY_COLOR}=======")
-                for (i in lowerLimit..(upperLimit + 1)) {
+                for (i in lowerLimit..upperLimit) {
                     if (i >= topPlayers.size)
                         break
-                    tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${topPlayers[i].playerName}: ${topPlayers[i].power} ")
+                    tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${topPlayers[i - 1].playerName}: ${topPlayers[i - 1].power} ")
                 }
             }
         }

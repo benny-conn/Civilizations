@@ -29,6 +29,7 @@ class CivilizationsCommandGroup : SimpleCommandGroup() {
         registerSubcommand(LeaderCommand(this))
         registerSubcommand(ChatCommand(this))
         registerSubcommand(InfoCommand(this))
+        registerSubcommand(ListCommand(this))
         registerSubcommand(PlotCommand(this))
         registerSubcommand(SetHomeCommand(this))
         registerSubcommand(HomeCommand(this))

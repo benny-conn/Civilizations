@@ -15,6 +15,7 @@ import org.mineacademy.fo.conversation.SimpleCanceller
 import org.mineacademy.fo.conversation.SimpleConversation
 import org.mineacademy.fo.conversation.SimpleDecimalPrompt
 import org.mineacademy.fo.model.HookManager
+import java.text.DecimalFormat
 
 class BankTranscationConversation(private val transaction: Transaction, val civ: Civ, val player: Player) :
     SimpleConversation() {
@@ -36,12 +37,23 @@ class BankTranscationConversation(private val transaction: Transaction, val civ:
         override fun acceptValidatedInput(context: ConversationContext?, input: Double): Prompt? {
             val cost = MathUtil.doubleToMoney(input)
             if (HookManager.getBalance(player) - cost < 0) {
-                tell(Localization.Warnings.INSUFFICIENT_PLAYER_FUNDS.replace("{cost}", cost.toString()))
+                tell(
+                    Localization.Warnings.INSUFFICIENT_PLAYER_FUNDS.replace(
+                        "{cost}",
+                        cost.toString().format(DecimalFormat.getCurrencyInstance())
+                    )
+                )
                 return null
             }
             HookManager.withdraw(player, cost)
             civilization.bank.addBalance(cost)
-            Messenger.success(player, Localization.Notifications.DEPOSITED.replace("{cost}", cost.toString()))
+            Messenger.success(
+                player,
+                Localization.Notifications.DEPOSITED.replace(
+                    "{cost}",
+                    cost.toString().format(DecimalFormat.getCurrencyInstance())
+                )
+            )
             return null
         }
 
@@ -60,13 +72,24 @@ class BankTranscationConversation(private val transaction: Transaction, val civ:
         override fun acceptValidatedInput(p0: ConversationContext, p1: Double): Prompt? {
             val cost = MathUtil.doubleToMoney(p1)
             if (civilization.bank.balance - cost < 0) {
-                tell(Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", cost.toString()))
+                tell(
+                    Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace(
+                        "{cost}",
+                        cost.toString().format(DecimalFormat.getCurrencyInstance())
+                    )
+                )
                 return null
             }
 
             HookManager.deposit(player, cost)
             civilization.bank.removeBalance(cost)
-            Messenger.success(player, Localization.Notifications.WITHDREW.replace("{cost}", cost.toString()))
+            Messenger.success(
+                player,
+                Localization.Notifications.WITHDREW.replace(
+                    "{cost}",
+                    cost.toString().format(DecimalFormat.getCurrencyInstance())
+                )
+            )
             return null
         }
 

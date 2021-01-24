@@ -54,6 +54,7 @@ class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "togg
                                     toggleables.pvp.toString()
                                 )
                             )
+                            setCooldown(Settings.PVP_TOGGLE_COOLDOWN, TimeUnit.SECONDS)
                         }
                     "public" -> toggleables.public =
                         !toggleables.public.also {
@@ -87,7 +88,6 @@ class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "togg
     }
 
     init {
-        setCooldown(Settings.PVP_TOGGLE_COOLDOWN, TimeUnit.SECONDS)
         minArguments = 1
         description = "Toggle settings for your Civilization"
         usage = "<fire | explosions | pvp | mobs | public | inviteonly >"

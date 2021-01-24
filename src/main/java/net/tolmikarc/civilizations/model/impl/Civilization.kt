@@ -87,7 +87,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             addPower(player.power)
         }
         player.addPower(CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, this).toInt())
-        CivManager.saveAsync(this)
+        CivManager.queueForSaving(this)
     }
 
     override fun removeCitizen(player: CPlayer) {
@@ -98,7 +98,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             removePower(player.power)
         }
         player.removePower(CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, this).toInt())
-        CivManager.saveAsync(this)
+        CivManager.queueForSaving(this)
     }
 
 

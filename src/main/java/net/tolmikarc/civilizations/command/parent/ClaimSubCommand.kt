@@ -19,6 +19,7 @@ import net.tolmikarc.civilizations.util.MathUtil
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
+import java.text.DecimalFormat
 import java.util.*
 import kotlin.math.abs
 
@@ -96,7 +97,10 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
         val cost = CivUtil.calculateFormulaForCiv(Settings.COST_FORMULA, civilization, claim)
         checkBoolean(
             civilization.bank.balance - cost >= 0,
-            Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", cost.toString())
+            Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace(
+                "{cost}",
+                cost.toString().format(DecimalFormat.getCurrencyInstance())
+            )
         )
         checkBoolean(
             claim.isWithin(getPlayer().location),

@@ -14,6 +14,16 @@ import kotlin.collections.HashSet
 import kotlin.collections.LinkedHashMap
 
 data class Permissions(val civ: Civ) : ConfigSerializable {
+    val allRankNames: List<String>
+        get() {
+            val list = mutableListOf<String>()
+            list.addAll(ranks.map { it.name })
+            list.add(defaultRank.name)
+            list.add(outsiderRank.name)
+            list.add(enemyRank.name)
+            list.add(allyRank.name)
+            return list.toList()
+        }
     val ranks: MutableSet<Rank> = HashSet()
     val adminGroups: MutableSet<Rank> = HashSet()
     var playerGroupMap: MutableMap<UUID, Rank> = LinkedHashMap()
@@ -22,16 +32,15 @@ data class Permissions(val civ: Civ) : ConfigSerializable {
     var allyRank: Rank = Rank(Settings.ALLY_GROUP.name, Settings.ALLY_GROUP.permissions)
     var enemyRank: Rank = Rank(Settings.ENEMY_GROUP.name, Settings.ENEMY_GROUP.permissions)
 
-    init {
-        ranks.add(defaultRank)
-        ranks.add(outsiderRank)
-        ranks.add(allyRank)
-        ranks.add(enemyRank)
-    }
-
 
     fun getGroupByName(name: String): Rank? {
-        return ranks.find { it.name == name }
+        return when {
+            name.equals(defaultRank.name, true) -> defaultRank
+            name.equals(outsiderRank.name, true) -> outsiderRank
+            name.equals(allyRank.name, true) -> allyRank
+            name.equals(enemyRank.name, true) -> enemyRank
+            else -> ranks.find { it.name.equals(name, true) }
+        }
     }
 
     fun setPlayerGroup(player: CPlayer, group: Rank) {
@@ -39,6 +48,7 @@ data class Permissions(val civ: Civ) : ConfigSerializable {
     }
 
     fun getPlayerGroup(player: CPlayer): Rank {
+        if (civ.leader == player) return defaultRank
         if (civ.relationships.allies.any { it.citizens.contains(player) })
             return allyRank
         if (civ.relationships.enemies.any { it.citizens.contains(player) })

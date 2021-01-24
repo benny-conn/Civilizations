@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
@@ -16,6 +17,7 @@ import org.bukkit.Location
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import org.mineacademy.fo.model.ChunkedTask
+import java.text.DecimalFormat
 import java.util.*
 
 class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "repair") {
@@ -60,7 +62,10 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
         val cost = locationList.size * Settings.REPAIR_COST_PER_BLOCK
         checkBoolean(
             civ.bank.balance - cost >= 0,
-            Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", cost.toString())
+            Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace(
+                "{cost}",
+                cost.toString().format(DecimalFormat.getCurrencyInstance())
+            )
         )
         civ.bank.removeBalance(cost)
 
@@ -69,7 +74,7 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
             val handledLocations: MutableList<Location> = ArrayList()
             override fun onProcess(index: Int) {
                 val location = locationList[index]
-                if (Settings.SWITCHABLES.contains(location.block.type))
+                if (PermissionChecker.isSwitchable(location.block.type))
                     return
                 location.block.blockData = Bukkit.createBlockData(damages.brokenBlocksMap[location]!!)
                 handledLocations.add(location)
@@ -85,9 +90,9 @@ class RepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "rep
                 CivManager.queueForSaving(civ)
                 tellSuccess(
                     Localization.Notifications.SUCCESS_REPAIR.replace(
-                        "{blocks}",
+                        "{amount}",
                         handledLocations.size.toString()
-                    ).replace("{cost}", cost.toString())
+                    ).replace("{cost}", cost.toString().format(DecimalFormat.getCurrencyInstance()))
                 )
             }
         }.startChain()

@@ -84,6 +84,9 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
                     group?.name = args[2]
                     tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                 }
+                "list" -> {
+                    tellInfo(Common.join(civ.permissions.allRankNames, ", "))
+                }
             }
         }
     }
@@ -91,7 +94,7 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
     override fun tabComplete(): List<String>? {
         val civ = PlayerManager.fromBukkitPlayer(player).civilization
         return when (args.size) {
-            1 -> listOf("set", "new", "delete", "rename")
+            1 -> listOf("set", "new", "delete", "rename", "list")
             2 -> {
                 if (args[0].equals("delete", true) || args[0].equals("rename", true))
                     civ?.permissions?.ranks?.map { it.name }?.toList() ?: super.tabComplete()
@@ -105,8 +108,8 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
     init {
         minArguments = 1
         setDescription("Assign ranks to players and create new custom ranks")
-        usage = "<set | new | delete | rename> [rank | player] [rank | name]"
-        if (Settings.ALL_PERMISSIONS_ENABLED) permission = null
+        usage = "<set | new | delete | rename | list> [rank | player] [rank | name]"
+        if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 
 }

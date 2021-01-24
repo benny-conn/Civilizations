@@ -26,7 +26,7 @@ class DescriptionCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, 
     init {
         minArguments = 1
         usage = "<description>"
-        if (Settings.ALL_PERMISSIONS_ENABLED) permission = null
+        if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 
 }

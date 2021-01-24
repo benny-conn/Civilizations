@@ -14,6 +14,7 @@ import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.hasCooldown
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
+import java.text.DecimalFormat
 
 class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "surrender") {
     override fun onCommand() {
@@ -34,7 +35,7 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
                             bank.balance - Settings.SURRENDER_COST < 0,
                             Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace(
                                 "{cost}",
-                                Settings.SURRENDER_COST.toString()
+                                Settings.SURRENDER_COST.toString().format(DecimalFormat.getCurrencyInstance())
                             )
                         )
                         bank.removeBalance(Settings.SURRENDER_COST)

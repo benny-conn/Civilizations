@@ -4,9 +4,12 @@
 
 package net.tolmikarc.civilizations.listener
 
+import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.constants.Constants
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Settings
+import net.tolmikarc.civilizations.util.ClaimUtil
 import net.tolmikarc.civilizations.util.ClaimUtil.getCivFromLocation
 import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
 import net.tolmikarc.civilizations.util.WarUtil
@@ -14,8 +17,8 @@ import net.tolmikarc.civilizations.util.WarUtil.addDamages
 import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
 import net.tolmikarc.civilizations.util.WarUtil.shootBlockAndAddDamages
 import org.bukkit.Material
+import org.bukkit.Tag
 import org.bukkit.entity.EntityType
-import org.bukkit.entity.Monster
 import org.bukkit.entity.Player
 import org.bukkit.entity.TNTPrimed
 import org.bukkit.event.EventHandler
@@ -24,6 +27,7 @@ import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.entity.ExplosionPrimeEvent
+import org.bukkit.event.hanging.HangingBreakByEntityEvent
 import org.mineacademy.fo.RandomUtil
 import org.mineacademy.fo.remain.CompMetadata
 import java.util.*
@@ -32,6 +36,7 @@ class EntityListener : Listener {
     @EventHandler
     fun onCreatureSpawn(event: CreatureSpawnEvent) {
         val location = event.location
+        if (!location.chunk.isLoaded) return
         val civilization = getCivFromLocation(location) ?: return
         val plot = getPlotFromLocation(location, civilization)
         if (plot != null) {
@@ -40,11 +45,6 @@ class EntityListener : Listener {
         }
         if (!civilization.toggleables.mobs) {
             event.isCancelled = true
-
-            // Remove monsters in civilization
-            for (region in civilization.claims.claims) for (entity in region.entities) {
-                (entity as? Monster)?.remove()
-            }
         }
     }
 
@@ -65,7 +65,6 @@ class EntityListener : Listener {
     @EventHandler
     fun onExplode(event: EntityExplodeEvent) {
         val entity = event.entity
-        if (!CompMetadata.hasMetadata(entity, Constants.WAR_TNT_TAG)) return
         val blockIterator = event.blockList().iterator()
         while (blockIterator.hasNext()) {
             val block = blockIterator.next()
@@ -86,10 +85,14 @@ class EntityListener : Listener {
                 )
 
                 if (canAttackCivilization(attackingPlayer, civilization)) {
-                    if (!Settings.RAID_BREAK_SWITCHABLES) if (Settings.SWITCHABLES.contains(block.type) || block.type == Material.TNT) {
-                        blockIterator.remove()
-                        continue
-                    }
+                    if (!Settings.RAID_BREAK_SWITCHABLES)
+                        if (PermissionChecker.isSwitchable(block.type) || block.type == Material.TNT || Tag.STAIRS.isTagged(
+                                block.type
+                            ) || Tag.CLIMBABLE.isTagged(block.type)
+                        ) {
+                            blockIterator.remove()
+                            continue
+                        }
                     val attackingCiv = attackingPlayer.civilization!!
                     if (RandomUtil.chance(80))
                         shootBlockAndAddDamages(civilization, attackingCiv, block)
@@ -119,4 +122,14 @@ class EntityListener : Listener {
             }
         }
     }
+
+    @EventHandler
+    private fun onItemFrameChange(event: HangingBreakByEntityEvent) {
+        val loc = event.entity.location
+        if (!ClaimUtil.isLocationInACiv(loc)) return
+        val player = event.remover as Player
+        val civ = getCivFromLocation(loc)
+        event.isCancelled = !PermissionChecker.can(PermissionType.INTERACT, player, civ!!)
+    }
+
 }

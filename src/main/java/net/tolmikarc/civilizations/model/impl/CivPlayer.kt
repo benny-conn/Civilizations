@@ -15,7 +15,7 @@ data class CivPlayer(override val uuid: UUID) : CPlayer {
     override var playerName: String? = null
         set(value) {
             if (value != null)
-                PlayerManager.byName[value] = this
+                PlayerManager.byName[value.toLowerCase()] = this
             field = value
         }
     override var civilization: Civ? = null
