@@ -1,35 +1,35 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.event;
+package net.tolmikarc.civilizations.api.event;
 
 import net.tolmikarc.civilizations.model.Civ;
-import org.bukkit.entity.Player;
+import net.tolmikarc.civilizations.war.Raid;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
-public class CivJoinEvent extends Event {
+public class RaidEndEvent extends Event {
 	private static final HandlerList handlers = new HandlerList();
 
-	private final Civ civ;
-	private final Player player;
+	private final Raid raid;
 
 
-	public CivJoinEvent(Civ civ, Player player) {
-		this.civ = civ;
-		this.player = player;
+	public RaidEndEvent(Raid raid) {
+		this.raid = raid;
 	}
 
-	public Player getPlayer() {
-		return player;
+	public Raid getRaid() {
+		return raid;
 	}
 
-
-	public Civ getCiv() {
-		return civ;
+	public Civ getAttacker() {
+		return raid.getCivRaiding();
 	}
 
+	public Civ getDefender() {
+		return raid.getCivBeingRaided();
+	}
 
 	@NotNull
 	@Override

@@ -15,7 +15,7 @@ import java.util.*
 class TownyAdapterTask(processAmount: Int) : ChunkedTask(processAmount) {
     var towns: List<Town> = ArrayList(TownyUniverse.getInstance().towns)
     override fun onProcess(i: Int) {
-        CivManager.createCiv(TownyAdapter.convertTownToCiv(towns[i], true))
+        CivManager.createCiv(TownyAdapter.convertTownToCiv(towns[i]))
     }
 
     override fun canContinue(i: Int): Boolean {

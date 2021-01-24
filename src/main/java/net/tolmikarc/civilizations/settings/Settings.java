@@ -182,16 +182,18 @@ public class Settings extends SimpleSettings {
 		RAID_COOLDOWN = getInteger("Cooldowns.Raid") * 60;
 		int attackerOnline = getInteger("War.Raid.Online_Ratio.Attacker");
 		int attackedOnline = getInteger("War.Raid.Online_Ratio.Attacked");
-		if (attackedOnline == 0 || attackerOnline == 0)
+		if (attackedOnline == 0 || attackerOnline == 0) {
 			RAID_RATIO_ONLINE_PLAYERS = -1;
-		else
+		} else {
 			RAID_RATIO_ONLINE_PLAYERS = attackedOnline / attackerOnline;
+		}
 		int attackerInRaid = getInteger("War.Raid.In_Raid_Ratio.Attacker");
 		int attackedInRaid = getInteger("War.Raid.In_Raid_Ratio.Attacked");
-		if (attackerInRaid == 0 || attackedInRaid == 0)
+		if (attackerInRaid == 0 || attackedInRaid == 0) {
 			RAID_RATIO_MAX_IN_RAID = -1;
-		else
+		} else {
 			RAID_RATIO_MAX_IN_RAID = attackedInRaid / attackerInRaid;
+		}
 		RAID_LIVES = getInteger("War.Raid.Lives");
 		RAID_BREAK_SWITCHABLES = getBoolean("War.Raid.Break_Switchables");
 		RAID_PVP_TP_COOLDOWN = getBoolean("War.Raid.PVP_TP_Cooldown");
@@ -208,28 +210,60 @@ public class Settings extends SimpleSettings {
 		String outsiderGroupName = getString("Permissions.Groups.Outsider.Name");
 
 		Set<PermissionType> defaultGroupPermissions = new HashSet<>();
-		if (getBoolean("Permissions.Groups.Default.Build")) defaultGroupPermissions.add(PermissionType.BUILD);
-		if (getBoolean("Permissions.Groups.Default.Break")) defaultGroupPermissions.add(PermissionType.BREAK);
-		if (getBoolean("Permissions.Groups.Default.Switch")) defaultGroupPermissions.add(PermissionType.SWITCH);
-		if (getBoolean("Permissions.Groups.Default.Interact")) defaultGroupPermissions.add(PermissionType.INTERACT);
+		if (getBoolean("Permissions.Groups.Default.Build")) {
+			defaultGroupPermissions.add(PermissionType.BUILD);
+		}
+		if (getBoolean("Permissions.Groups.Default.Break")) {
+			defaultGroupPermissions.add(PermissionType.BREAK);
+		}
+		if (getBoolean("Permissions.Groups.Default.Switch")) {
+			defaultGroupPermissions.add(PermissionType.SWITCH);
+		}
+		if (getBoolean("Permissions.Groups.Default.Interact")) {
+			defaultGroupPermissions.add(PermissionType.INTERACT);
+		}
 
 		Set<PermissionType> outsiderGroupPermissions = new HashSet<>();
-		if (getBoolean("Permissions.Groups.Outsider.Build")) defaultGroupPermissions.add(PermissionType.BUILD);
-		if (getBoolean("Permissions.Groups.Outsider.Break")) defaultGroupPermissions.add(PermissionType.BREAK);
-		if (getBoolean("Permissions.Groups.Outsider.Switch")) defaultGroupPermissions.add(PermissionType.SWITCH);
-		if (getBoolean("Permissions.Groups.Outsider.Interact")) defaultGroupPermissions.add(PermissionType.INTERACT);
+		if (getBoolean("Permissions.Groups.Outsider.Build")) {
+			defaultGroupPermissions.add(PermissionType.BUILD);
+		}
+		if (getBoolean("Permissions.Groups.Outsider.Break")) {
+			defaultGroupPermissions.add(PermissionType.BREAK);
+		}
+		if (getBoolean("Permissions.Groups.Outsider.Switch")) {
+			defaultGroupPermissions.add(PermissionType.SWITCH);
+		}
+		if (getBoolean("Permissions.Groups.Outsider.Interact")) {
+			defaultGroupPermissions.add(PermissionType.INTERACT);
+		}
 
 		Set<PermissionType> allyGroupPermissions = new HashSet<>();
-		if (getBoolean("Permissions.Groups.Ally.Build")) defaultGroupPermissions.add(PermissionType.BUILD);
-		if (getBoolean("Permissions.Groups.Ally.Break")) defaultGroupPermissions.add(PermissionType.BREAK);
-		if (getBoolean("Permissions.Groups.Ally.Switch")) defaultGroupPermissions.add(PermissionType.SWITCH);
-		if (getBoolean("Permissions.Groups.Ally.Interact")) defaultGroupPermissions.add(PermissionType.INTERACT);
+		if (getBoolean("Permissions.Groups.Ally.Build")) {
+			defaultGroupPermissions.add(PermissionType.BUILD);
+		}
+		if (getBoolean("Permissions.Groups.Ally.Break")) {
+			defaultGroupPermissions.add(PermissionType.BREAK);
+		}
+		if (getBoolean("Permissions.Groups.Ally.Switch")) {
+			defaultGroupPermissions.add(PermissionType.SWITCH);
+		}
+		if (getBoolean("Permissions.Groups.Ally.Interact")) {
+			defaultGroupPermissions.add(PermissionType.INTERACT);
+		}
 
 		Set<PermissionType> enemyGroupPermissions = new HashSet<>();
-		if (getBoolean("Permissions.Groups.Enemy.Build")) defaultGroupPermissions.add(PermissionType.BUILD);
-		if (getBoolean("Permissions.Groups.Enemy.Break")) defaultGroupPermissions.add(PermissionType.BREAK);
-		if (getBoolean("Permissions.Groups.Enemy.Switch")) defaultGroupPermissions.add(PermissionType.SWITCH);
-		if (getBoolean("Permissions.Groups.Enemy.Interact")) defaultGroupPermissions.add(PermissionType.INTERACT);
+		if (getBoolean("Permissions.Groups.Enemy.Build")) {
+			defaultGroupPermissions.add(PermissionType.BUILD);
+		}
+		if (getBoolean("Permissions.Groups.Enemy.Break")) {
+			defaultGroupPermissions.add(PermissionType.BREAK);
+		}
+		if (getBoolean("Permissions.Groups.Enemy.Switch")) {
+			defaultGroupPermissions.add(PermissionType.SWITCH);
+		}
+		if (getBoolean("Permissions.Groups.Enemy.Interact")) {
+			defaultGroupPermissions.add(PermissionType.INTERACT);
+		}
 
 		DEFAULT_GROUP = new Rank(defaultGroupName, defaultGroupPermissions);
 		OUTSIDER_GROUP = new Rank(outsiderGroupName, outsiderGroupPermissions);
@@ -240,8 +274,9 @@ public class Settings extends SimpleSettings {
 
 
 		List<String> switchablesAsStrings = getStringList("Permissions.Switchable_Blocks");
-		for (String string : switchablesAsStrings)
+		for (String string : switchablesAsStrings) {
 			SWITCHABLES.add(Material.valueOf(string));
+		}
 
 
 		int colorPallet = getInteger("Color_Pallet");

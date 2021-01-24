@@ -4,7 +4,8 @@
 
 package net.tolmikarc.civilizations.command.admin
 
-import net.tolmikarc.civilizations.event.UnclaimEvent
+
+import net.tolmikarc.civilizations.api.event.UnclaimEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
 import net.tolmikarc.civilizations.settings.Localization

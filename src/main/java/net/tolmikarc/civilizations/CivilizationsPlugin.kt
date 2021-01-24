@@ -21,7 +21,6 @@ import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.UpkeepTaxesTask
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
-import org.dynmap.DynmapAPI
 import org.mineacademy.fo.ASCIIUtil
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.model.HookManager
@@ -44,16 +43,7 @@ class CivilizationsPlugin : SimplePlugin() {
         registerAllTasks()
         Common.ADD_TELL_PREFIX = true
         Common.log("Civilizations by Tolmikarc up and running!")
-
-        for (civ in CivManager.all) {
-            civ.home?.let {
-                DynmapHook.doDynmapStuffWithCiv(civ)
-            }
-        }
         PaperLib.suggestPaper(this)
-        Common.runLater(10) {
-            //  seedDatabase()
-        }
     }
 
     override fun onPluginStop() {
@@ -76,10 +66,6 @@ class CivilizationsPlugin : SimplePlugin() {
 
     override fun getFoundedYear(): Int {
         return 2021
-    }
-
-    override fun getStartupLogo(): Array<String> {
-        return Array(13) { i -> ASCIIUtil.generate("Civ")[i] }
     }
 
     private fun registerAllTasks() {
@@ -166,29 +152,6 @@ class CivilizationsPlugin : SimplePlugin() {
         for (map in MapCommand.drawnMaps) {
             map.renderers.clear()
         }
-    }
-
-
-    private fun seedDatabase() {
-        GlobalScope.launch {
-            repeat(100000)
-            {
-                val p = PlayerManager.initialize(UUID.randomUUID()).apply { playerName = UUID.randomUUID().toString() }
-                PlayerManager.saveAsync(p)
-                println("ADDED PLAYER")
-            }
-        }
-    }
-
-    companion object {
-
-        val dynmapApi: DynmapAPI?
-            get() {
-                return if (Common.doesPluginExist("dynmap"))
-                    Bukkit.getServer().pluginManager.getPlugin("dynmap") as DynmapAPI
-                else
-                    null
-            }
     }
 
 }

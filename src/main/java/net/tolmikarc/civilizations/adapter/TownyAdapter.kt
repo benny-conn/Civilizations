@@ -4,7 +4,6 @@
 
 package net.tolmikarc.civilizations.adapter
 
-import com.palmergames.bukkit.towny.TownyUniverse
 import com.palmergames.bukkit.towny.`object`.*
 import com.palmergames.bukkit.towny.exceptions.NotRegisteredException
 import com.palmergames.bukkit.towny.permissions.TownyPerms
@@ -32,7 +31,7 @@ object TownyAdapter {
     private val convertedTowns: MutableMap<Town, Civ> = HashMap()
 
 
-    fun convertTownToCiv(town: Town, deleteAfterConversion: Boolean): Civ {
+    fun convertTownToCiv(town: Town): Civ {
         val civ = Civilization(town.getUUID())
         civ.name = town.name
         civ.home = town.spawn
@@ -54,7 +53,6 @@ object TownyAdapter {
         if (town.isTaxPercentage)
             civ.bank.taxes = town.taxes
         convertedTowns[town] = civ
-        if (deleteAfterConversion) TownyUniverse.getInstance().dataSource.removeTown(town)
         return civ
     }
 
@@ -100,7 +98,7 @@ object TownyAdapter {
 
 
     private fun getConvertedRegions(town: Town, civ: Civ): MutableSet<Region> {
-        val handledTownBlocks: MutableSet<TownBlock> = HashSet()
+//        val handledTownBlocks: MutableSet<TownBlock> = HashSet()
         val newRegions: MutableSet<Region> = HashSet()
         val newColonies: MutableSet<Colony> = HashSet()
         var id = 0
@@ -120,27 +118,27 @@ object TownyAdapter {
                 }
             }
             val bottomLeftCorner: WorldCoord = townBlock.worldCoord
-            var topLeftCorner: WorldCoord = townBlock.worldCoord
-            var topRightCorner: WorldCoord = townBlock.worldCoord
+//            var topLeftCorner: WorldCoord = townBlock.worldCoord
+            val topRightCorner: WorldCoord = townBlock.worldCoord
 
-            while (town.townBlockMap[topRightCorner.add(1, 0)] != null) {
-                val nextTownBlock: TownBlock = town.townBlockMap[topRightCorner.add(1, 0)]!!
-                topRightCorner = nextTownBlock.worldCoord
-                handledTownBlocks.add(nextTownBlock)
-            }
-            outerWhile@ while (town.townBlockMap[topLeftCorner.add(0, 1)] != null) {
-                var nextTownBlock: TownBlock = town.townBlockMap[topLeftCorner.add(0, 1)]!!
-                val handledTownBlocksMovingRight = mutableSetOf(nextTownBlock)
-                innerWhile@ while (town.townBlockMap[nextTownBlock.worldCoord.add(1, 0)] != null) {
-                    nextTownBlock = town.townBlockMap[nextTownBlock.worldCoord.add(1, 0)]!!
-                    handledTownBlocksMovingRight.add(nextTownBlock)
-                    if (nextTownBlock.worldCoord == topRightCorner.add(0, 1)) break@innerWhile
-                }
-                if (nextTownBlock.worldCoord != topRightCorner.add(0, 1)) break@outerWhile
-                topRightCorner = nextTownBlock.worldCoord
-                topLeftCorner = topLeftCorner.add(0, 1)
-                handledTownBlocks.addAll(handledTownBlocksMovingRight)
-            }
+//            while (town.townBlockMap[topRightCorner.add(1, 0)] != null) {
+//                val nextTownBlock: TownBlock = town.townBlockMap[topRightCorner.add(1, 0)]!!
+//                topRightCorner = nextTownBlock.worldCoord
+//                handledTownBlocks.add(nextTownBlock)
+//            }
+//            outerWhile@ while (town.townBlockMap[topLeftCorner.add(0, 1)] != null) {
+//                var nextTownBlock: TownBlock = town.townBlockMap[topLeftCorner.add(0, 1)]!!
+//                val handledTownBlocksMovingRight = mutableSetOf(nextTownBlock)
+//                innerWhile@ while (town.townBlockMap[nextTownBlock.worldCoord.add(1, 0)] != null) {
+//                    nextTownBlock = town.townBlockMap[nextTownBlock.worldCoord.add(1, 0)]!!
+//                    handledTownBlocksMovingRight.add(nextTownBlock)
+//                    if (nextTownBlock.worldCoord == topRightCorner.add(0, 1)) break@innerWhile
+//                }
+//                if (nextTownBlock.worldCoord != topRightCorner.add(0, 1)) break@outerWhile
+//                topRightCorner = nextTownBlock.worldCoord
+//                topLeftCorner = topLeftCorner.add(0, 1)
+//                handledTownBlocks.addAll(handledTownBlocksMovingRight)
+//            }
             val newRegion = Region(
                 id,
                 Location(

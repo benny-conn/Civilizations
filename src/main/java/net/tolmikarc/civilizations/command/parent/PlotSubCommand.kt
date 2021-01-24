@@ -16,7 +16,6 @@ import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import net.tolmikarc.civilizations.util.ClaimUtil
 import net.tolmikarc.civilizations.util.MathUtil
-import org.bukkit.Location
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import org.mineacademy.fo.model.HookManager
@@ -144,21 +143,12 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             while (civPlayer.visualizing) {
                 for (region in visualizedRegions) {
                     for (loc in region.boundingBox.filter { it.y in player.location.y - 5..player.location.y + 5 }) {
-                        if (isLocationConnected(loc, civilization, region)) continue
                         Settings.CLAIM_PARTICLE.spawnFor(player, loc)
                     }
                 }
                 delay(((1000 * Settings.PARTICLE_FREQUENCY) / visualizedRegions.size).toLong())
             }
         }
-    }
-
-    private fun isLocationConnected(location: Location, civilization: Civ, excludedRegion: Region): Boolean {
-        for (plot in civilization.claims.plots) {
-            if (plot.region == excludedRegion) continue
-            if (plot.region.boundingBox.filter { it.y == location.y }.contains(location)) return true
-        }
-        return false
     }
 
     override fun onCommand() {

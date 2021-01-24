@@ -6,10 +6,10 @@ package net.tolmikarc.civilizations.listener
 
 import net.tolmikarc.civilizations.NameTag
 import net.tolmikarc.civilizations.PermissionChecker.can
+import net.tolmikarc.civilizations.api.event.CivEnterEvent
+import net.tolmikarc.civilizations.api.event.CivLeaveEvent
+import net.tolmikarc.civilizations.api.event.PlotEnterEvent
 import net.tolmikarc.civilizations.constants.Constants
-import net.tolmikarc.civilizations.event.CivEnterEvent
-import net.tolmikarc.civilizations.event.CivLeaveEvent
-import net.tolmikarc.civilizations.event.PlotEnterEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.impl.Selection

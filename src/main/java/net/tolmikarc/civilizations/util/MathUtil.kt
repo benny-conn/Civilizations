@@ -59,46 +59,10 @@ object MathUtil {
         return Pattern.matches(fpRegex, s)
     }
 
-    fun isInteger(s: String): Boolean {
-        return isInteger(s, 10)
-    }
-
-    private fun isInteger(s: String, radix: Int): Boolean {
-        if (s.isEmpty()) return false
-        for (i in s.indices) {
-            if (i == 0 && s[i] == '-') {
-                return if (s.length == 1) false else continue
-            }
-            if (Character.digit(s[i], radix) < 0) return false
-        }
-        return true
-    }
-
     fun areaBetweenTwoPoints(location1: Location, location2: Location): Int {
         return abs((location1.blockX - location2.blockX) * (location1.blockZ - location2.blockZ))
     }
 
-    fun isPointInRegion(
-        x1: Int, y1: Int, x2: Int,
-        y2: Int, x: Int, y: Int
-    ): Boolean {
-        val xBL = x1.coerceAtMost(x2)
-        val xTR = x1.coerceAtLeast(x2)
-        val yBL = y1.coerceAtMost(y2)
-        val yTR = y1.coerceAtLeast(y2)
-        return x in xBL..xTR && y in yBL..yTR
-    }
-
-    fun isPointInRegion(region: Region, x: Int, y: Int): Boolean {
-        return isPointInRegion(
-            region.primary.blockX,
-            region.primary.blockZ,
-            region.secondary.blockX,
-            region.secondary.blockZ,
-            x,
-            y
-        )
-    }
 
     fun isRegionInRegion(regionBig: Region, regionSmall: Region): Boolean {
         val xBL = regionBig.primary.blockX.coerceAtMost(regionBig.secondary.blockX)

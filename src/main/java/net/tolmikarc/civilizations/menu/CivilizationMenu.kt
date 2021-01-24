@@ -5,11 +5,11 @@
 package net.tolmikarc.civilizations.menu
 
 import io.papermc.lib.PaperLib
+import net.tolmikarc.civilizations.api.event.DeleteCivEvent
 import net.tolmikarc.civilizations.conversation.BankTranscationConversation
 import net.tolmikarc.civilizations.conversation.RankCreationConversation
 import net.tolmikarc.civilizations.conversation.RankRenameConversation
 import net.tolmikarc.civilizations.conversation.RenameConversation
-import net.tolmikarc.civilizations.event.DeleteCivEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
@@ -470,7 +470,10 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
                             civPlayer.civilization = null
                             Bukkit.getPlayer(civPlayer.uuid)
                                 ?.let { Common.tell(it, "&cYou have been kicked from your Civilization") }
-                            tellSuccess("${Settings.PRIMARY_COLOR}Successfully kicked ${Settings.SECONDARY_COLOR} ${civPlayer.playerName}")
+                            Messenger.success(
+                                player,
+                                "${Settings.PRIMARY_COLOR}Successfully kicked ${Settings.SECONDARY_COLOR} ${civPlayer.playerName}"
+                            )
                         }
                         player.closeInventory()
                         ConfirmMenu(
@@ -567,9 +570,9 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
                     )
                     PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
                         if (it)
-                            tellSuccess(Localization.Notifications.SUCCESS_TELEPORT)
+                            Messenger.success(player, Localization.Notifications.SUCCESS_TELEPORT)
                         else
-                            tellError(Localization.Warnings.FAILED_TELEPORT)
+                            Messenger.error(player, Localization.Warnings.FAILED_TELEPORT)
                     }
                     CooldownTask.addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
                 }
@@ -659,7 +662,7 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
     inner class InviteMenu :
         MenuPagged<Player>(this@CivilizationMenu, Bukkit.getOnlinePlayers()) {
         override fun convertToItemStack(player: Player): ItemStack? {
-            if (player == viewer)
+            if (viewers.contains(player))
                 return null
             val skull = ItemStack(Material.PLAYER_HEAD, 1)
             val skullMeta = skull.itemMeta as SkullMeta
@@ -760,7 +763,7 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
                     civilization.permissions.setPlayerGroup(civilization.leader!!, civilization.permissions.defaultRank)
                     civilization.leader = civPlayer
                     player.closeInventory()
-                    tellSuccess("Set new Civilization Leader")
+                    Messenger.success(player, "Set new Civilization Leader")
                 }
                 ConfirmMenu(
                     "&4&lSet Leader?",
@@ -812,9 +815,9 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
                         )
                     PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
                         if (it)
-                            tellSuccess(Localization.Notifications.SUCCESS_TELEPORT)
+                            Messenger.success(player, Localization.Notifications.SUCCESS_TELEPORT)
                         else
-                            tellError(Localization.Warnings.FAILED_TELEPORT)
+                            Messenger.error(player, Localization.Warnings.FAILED_TELEPORT)
                     }
                     CooldownTask.addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
                 }
@@ -861,7 +864,7 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
             deleteButton = object : Button() {
                 override fun onClickedInMenu(player: Player, p1: Menu?, p2: ClickType?) {
                     fun run() {
-                        tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
+                        Messenger.success(player, Localization.Notifications.SUCCESS_COMMAND)
                         for (citizen in civilization.citizens) {
                             citizen.civilization = null
                             PlayerManager.queueForSaving(citizen)
@@ -899,9 +902,9 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
                     )
                 PaperLib.teleportAsync(player, location!!).thenAccept {
                     if (it)
-                        tellSuccess(Localization.Notifications.SUCCESS_TELEPORT)
+                        Messenger.success(player, Localization.Notifications.SUCCESS_TELEPORT)
                     else
-                        tellError(Localization.Warnings.FAILED_TELEPORT)
+                        Messenger.error(player, Localization.Warnings.FAILED_TELEPORT)
                 }
                 CooldownTask.addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
             }
@@ -927,9 +930,9 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
                     )
                 PaperLib.teleportAsync(player, location).thenAccept {
                     if (it)
-                        tellSuccess(Localization.Notifications.SUCCESS_TELEPORT)
+                        Messenger.success(player, Localization.Notifications.SUCCESS_TELEPORT)
                     else
-                        tellError(Localization.Warnings.FAILED_TELEPORT)
+                        Messenger.error(player, Localization.Warnings.FAILED_TELEPORT)
                 }
                 CooldownTask.addCooldownTimer(civPlayer, CooldownTask.CooldownType.TELEPORT)
             }

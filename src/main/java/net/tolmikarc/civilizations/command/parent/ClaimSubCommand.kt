@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.command.parent
 import kotlinx.coroutines.delay
 import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.PermissionChecker
-import net.tolmikarc.civilizations.event.ClaimEvent
+import net.tolmikarc.civilizations.api.event.ClaimEvent
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.model.impl.Colony
@@ -44,11 +44,10 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
             while (civPlayer.visualizing) {
                 for (region in visualizedRegions) {
                     for (loc in region.boundingBox.filter { it.y in player.location.y - 5..player.location.y + 5 }) {
-                        if (ClaimUtil.isLocationConnected(loc, civilization, region)) continue
                         Settings.CLAIM_PARTICLE.spawnFor(player, loc)
                     }
                 }
-                delay(((1000 * Settings.PARTICLE_FREQUENCY) / visualizedRegions.size).toLong())
+                delay(1000 * Settings.PARTICLE_FREQUENCY.toLong())
             }
         }
     }

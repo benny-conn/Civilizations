@@ -5,9 +5,9 @@
 package net.tolmikarc.civilizations.war
 
 import net.tolmikarc.civilizations.NameTag
-import net.tolmikarc.civilizations.event.PlayerJoinRaidEvent
-import net.tolmikarc.civilizations.event.RaidBeginEvent
-import net.tolmikarc.civilizations.event.RaidEndEvent
+import net.tolmikarc.civilizations.api.event.PlayerJoinRaidEvent
+import net.tolmikarc.civilizations.api.event.RaidBeginEvent
+import net.tolmikarc.civilizations.api.event.RaidEndEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ

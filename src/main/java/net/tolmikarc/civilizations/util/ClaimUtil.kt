@@ -157,14 +157,4 @@ object ClaimUtil {
     }
 
 
-    fun isLocationConnected(location: Location, civilization: Civ, excludedRegion: Region): Boolean {
-        for (claimedRegion in civilization.claims.claims) {
-            if (claimedRegion == excludedRegion) continue
-            val boundingBox =
-                claimedRegion.boundingBox.filter { borderLocation: Location -> borderLocation.y == location.y }
-            return boundingBox.contains(location)
-        }
-        return false
-    }
-
 }
