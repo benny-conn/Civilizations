@@ -13,6 +13,7 @@ import net.tolmikarc.civilizations.util.MathUtil.isDouble
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import org.mineacademy.fo.model.HookManager
+import java.text.DecimalFormat
 
 class WithdrawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "withdraw") {
     override fun onCommand() {
@@ -28,11 +29,20 @@ class WithdrawCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "w
                 val amount = doubleToMoney(args[0].toDouble())
                 checkBoolean(
                     bank.balance - amount > 0,
-                    Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace("{cost}", amount.toString())
+                    Localization.Warnings.INSUFFICIENT_CIV_FUNDS.replace(
+                        "{cost}", amount.toString().format(
+                            DecimalFormat.getCurrencyInstance()
+                        )
+                    )
                 )
                 HookManager.deposit(player, amount)
                 bank.removeBalance(amount)
-                tellSuccess(Localization.Notifications.WITHDREW.replace("{cost}", amount.toString()))
+                tellSuccess(
+                    Localization.Notifications.WITHDREW.replace(
+                        "{cost}",
+                        amount.toString().format(DecimalFormat.getCurrencyInstance())
+                    )
+                )
             }
         }
     }

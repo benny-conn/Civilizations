@@ -18,7 +18,7 @@ class ListCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "list"
             val lowerLimit = (page * 10) - 9
             val upperLimit = page * 10
             tellNoPrefix("${Settings.PRIMARY_COLOR}======= ${Settings.SECONDARY_COLOR}Civs: ${args[0].capitalize()} ($page) ${Settings.PRIMARY_COLOR}=======")
-            val civs = CivManager.all.toList()
+            val civs = ArrayList(CivManager.all)
             for (i in lowerLimit..upperLimit) {
                 tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civs[i - 1].name}")
             }

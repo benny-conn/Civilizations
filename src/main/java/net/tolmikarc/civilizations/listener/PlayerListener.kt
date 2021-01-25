@@ -27,10 +27,7 @@ import net.tolmikarc.civilizations.util.WarUtil.addDamages
 import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
 import net.tolmikarc.civilizations.util.WarUtil.increaseBlocksBroken
 import net.tolmikarc.civilizations.util.WarUtil.isInRaid
-import org.bukkit.Bukkit
-import org.bukkit.Location
-import org.bukkit.Material
-import org.bukkit.Statistic
+import org.bukkit.*
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Monster
 import org.bukkit.entity.Player
@@ -49,6 +46,7 @@ import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.debug.LagCatcher
 import org.mineacademy.fo.model.HookManager
 import org.mineacademy.fo.remain.CompMetadata
+import java.text.DecimalFormat
 
 class PlayerListener : Listener {
     @EventHandler
@@ -104,13 +102,19 @@ class PlayerListener : Listener {
                 addCooldownTimer(civPlayer, CooldownTask.CooldownType.RESPAWN_PROTECTION)
                 Messenger.warn(
                     player,
-                    Localization.Warnings.Raid.DEATH_COST.replace("{cost}", Settings.MONEY_PVP_TRANSACTION.toString())
+                    Localization.Warnings.Raid.DEATH_COST.replace(
+                        "{cost}", Settings.MONEY_PVP_TRANSACTION.toString().format(
+                            DecimalFormat.getCurrencyInstance()
+                        )
+                    )
                         .replace("{power}", Settings.POWER_PVP_TRANSACTION.toString())
                         .replace("{lives}", playerLives.toString())
                 )
                 Messenger.success(
                     killer,
-                    "You earned ${Settings.CURRENCY_SYMBOL}${Settings.MONEY_PVP_TRANSACTION} and ${Settings.POWER_PVP_TRANSACTION} power for killing ${player.name}."
+                    "You earned ${
+                        Settings.MONEY_PVP_TRANSACTION.toString().format(DecimalFormat.getCurrencyInstance())
+                    } and ${Settings.POWER_PVP_TRANSACTION} power for killing ${player.name}."
                 )
                 killer?.let { killer ->
                     PlayerManager.fromBukkitPlayer(killer).addPower(Settings.POWER_PVP_TRANSACTION)
@@ -179,6 +183,8 @@ class PlayerListener : Listener {
             if (block != null) {
                 val type = block.type
                 if (!type.isInteractable) return
+                if (Tag.SIGNS.isTagged(type)) return
+                if (type == Material.ENCHANTING_TABLE) return
                 if (PermissionChecker.isSwitchable(type)) {
                     Common.log("${can(PermissionType.SWITCH, player, civilization)}")
                     Common.log(civilization.permissions.getPlayerGroup(PlayerManager.fromBukkitPlayer(player)).name)
@@ -413,7 +419,7 @@ class PlayerListener : Listener {
             }
             val plot = getPlotFromLocation(location, civilization)
             if (plot != null) {
-                if (!plot.claimToggleables.pvp) event.isCancelled = true
+                if (!plot.toggleables.pvp) event.isCancelled = true
                 return
             }
             event.isCancelled = !civilization.toggleables.pvp

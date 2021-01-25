@@ -28,9 +28,12 @@ import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.entity.ExplosionPrimeEvent
 import org.bukkit.event.hanging.HangingBreakByEntityEvent
+import org.bukkit.event.hanging.HangingBreakEvent
+import org.bukkit.event.hanging.HangingBreakEvent.RemoveCause
 import org.mineacademy.fo.RandomUtil
 import org.mineacademy.fo.remain.CompMetadata
 import java.util.*
+
 
 class EntityListener : Listener {
     @EventHandler
@@ -40,7 +43,7 @@ class EntityListener : Listener {
         val civilization = getCivFromLocation(location) ?: return
         val plot = getPlotFromLocation(location, civilization)
         if (plot != null) {
-            if (!plot.claimToggleables.mobs) event.isCancelled = true
+            if (!plot.toggleables.mobs) event.isCancelled = true
             return
         }
         if (!civilization.toggleables.mobs) {
@@ -94,7 +97,7 @@ class EntityListener : Listener {
                             continue
                         }
                     val attackingCiv = attackingPlayer.civilization!!
-                    if (RandomUtil.chance(80))
+                    if (RandomUtil.chance(75))
                         shootBlockAndAddDamages(civilization, attackingCiv, block)
                     else
                         addDamages(civilization, attackingCiv, block)
@@ -104,7 +107,7 @@ class EntityListener : Listener {
             }
             val plot = getPlotFromLocation(block.location, civilization)
             if (plot != null) {
-                if (!plot.claimToggleables.explosion) blockIterator.remove()
+                if (!plot.toggleables.explosion) blockIterator.remove()
                 continue
             }
             if (!civilization.toggleables.explosion) blockIterator.remove()
@@ -130,6 +133,15 @@ class EntityListener : Listener {
         val player = event.remover as Player
         val civ = getCivFromLocation(loc)
         event.isCancelled = !PermissionChecker.can(PermissionType.INTERACT, player, civ!!)
+    }
+
+    @EventHandler
+    fun onHangingBreak(event: HangingBreakEvent) {
+        val loc = event.entity.location
+        if (!ClaimUtil.isLocationInACiv(loc)) return
+        if (event.cause == RemoveCause.EXPLOSION) {
+            event.isCancelled = true
+        }
     }
 
 }

@@ -19,7 +19,7 @@ class ARankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank"
         civ?.apply {
             when (args[1].toLowerCase()) {
                 "set" -> {
-                    checkArgs(3, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER))
+                    checkArgs(4, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER))
                     val player = PlayerManager.getByName(args[2])
                     val rank = permissions.getGroupByName(args[3])
                     checkNotNull(

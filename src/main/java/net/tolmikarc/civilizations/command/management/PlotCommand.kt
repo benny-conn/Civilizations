@@ -23,7 +23,9 @@ class PlotCommand(parent: SimpleCommandGroup?) : PlotSubCommand(parent) {
                         "claim" -> claimPlot(civPlayer, this)
                         "delete" -> deletePlot(civPlayer, this)
                         "forsale" -> setPlotForSale(civPlayer, this)
+                        "toggle" -> toggle(civPlayer, this)
                         "add" -> addMemberToPlot(civPlayer, this)
+                        "info" -> info(this)
                     }
                 PlayerManager.queueForSaving(civPlayer)
             }
@@ -31,13 +33,13 @@ class PlotCommand(parent: SimpleCommandGroup?) : PlotSubCommand(parent) {
     }
 
     override fun tabComplete(): List<String>? {
-        if (args.size == 1) return listOf("define", "claim", "visualize", "forsale", "add")
+        if (args.size == 1) return listOf("define", "claim", "visualize", "forsale", "add", "info", "toggle")
         return super.tabComplete()
     }
 
     init {
         minArguments = 1
-        usage = "<define | claim | add | forsale | visualize> [...]"
+        usage = "<define | claim | add | forsale | visualize | info | toggle> [...]"
         if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 }

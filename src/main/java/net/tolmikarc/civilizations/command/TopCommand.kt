@@ -10,6 +10,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
+import java.text.DecimalFormat
 
 class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") {
     override fun onCommand() {
@@ -49,7 +50,12 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                         for (i in lowerLimit..upperLimit) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i - 1].name}: ${civilizationsSorted[i - 1].bank.balance} ")
+                            tellNoPrefix(
+                                "${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i - 1].name}: ${
+                                    civilizationsSorted[i - 1].bank.balance.toString()
+                                        .format(DecimalFormat.getCurrencyInstance())
+                                } "
+                            )
                         }
                     }
                     "land" -> {

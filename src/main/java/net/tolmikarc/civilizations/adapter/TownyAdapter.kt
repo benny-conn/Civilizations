@@ -150,6 +150,7 @@ object TownyAdapter {
                 ).block.location
             )
             newRegions.add(newRegion)
+            civ.claims.totalBlocksCount += 16
             id++
         }
         civ.claims.colonies.addAll(newColonies)

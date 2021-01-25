@@ -30,7 +30,7 @@ class TaxesCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "taxes
 
     init {
         minArguments = 1
-        usage = "<${Settings.CURRENCY_SYMBOL}>"
+        usage = "<>"
         if (!Settings.ALL_PERMISSIONS_ENABLED) permission = null
     }
 }

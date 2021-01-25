@@ -12,12 +12,13 @@ import net.tolmikarc.civilizations.util.MathUtil
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
+import kotlin.math.abs
 
 data class Bank(val civilization: Civ) : ConfigSerializable {
 
     var balance: Double = 0.0
     val upkeep: Double
-        get() = MathUtil.doubleToMoney(CivUtil.calculateFormulaForCiv(Settings.UPKEEP_FORMULA, civilization))
+        get() = abs(MathUtil.doubleToMoney(CivUtil.calculateFormulaForCiv(Settings.UPKEEP_FORMULA, civilization)))
     var taxes: Double = 0.0
 
 
@@ -27,8 +28,14 @@ data class Bank(val civilization: Civ) : ConfigSerializable {
     }
 
     fun removeBalance(amount: Double) {
-        balance -= amount
-        civilization.removePower(Settings.POWER_MONEY_WEIGHT * amount.toInt())
+        if (balance - amount < 0) {
+            balance = 0.0
+            val newAmount = abs(0 - balance)
+            civilization.removePower(Settings.POWER_MONEY_WEIGHT * newAmount.toInt())
+        } else {
+            balance -= amount
+            civilization.removePower(Settings.POWER_MONEY_WEIGHT * amount.toInt())
+        }
     }
 
     override fun serialize(): SerializedMap {

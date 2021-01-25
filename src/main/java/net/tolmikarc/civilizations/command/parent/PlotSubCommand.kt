@@ -16,10 +16,13 @@ import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import net.tolmikarc.civilizations.util.ClaimUtil
 import net.tolmikarc.civilizations.util.MathUtil
+import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import org.mineacademy.fo.model.HookManager
+import java.text.DecimalFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot") {
 
@@ -69,7 +72,10 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             checkBoolean(forSale, Localization.Warnings.Claim.NOT_FOR_SALE)
             checkBoolean(
                 HookManager.getBalance(player) - price > 0,
-                Localization.Warnings.INSUFFICIENT_PLAYER_FUNDS.replace("{cost}", price.toString())
+                Localization.Warnings.INSUFFICIENT_PLAYER_FUNDS.replace(
+                    "{cost}",
+                    price.toString().format(DecimalFormat.getCurrencyInstance())
+                )
             )
             HookManager.withdraw(player, price)
             owner = civPlayer
@@ -149,6 +155,96 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
                 delay(((1000 * Settings.PARTICLE_FREQUENCY) / visualizedRegions.size).toLong())
             }
         }
+    }
+
+    fun toggle(civPlayer: CPlayer, civilization: Civ) {
+        checkArgs(2, "Please specify a value to toggle")
+        val arg = args[1]
+        val plot: Plot = ClaimUtil.getPlotFromLocation(player.location, civilization) ?: return
+        plot.apply {
+            checkBoolean(
+                PermissionChecker.canManagePlot(this.civ, this, civPlayer),
+                Localization.Warnings.CANNOT_MANAGE_CIV
+            )
+            when (arg) {
+                "fire" -> toggleables.fire =
+                    !toggleables.fire.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.fire.toString()
+                            )
+                        )
+                    }
+                "explosions" -> toggleables.explosion =
+                    !toggleables.explosion.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.explosion.toString()
+                            )
+                        )
+                    }
+                "mobs" -> toggleables.mobs =
+                    !toggleables.mobs.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.mobs.toString()
+                            )
+                        )
+                    }
+                "pvp" -> toggleables.pvp =
+                    !toggleables.pvp.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.pvp.toString()
+                            )
+                        )
+                        setCooldown(Settings.PVP_TOGGLE_COOLDOWN, TimeUnit.SECONDS)
+                    }
+                "public" -> toggleables.public =
+                    !toggleables.public.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.public.toString()
+                            )
+                        )
+                    }
+                "inviteonly" -> toggleables.inviteOnly =
+                    !toggleables.inviteOnly.also {
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.inviteOnly.toString()
+                            )
+                        )
+                    }
+                else -> returnInvalidArgs()
+            }
+        }
+    }
+
+    fun info(civilization: Civ) {
+        val plot: Plot = ClaimUtil.getPlotFromLocation(player.location, civilization) ?: return
+        val toggleables = plot.toggleables
+        val membersNames: MutableList<String?> = ArrayList()
+        for (player in civilization.citizens) {
+            membersNames.add(player.playerName)
+        }
+        tellNoPrefix(
+            "${Settings.PRIMARY_COLOR}============ ${Settings.SECONDARY_COLOR}" + civilization.name + "${Settings.PRIMARY_COLOR} ============",
+            "${Settings.PRIMARY_COLOR}Owner: ${Settings.SECONDARY_COLOR}" + plot.owner,
+            "${Settings.PRIMARY_COLOR}Members: ${Settings.SECONDARY_COLOR}" + Common.join(
+                membersNames,
+                ", "
+            ),
+            "${Settings.PRIMARY_COLOR}============================",
+            "${Settings.PRIMARY_COLOR}PVP: ${Settings.SECONDARY_COLOR}" + toggleables.pvp + " ${Settings.PRIMARY_COLOR}Mob Spawning: ${Settings.SECONDARY_COLOR}" + toggleables.mobs + " ${Settings.PRIMARY_COLOR}Explosions: ${Settings.SECONDARY_COLOR}" + toggleables.explosion + " ${Settings.PRIMARY_COLOR}Fire Spread: ${Settings.SECONDARY_COLOR}" + toggleables.fire + " ${Settings.PRIMARY_COLOR}Public: ${Settings.SECONDARY_COLOR}" + toggleables.public + " ${Settings.PRIMARY_COLOR}Invite Only: ${Settings.SECONDARY_COLOR}" + toggleables.inviteOnly,
+            "${Settings.PRIMARY_COLOR}============================"
+        )
     }
 
     override fun onCommand() {

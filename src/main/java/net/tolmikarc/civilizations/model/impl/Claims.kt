@@ -5,11 +5,11 @@ package net.tolmikarc.civilizations.model.impl
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Region
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
+import kotlin.math.abs
 
 class Claims(val civ: Civ) : ConfigSerializable {
 
@@ -80,8 +80,14 @@ class Claims(val civ: Civ) : ConfigSerializable {
     }
 
     private fun removeTotalBlocks(amount: Int) {
-        totalBlocksCount -= amount
-        civ.removePower(Settings.POWER_BLOCKS_WEIGHT * amount)
+        if (totalBlocksCount - amount < 0) {
+            totalBlocksCount = 0
+            val newAmount = abs(0 - totalBlocksCount)
+            civ.removePower(Settings.POWER_BLOCKS_WEIGHT * newAmount)
+        } else {
+            totalBlocksCount -= amount
+            civ.removePower(Settings.POWER_BLOCKS_WEIGHT * amount)
+        }
     }
 
 
@@ -104,7 +110,7 @@ class Claims(val civ: Civ) : ConfigSerializable {
             claims.colonies.addAll(map.getSet("Colonies", Colony::class.java))
             claims.plots.addAll(map.getSet("Plots", Plot::class.java))
             claims.idNumber = map.getInteger("ID_Number")
-            claims.totalBlocksCount = map.getInteger("Total_blocks")
+            claims.totalBlocksCount = abs(map.getInteger("Total_blocks"))
             return claims
         }
     }

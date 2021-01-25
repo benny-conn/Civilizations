@@ -103,11 +103,11 @@ class CivListener : Listener {
         Remain.sendActionBar(
             event.player,
             if (event.plot.forSale)
-                "{1}Plot: {2}" + event.plot.price + (if (event.plot.claimToggleables.pvp) " &4&l[PVP]" else "")
+                "{1}Plot: {2}" + event.plot.price + (if (event.plot.toggleables.pvp) " &4&l[PVP]" else "")
             else
                 "{1}Plot: {2}" +
                         if (plotOwner.uuid != event.plot.civ.leader?.uuid) plotOwner.playerName
-                        else "Unowned" + (if (event.plot.claimToggleables.pvp) " &4&l[PVP]" else "")
+                        else "Unowned" + (if (event.plot.toggleables.pvp) " &4&l[PVP]" else "")
         )
     }
 

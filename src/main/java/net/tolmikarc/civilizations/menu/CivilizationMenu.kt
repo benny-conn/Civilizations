@@ -373,7 +373,7 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
                         CompMaterial.ENDER_CHEST,
                         "&2&lBalance",
                         "",
-                        "${Settings.CURRENCY_SYMBOL}${civilization.bank.balance}"
+                        "${civilization.bank.balance}"
                     ).build().make()
                 }
             }

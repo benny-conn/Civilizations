@@ -59,7 +59,7 @@ class SignListener : Listener {
 
             Messenger.success(
                 player,
-                "{1}Successfully created Warp Sign" + if (Settings.WARP_SIGN_COST > 0) " for ${Settings.CURRENCY_SYMBOL}${Settings.WARP_SIGN_COST}" else ""
+                "{1}Successfully created Warp Sign" + if (Settings.WARP_SIGN_COST > 0) " for ${Settings.WARP_SIGN_COST}" else ""
             )
         }
     }

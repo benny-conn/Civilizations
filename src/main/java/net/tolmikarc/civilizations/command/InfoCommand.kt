@@ -13,6 +13,7 @@ import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
+import java.text.DecimalFormat
 
 class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info") {
     override fun onCommand() {
@@ -84,8 +85,16 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
                 citizenNames,
                 ", "
             ), "${Settings.PRIMARY_COLOR}Power: ${Settings.SECONDARY_COLOR} ${civilization.power}",
-            "${Settings.PRIMARY_COLOR}Balance: ${Settings.SECONDARY_COLOR} ${Settings.CURRENCY_SYMBOL}${civilization.bank.balance}",
-            "${Settings.PRIMARY_COLOR}Upkeep Cost: ${Settings.SECONDARY_COLOR}${Settings.CURRENCY_SYMBOL}${civilization.bank.upkeep} ${Settings.PRIMARY_COLOR}Tax Amount: ${Settings.SECONDARY_COLOR}${Settings.CURRENCY_SYMBOL}${civilization.bank.taxes}",
+            "${Settings.PRIMARY_COLOR}Balance: ${Settings.SECONDARY_COLOR} ${
+                civilization.bank.balance.toString().format(
+                    DecimalFormat.getCurrencyInstance()
+                )
+            }",
+            "${Settings.PRIMARY_COLOR}Upkeep Cost: ${Settings.SECONDARY_COLOR}${
+                civilization.bank.upkeep.toString().format(DecimalFormat.getCurrencyInstance())
+            } ${Settings.PRIMARY_COLOR}Tax Amount: ${Settings.SECONDARY_COLOR}${
+                civilization.bank.taxes.toString().format(DecimalFormat.getCurrencyInstance())
+            }",
             "${Settings.PRIMARY_COLOR}Total Blocks: ${Settings.SECONDARY_COLOR}" + civilization.claims.totalBlocksCount,
             "${Settings.PRIMARY_COLOR}============================",
             "${Settings.PRIMARY_COLOR}PVP: ${Settings.SECONDARY_COLOR}" + toggleables.pvp + " ${Settings.PRIMARY_COLOR}Mob Spawning: ${Settings.SECONDARY_COLOR}" + toggleables.mobs + " ${Settings.PRIMARY_COLOR}Explosions: ${Settings.SECONDARY_COLOR}" + toggleables.explosion + " ${Settings.PRIMARY_COLOR}Fire Spread: ${Settings.SECONDARY_COLOR}" + toggleables.fire + " ${Settings.PRIMARY_COLOR}Public: ${Settings.SECONDARY_COLOR}" + toggleables.public + " ${Settings.PRIMARY_COLOR}Invite Only: ${Settings.SECONDARY_COLOR}" + toggleables.inviteOnly,

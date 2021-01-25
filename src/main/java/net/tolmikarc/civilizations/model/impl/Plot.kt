@@ -8,7 +8,6 @@ import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Region
 import net.tolmikarc.civilizations.permissions.Toggleables
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
@@ -24,7 +23,7 @@ data class Plot(
     var price = 0.0
     var forSale = false
     var members: MutableSet<CPlayer> = HashSet()
-    var claimToggleables = Toggleables()
+    var toggleables = Toggleables()
 
 
     fun addMember(player: CPlayer) {
@@ -41,7 +40,7 @@ data class Plot(
         map.put("Price", price)
         map.putIfExist("For_Sale", forSale)
         map.putIfExist("Members", members.stream().map { it.uuid }.collect(Collectors.toSet()))
-        map.put("Toggleables", claimToggleables)
+        map.put("Toggleables", toggleables)
         return map
     }
 
@@ -62,7 +61,7 @@ data class Plot(
             plot.price = price.toDouble()
             plot.forSale = forSale
             plot.members = members
-            plot.claimToggleables = claimToggleables
+            plot.toggleables = claimToggleables
             return plot
         }
     }

@@ -88,6 +88,7 @@ object PermissionChecker {
                 type == Material.LEVER ||
                 type == Material.CHEST ||
                 type == Material.TRAPPED_CHEST ||
-                type == Material.CHEST_MINECART
+                type == Material.CHEST_MINECART ||
+                Settings.SWITCHABLES.contains(type)
     }
 }

@@ -20,7 +20,7 @@ class WorldListener : Listener {
         val civilization = getCivFromLocation(location) ?: return
         val plot = getPlotFromLocation(location, civilization)
         if (plot != null) {
-            if (!plot.claimToggleables.fire) event.isCancelled = true
+            if (!plot.toggleables.fire) event.isCancelled = true
             return
         }
         if (!civilization.toggleables.fire) event.isCancelled = true
