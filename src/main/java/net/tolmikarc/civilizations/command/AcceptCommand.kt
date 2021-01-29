@@ -16,11 +16,10 @@ class AcceptCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "acc
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
+            checkBoolean(civPlayer.civilization == null, Localization.Warnings.CANNOT_JOIN_CIV)
             checkNotNull(civPlayer.civilizationInvite, Localization.Warnings.NULL_RESULT.replace("{item}", "invites"))
             civPlayer.civilizationInvite?.apply {
-                this.addCitizen(civPlayer)
-                civPlayer.civilization = this
-                civPlayer.civilizationInvite = null
+                addCitizen(civPlayer)
                 tellSuccess(Localization.Notifications.ACCEPTED_INVITE.replace("{civ}", this.name!!))
                 tellInfo(Localization.Notifications.INFO)
                 Common.callEvent(CivJoinEvent(this, player))

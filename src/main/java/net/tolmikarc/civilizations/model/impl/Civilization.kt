@@ -80,6 +80,8 @@ data class Civilization(override val uuid: UUID) : Civ {
 
 
     override fun addCitizen(player: CPlayer) {
+        player.civilizationInvite = null
+        player.civilization = this
         citizens.add(player)
         permissions.setPlayerGroup(player, permissions.defaultRank)
         addPower(Settings.POWER_CITIZENS_WEIGHT)
@@ -91,6 +93,7 @@ data class Civilization(override val uuid: UUID) : Civ {
     }
 
     override fun removeCitizen(player: CPlayer) {
+        player.civilization = null
         citizens.remove(player)
         permissions.playerGroupMap.remove(player.uuid)
         removePower(Settings.POWER_CITIZENS_WEIGHT)

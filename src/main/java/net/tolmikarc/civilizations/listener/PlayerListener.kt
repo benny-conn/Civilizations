@@ -440,10 +440,14 @@ class PlayerListener : Listener {
             if (damager !is Player || damaged is Player) return
             val civ = getCivFromLocation(damaged.location) ?: return
             if (damaged is Monster) {
-                if (!civ.toggleables.mobs)
-                    damaged.remove()
-                else
-                    return
+                val plot = getPlotFromLocation(damaged.location, civ)
+                if (plot != null) {
+                    if (!plot.toggleables.mobs)
+                        damaged.remove()
+                } else {
+                    if (!civ.toggleables.mobs)
+                        damaged.remove()
+                }
             }
             event.isCancelled = !can(PermissionType.INTERACT, damager, civ)
         } finally {

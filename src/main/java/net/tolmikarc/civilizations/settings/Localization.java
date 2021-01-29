@@ -79,6 +79,7 @@ public class Localization extends SimpleLocalization {
 		public static String MAXIMUM;
 		public static String OUTLAW_ENTER;
 		public static String OUTLAW_ACTIONS;
+		public static String CANNOT_JOIN_CIV;
 
 
 		private static void init() {
@@ -127,6 +128,7 @@ public class Localization extends SimpleLocalization {
 			MAXIMUM = getStringColorized("Maximum");
 			OUTLAW_ENTER = getStringColorized("Outlaw_Enter");
 			OUTLAW_ACTIONS = getStringColorized("Outlaw_Actions");
+			CANNOT_JOIN_CIV = getStringColorized("Cannot_Join_Civ");
 		}
 
 		public static class Claim {

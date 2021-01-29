@@ -51,6 +51,7 @@ Warnings:
   Not_Warring: "{3}You are not warring this Civilization"
   Outlaw_Enter: "{3}You are an outlaw in this town and cannot enter."
   Outlaw_Actions: "{3}You are an outlaw in this town and cannot do anything."
+  Cannot_Join_Civ: "{3}You are unable to join a new Civilization because you are currently in a Civilization."
   Claim:
     No_Claim: "{3}There is no claim at your location"
     Stop_Visualizing: "{3}Stop visualizing before completing this action."
@@ -113,25 +114,6 @@ Notifications:
   Tutorial: "{1}Use /civ create to create a Civilization and protect your land!"
   Select_Primary: "{1}Set first point to {x}, {z}"
   Select_Secondary: "{1}Set second point to {x}, {z}"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

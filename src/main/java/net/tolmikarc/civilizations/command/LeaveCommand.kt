@@ -25,7 +25,6 @@ class LeaveCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "leav
 
             fun run() {
                 civilization.removeCitizen(civPlayer)
-                civPlayer.civilization = null
                 PlayerManager.queueForSaving(civPlayer)
                 CivManager.queueForSaving(civilization)
                 tellSuccess(Localization.Notifications.SUCCESS_COMMAND)

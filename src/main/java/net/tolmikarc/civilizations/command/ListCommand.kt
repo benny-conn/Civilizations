@@ -20,6 +20,8 @@ class ListCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "list"
             tellNoPrefix("${Settings.PRIMARY_COLOR}======= ${Settings.SECONDARY_COLOR}Civs: ($page) ${Settings.PRIMARY_COLOR}=======")
             val civs = ArrayList(CivManager.all)
             for (i in lowerLimit..upperLimit) {
+                if (i >= civs.size)
+                    break
                 tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civs[i - 1].name}")
             }
 

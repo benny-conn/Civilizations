@@ -4,6 +4,7 @@
 
 package net.tolmikarc.civilizations.command.admin
 
+import net.tolmikarc.civilizations.command.management.LeaderCommand
 import org.mineacademy.fo.command.SimpleCommandGroup
 
 class AdminCommandGroup : SimpleCommandGroup() {
@@ -27,6 +28,7 @@ class AdminCommandGroup : SimpleCommandGroup() {
         registerSubcommand(AWarpsCommand(this))
         registerSubcommand(ARankCommand(this))
         registerSubcommand(ARepairCommand(this))
+        registerSubcommand(LeaderCommand(this))
         registerSubcommand(ATownyAdaptCommand(this))
     }
 
