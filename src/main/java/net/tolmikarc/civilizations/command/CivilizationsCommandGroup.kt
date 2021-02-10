@@ -49,6 +49,7 @@ class CivilizationsCommandGroup : SimpleCommandGroup() {
         registerSubcommand(WarpCommand(this))
         registerSubcommand(WarpsCommand(this))
         registerSubcommand(MapCommand(this))
+        registerSubcommand(HereCommand(this))
         if (Settings.FLY_ENABLED) registerSubcommand(FlyCommand(this))
         registerSubcommand(TestCommand(this))
     }
