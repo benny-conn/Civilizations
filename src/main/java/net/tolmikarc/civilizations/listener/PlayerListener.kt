@@ -175,7 +175,7 @@ class PlayerListener : Listener {
                 if (selectionType == Selection.SelectionType.PRIMARY) {
                     Messenger.success(
                         player,
-                        Localization.Notifications.SELECT_SECONDARY.replace(
+                        Localization.Notifications.SELECT_PRIMARY.replace(
                             "{x}",
                             civPlayer.selection.primary!!.x.toString()
                         ).replace("{z}", civPlayer.selection.primary!!.z.toString())

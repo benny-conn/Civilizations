@@ -24,7 +24,6 @@ data class CivPlayer(override val uuid: UUID) : CPlayer {
     override val selection: Selection = Selection()
     override var visualizing = false
     override var flying = false
-    override var lastSelection: Selection.SelectionType? = null
     override var raidBlocksDestroyed = 0
     override var lastLocationBeforeRaid: Location? = null
 

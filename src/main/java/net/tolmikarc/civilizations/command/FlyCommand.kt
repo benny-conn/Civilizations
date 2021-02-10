@@ -18,7 +18,7 @@ class FlyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "fly") 
             flying = !flying
             tellSuccess(Localization.Notifications.FLIGHT.replace("{value}", flying.toString()))
             if (isLocationInCiv(player.location, civilization!!)) {
-                player.allowFlight = true
+                player.allowFlight = flying
                 player.isFlying = flying
             }
         }

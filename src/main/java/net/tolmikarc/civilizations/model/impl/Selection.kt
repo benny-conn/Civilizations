@@ -3,7 +3,6 @@
  */
 package net.tolmikarc.civilizations.model.impl
 
-import net.tolmikarc.civilizations.manager.PlayerManager
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
@@ -15,6 +14,8 @@ class Selection {
     var primary: Location? = null
         private set
     var secondary: Location? = null
+        private set
+    var lastSelection: SelectionType? = null
         private set
 
     fun select(block: Block, player: Player, clickType: ClickType) {
@@ -37,7 +38,6 @@ class Selection {
 
     fun selectNoClickType(block: Block, player: Player): SelectionType {
         var selectionType: SelectionType = SelectionType.PRIMARY
-        val civPlayer = PlayerManager.fromBukkitPlayer(player)
         when {
             primary == null -> {
                 primary = block.location
@@ -47,17 +47,17 @@ class Selection {
                 secondary = block.location
                 selectionType = SelectionType.SECONDARY
             }
-            civPlayer.lastSelection == SelectionType.PRIMARY -> {
+            lastSelection == SelectionType.PRIMARY -> {
                 secondary = block.location
                 selectionType = SelectionType.SECONDARY
             }
-            civPlayer.lastSelection == SelectionType.SECONDARY -> {
+            lastSelection == SelectionType.SECONDARY -> {
                 primary = block.location
                 selectionType = SelectionType.PRIMARY
             }
         }
-        civPlayer.lastSelection = selectionType
-        
+        lastSelection = selectionType
+
         Common.runLaterAsync(5) {
             player.sendBlockChange(block.location, Bukkit.createBlockData(Material.DIAMOND_BLOCK))
         }
