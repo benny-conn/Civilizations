@@ -15,6 +15,7 @@ interface CPlayer : UniquelyIdentifiable {
     val selection: Selection
     var visualizing: Boolean
     var flying: Boolean
+    var lastSelection: Selection.SelectionType?
     var raidBlocksDestroyed: Int
     var lastLocationBeforeRaid: Location?
 

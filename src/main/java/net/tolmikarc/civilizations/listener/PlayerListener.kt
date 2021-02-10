@@ -144,20 +144,43 @@ class PlayerListener : Listener {
         val player = event.player
         val itemInHand = player.inventory.itemInMainHand
         if (itemInHand.type != Settings.CLAIM_TOOL) return
+        val block = event.clickedBlock!!
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            if (event.action == Action.LEFT_CLICK_BLOCK) {
-                val block = event.clickedBlock!!
-                civPlayer.selection.select(block, player, Selection.ClickType.LEFT)
-                Messenger.success(
-                    player,
-                    Localization.Notifications.SELECT_PRIMARY.replace("{x}", civPlayer.selection.primary!!.x.toString())
-                        .replace("{z}", civPlayer.selection.primary!!.z.toString())
-                )
-            }
-            if (event.action == Action.RIGHT_CLICK_BLOCK) {
-                val block = event.clickedBlock!!
-                if (event.hand == EquipmentSlot.HAND) {
-                    civPlayer.selection.select(block, player, Selection.ClickType.RIGHT)
+            if (Settings.DUAL_CLICK_CLAIM) {
+                if (event.action == Action.LEFT_CLICK_BLOCK) {
+                    civPlayer.selection.select(block, player, Selection.ClickType.LEFT)
+                    Messenger.success(
+                        player,
+                        Localization.Notifications.SELECT_PRIMARY.replace(
+                            "{x}",
+                            civPlayer.selection.primary!!.x.toString()
+                        )
+                            .replace("{z}", civPlayer.selection.primary!!.z.toString())
+                    )
+                }
+                if (event.action == Action.RIGHT_CLICK_BLOCK) {
+                    if (event.hand == EquipmentSlot.HAND) {
+                        civPlayer.selection.select(block, player, Selection.ClickType.RIGHT)
+                        Messenger.success(
+                            player,
+                            Localization.Notifications.SELECT_SECONDARY.replace(
+                                "{x}",
+                                civPlayer.selection.secondary!!.x.toString()
+                            ).replace("{z}", civPlayer.selection.secondary!!.z.toString())
+                        )
+                    }
+                }
+            } else {
+                val selectionType = civPlayer.selection.selectNoClickType(block, player)
+                if (selectionType == Selection.SelectionType.PRIMARY) {
+                    Messenger.success(
+                        player,
+                        Localization.Notifications.SELECT_SECONDARY.replace(
+                            "{x}",
+                            civPlayer.selection.primary!!.x.toString()
+                        ).replace("{z}", civPlayer.selection.primary!!.z.toString())
+                    )
+                } else if (selectionType == Selection.SelectionType.SECONDARY) {
                     Messenger.success(
                         player,
                         Localization.Notifications.SELECT_SECONDARY.replace(

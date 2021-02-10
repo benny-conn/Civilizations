@@ -50,6 +50,10 @@ Currency_Symbol: $
 
 Claim_Tool: WOODEN_SHOVEL
 
+# Should claims be claimed by right clicking then left clicking for each selection point (true) or
+# should the selected point alternate between primary and secondary regardless of right or left click
+Dual_Click_Claim: false
+
 Database:
   # mysql or sqlite
   Type: sqlite

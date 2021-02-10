@@ -23,6 +23,7 @@ public class Settings extends SimpleSettings {
 
 	public static String CURRENCY_SYMBOL;
 	public static Material CLAIM_TOOL;
+	public static Boolean DUAL_CLICK_CLAIM;
 
 	public static String DB_TYPE;
 	public static String DB_HOST;
@@ -121,6 +122,7 @@ public class Settings extends SimpleSettings {
 		CURRENCY_SYMBOL = getString("Currency_Symbol");
 
 		CLAIM_TOOL = getMaterial("Claim_Tool").getMaterial();
+		DUAL_CLICK_CLAIM = getBoolean("Dual_Click_Claim");
 
 		DB_TYPE = getString("Database.Type");
 		DB_HOST = getString("Database.Host");

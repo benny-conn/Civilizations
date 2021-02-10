@@ -92,7 +92,7 @@ class CivListener : Listener {
             )
         }
         // stop the player from flying if he leaves his own civ
-        if (event.civ.citizens.contains(civPlayer) && civPlayer.flying) {
+        if (civPlayer.flying) {
             player.isFlying = false
         }
     }

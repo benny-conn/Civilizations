@@ -5,8 +5,6 @@
 package net.tolmikarc.civilizations
 
 import io.papermc.lib.PaperLib
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import net.tolmikarc.civilizations.command.CivilizationsCommandGroup
 import net.tolmikarc.civilizations.command.MapCommand
 import net.tolmikarc.civilizations.command.admin.AdminCommandGroup
@@ -21,7 +19,6 @@ import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.UpkeepTaxesTask
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
-import org.mineacademy.fo.ASCIIUtil
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.model.HookManager
 import org.mineacademy.fo.plugin.SimplePlugin
@@ -116,10 +113,6 @@ class CivilizationsPlugin : SimplePlugin() {
                     "",
                     "civ_civs"
                 )
-                Common.runLaterAsync {
-                    PlayerDatastore.loadAll()
-                }
-                return
             }
             Settings.DB_TYPE.equals("mysql", ignoreCase = true) -> {
                 PlayerDatastore.connect(
@@ -138,12 +131,14 @@ class CivilizationsPlugin : SimplePlugin() {
                     Settings.DB_PASS,
                     "civ_civs"
                 )
-                PlayerDatastore.loadAll()
             }
             else -> {
                 Common.error(Throwable("NoDataSource"), "No datasource for saving and loading, disabling plugin.")
                 Bukkit.getPluginManager().disablePlugin(this)
             }
+        }
+        Common.runLaterAsync {
+            PlayerDatastore.loadAll()
         }
     }
 

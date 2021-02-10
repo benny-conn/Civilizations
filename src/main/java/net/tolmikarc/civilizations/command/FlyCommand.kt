@@ -13,12 +13,14 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class FlyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "fly") {
     override fun onCommand() {
         checkConsole()
-        player.allowFlight = true
         PlayerManager.fromBukkitPlayer(player).apply {
             checkNotNull(civilization, Localization.Warnings.NO_CIV)
             flying = !flying
             tellSuccess(Localization.Notifications.FLIGHT.replace("{value}", flying.toString()))
-            if (isLocationInCiv(player.location, civilization!!)) player.isFlying = flying
+            if (isLocationInCiv(player.location, civilization!!)) {
+                player.allowFlight = true
+                player.isFlying = flying
+            }
         }
     }
 
