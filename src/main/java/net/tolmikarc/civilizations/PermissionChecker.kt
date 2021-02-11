@@ -4,7 +4,6 @@
 
 package net.tolmikarc.civilizations
 
-import lombok.experimental.UtilityClass
 import net.tolmikarc.civilizations.constants.Permissions
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CPlayer
@@ -19,7 +18,7 @@ import org.bukkit.Material
 import org.bukkit.Tag
 import org.bukkit.entity.Player
 
-@UtilityClass
+
 object PermissionChecker {
 
     fun can(permType: PermissionType, player: Player, civilization: Civ): Boolean {

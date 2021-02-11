@@ -119,7 +119,7 @@ object ClaimUtil {
     }
 
 
-    fun regionsInSelection(region: Region, civilization: Civ): List<Region> {
+    private fun regionsInSelection(region: Region, civilization: Civ): List<Region> {
         val regions: MutableList<Region> = ArrayList()
         for (claimedRegion in civilization.claims.claims) {
             if (claimedRegion == region) continue

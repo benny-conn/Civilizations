@@ -19,61 +19,67 @@ class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "togg
             civPlayer.civilization?.apply {
                 checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
                 when (args[0].toLowerCase()) {
-                    "fire" -> toggleables.fire =
-                        !toggleables.fire.also {
-                            tellSuccess(
-                                Localization.Notifications.SUCCESS_TOGGLE.replace(
-                                    "{value}",
-                                    toggleables.fire.toString()
-                                )
+                    "fire" -> {
+                        toggleables.fire = !toggleables.fire
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.fire.toString()
                             )
-                        }
-                    "explosions" -> toggleables.explosion =
-                        !toggleables.explosion.also {
-                            tellSuccess(
-                                Localization.Notifications.SUCCESS_TOGGLE.replace(
-                                    "{value}",
-                                    toggleables.explosion.toString()
-                                )
+                        )
+
+                    }
+                    "explosions" -> {
+                        toggleables.explosion = !toggleables.explosion
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.explosion.toString()
                             )
-                        }
-                    "mobs" -> toggleables.mobs =
-                        !toggleables.mobs.also {
-                            tellSuccess(
-                                Localization.Notifications.SUCCESS_TOGGLE.replace(
-                                    "{value}",
-                                    toggleables.mobs.toString()
-                                )
+                        )
+
+                    }
+                    "mobs" -> {
+                        toggleables.mobs = !toggleables.mobs
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.mobs.toString()
                             )
-                        }
-                    "pvp" -> toggleables.pvp =
-                        !toggleables.pvp.also {
-                            tellSuccess(
-                                Localization.Notifications.SUCCESS_TOGGLE.replace(
-                                    "{value}",
-                                    toggleables.pvp.toString()
-                                )
+                        )
+
+                    }
+                    "pvp" -> {
+                        toggleables.pvp = !toggleables.pvp
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.pvp.toString()
                             )
-                            setCooldown(Settings.PVP_TOGGLE_COOLDOWN, TimeUnit.SECONDS)
-                        }
-                    "public" -> toggleables.public =
-                        !toggleables.public.also {
-                            tellSuccess(
-                                Localization.Notifications.SUCCESS_TOGGLE.replace(
-                                    "{value}",
-                                    toggleables.public.toString()
-                                )
+                        )
+                        setCooldown(Settings.PVP_TOGGLE_COOLDOWN, TimeUnit.SECONDS)
+
+                    }
+                    "public" -> {
+                        toggleables.public = !toggleables.public
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.public.toString()
                             )
-                        }
-                    "inviteonly" -> toggleables.inviteOnly =
-                        !toggleables.inviteOnly.also {
-                            tellSuccess(
-                                Localization.Notifications.SUCCESS_TOGGLE.replace(
-                                    "{value}",
-                                    toggleables.inviteOnly.toString()
-                                )
+                        )
+
+                    }
+                    "inviteonly" -> {
+                        toggleables.inviteOnly = !toggleables.inviteOnly
+                        tellSuccess(
+                            Localization.Notifications.SUCCESS_TOGGLE.replace(
+                                "{value}",
+                                toggleables.inviteOnly.toString()
                             )
-                        }
+                        )
+
+                    }
                     else -> returnInvalidArgs()
                 }
             }

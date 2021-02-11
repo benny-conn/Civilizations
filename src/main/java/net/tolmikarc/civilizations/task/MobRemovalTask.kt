@@ -4,23 +4,40 @@
 
 package net.tolmikarc.civilizations.task
 
-import net.tolmikarc.civilizations.manager.CivManager
+import net.tolmikarc.civilizations.util.ClaimUtil
+import org.bukkit.Bukkit
 import org.bukkit.entity.Monster
 import org.bukkit.scheduler.BukkitRunnable
+import org.mineacademy.fo.Common
 
 class MobRemovalTask : BukkitRunnable() {
+
+    val mobsToRemove = mutableSetOf<Monster>()
+
     override fun run() {
-        CivManager.all.forEach { civ ->
-            if (!civ.toggleables.mobs) {
-                civ.claims.claims.forEach { claim ->
-                    claim.entities.forEach { entity ->
-                        if (entity is Monster) {
-                            entity.remove()
+        for (world in Bukkit.getWorlds()) {
+            world.entities.forEach {
+                if (it is Monster) {
+                    val location = it.location
+                    val civ = ClaimUtil.getCivFromLocation(location)
+                    if (civ != null) {
+                        val plot = ClaimUtil.getPlotFromLocation(location, civ)
+                        if (plot != null) {
+                            if (!plot.toggleables.mobs)
+                                mobsToRemove.add(it)
+                        } else {
+                            if (!civ.toggleables.mobs)
+                                mobsToRemove.add(it)
                         }
                     }
                 }
             }
         }
+
+        Common.runLater(0) {
+            mobsToRemove.forEach { it.remove() }
+        }
+
     }
 
 }
