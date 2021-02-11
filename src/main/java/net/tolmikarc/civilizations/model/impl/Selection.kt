@@ -48,10 +48,12 @@ class Selection {
                 selectionType = SelectionType.SECONDARY
             }
             lastSelection == SelectionType.PRIMARY -> {
+                player.sendBlockChange(primary!!, Bukkit.createBlockData(primary!!.block.type))
                 secondary = block.location
                 selectionType = SelectionType.SECONDARY
             }
             lastSelection == SelectionType.SECONDARY -> {
+                player.sendBlockChange(secondary!!, Bukkit.createBlockData(primary!!.block.type))
                 primary = block.location
                 selectionType = SelectionType.PRIMARY
             }

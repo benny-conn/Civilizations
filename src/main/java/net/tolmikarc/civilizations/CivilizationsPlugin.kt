@@ -16,6 +16,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
+import net.tolmikarc.civilizations.task.MobRemovalTask
 import net.tolmikarc.civilizations.task.UpkeepTaxesTask
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
@@ -24,7 +25,6 @@ import org.mineacademy.fo.model.HookManager
 import org.mineacademy.fo.plugin.SimplePlugin
 import org.mineacademy.fo.settings.YamlStaticConfig
 import java.io.File
-import java.util.*
 
 class CivilizationsPlugin : SimplePlugin() {
 
@@ -68,13 +68,16 @@ class CivilizationsPlugin : SimplePlugin() {
     private fun registerAllTasks() {
         Common.runTimerAsync(20, CooldownTask())
         Common.runTimerAsync(20 * 60 * 60, UpkeepTaxesTask())
+        Common.runTimer(20 * 10, MobRemovalTask())
     }
 
     private fun registerAllPlaceholders() {
         HookManager.addPlaceholder("civilization") { player: Player ->
             val cache = PlayerManager.fromBukkitPlayer(player)
-            if (cache.civilization != null) return@addPlaceholder cache.civilization!!.name
-            ""
+            if (cache.civilization != null)
+                cache.civilization!!.name
+            else
+                ""
         }
     }
 

@@ -6,6 +6,7 @@ package net.tolmikarc.civilizations.command.management
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.conversation.RankCreationConversation
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.menu.RankMenu
 import net.tolmikarc.civilizations.permissions.Rank
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -83,6 +84,12 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
                     }
                     group?.name = args[2]
                     tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
+                }
+                "edit" -> {
+                    if (args.size < 3) returnInvalidArgs()
+                    val group = permissions.getGroupByName(args[1])
+                    checkNotNull(group, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "rank"))
+                    RankMenu(group!!, civ, null).displayTo(player)
                 }
                 "list" -> {
                     tellInfo(Common.join(civ.permissions.allRankNames, ", "))

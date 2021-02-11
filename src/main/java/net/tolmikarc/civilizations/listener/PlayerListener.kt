@@ -4,7 +4,6 @@
 
 package net.tolmikarc.civilizations.listener
 
-import net.tolmikarc.civilizations.NameTag
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.PermissionChecker.can
 import net.tolmikarc.civilizations.api.event.CivEnterEvent
@@ -93,7 +92,6 @@ class PlayerListener : Listener {
                         player,
                         Localization.Warnings.Raid.NO_LIVES
                     )
-                    NameTag.remove(player)
                     return
                 }
 
@@ -144,6 +142,7 @@ class PlayerListener : Listener {
         val player = event.player
         val itemInHand = player.inventory.itemInMainHand
         if (itemInHand.type != Settings.CLAIM_TOOL) return
+        if (!event.hasBlock()) return
         val block = event.clickedBlock!!
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             if (Settings.DUAL_CLICK_CLAIM) {

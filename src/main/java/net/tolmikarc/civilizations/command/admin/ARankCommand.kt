@@ -5,6 +5,7 @@ package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
+import net.tolmikarc.civilizations.menu.RankMenu
 import net.tolmikarc.civilizations.permissions.Rank
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -65,6 +66,12 @@ class ARankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank"
                         if (permissions.playerGroupMap[player] == group)
                             permissions.playerGroupMap[player] = permissions.defaultRank
                     }
+                }
+                "edit" -> {
+                    if (args.size < 3) returnInvalidArgs()
+                    val group = permissions.getGroupByName(args[1])
+                    checkNotNull(group, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "rank"))
+                    RankMenu(group!!, civ, null).displayTo(player)
                 }
                 "rename" -> {
                     checkArgs(3, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "rank"))

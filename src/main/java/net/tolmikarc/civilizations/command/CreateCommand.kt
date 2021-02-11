@@ -18,7 +18,7 @@ class CreateCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "new
         checkConsole()
         val name = args[0]
         PlayerManager.fromBukkitPlayer(player).let {
-            checkBoolean(!CivManager.civNames.contains(name), Localization.Warnings.CIV_NAME_EXISTS)
+            checkBoolean(!CivManager.civNames.containsIgnoreCase(name), Localization.Warnings.CIV_NAME_EXISTS)
             checkBoolean(
                 it.civilization == null,
                 Localization.Warnings.CANNOT_CREATE_CIV
@@ -32,6 +32,11 @@ class CreateCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "new
             }
         }
     }
+
+    private fun MutableSet<String>.containsIgnoreCase(other: String): Boolean {
+        return any { it.equals(other, true) }
+    }
+
 
     init {
         minArguments = 1

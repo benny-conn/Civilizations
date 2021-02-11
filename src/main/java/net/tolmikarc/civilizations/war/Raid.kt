@@ -4,7 +4,6 @@
 
 package net.tolmikarc.civilizations.war
 
-import net.tolmikarc.civilizations.NameTag
 import net.tolmikarc.civilizations.api.event.PlayerJoinRaidEvent
 import net.tolmikarc.civilizations.api.event.RaidBeginEvent
 import net.tolmikarc.civilizations.api.event.RaidEndEvent
@@ -13,6 +12,7 @@ import net.tolmikarc.civilizations.model.CPlayer
 import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
+import net.tolmikarc.civilizations.task.RaidParticleTask
 import net.tolmikarc.civilizations.util.ClaimUtil
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
@@ -27,6 +27,7 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
 
     // map of players and their lives
     val playersInvolved: MutableMap<CPlayer, Int> = HashMap()
+    val openTasks = mutableSetOf<RaidParticleTask>()
 
     fun addPlayerToRaid(player: Player) {
 
@@ -54,7 +55,9 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
                         if (PlayerManager.fromBukkitPlayer(p).civilization == civRaiding)
                             onlinePlayersFromOppositeCiv.add(p)
                 }
-                //NameTag.of("&c" + player.displayName).applyTo(player, onlinePlayersFromOppositeCiv)
+                val task = RaidParticleTask(player, onlinePlayersFromOppositeCiv)
+                Common.runTimerAsync(10, task)
+                openTasks.add(task)
 
             }
         }
@@ -113,11 +116,7 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
                     "${Settings.PRIMARY_COLOR}Raid over!"
                 )
             }
-            for (civPlayer in playersInvolved.keys) {
-                civPlayer.playerName?.let {
-                    Bukkit.getPlayer(civPlayer.uuid)?.let { bukkitPlayer -> NameTag.remove(bukkitPlayer) }
-                }
-            }
+            openTasks.forEach { it.cancel() }
             civBeingRaided.raid = null
             civRaiding.raid = null
             CooldownTask.addCooldownTimer(civBeingRaided, CooldownTask.CooldownType.END_WAR)
