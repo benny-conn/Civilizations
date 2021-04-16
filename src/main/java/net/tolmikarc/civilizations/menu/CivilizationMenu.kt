@@ -544,7 +544,7 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
     inner class InviteMenu :
         MenuPagged<Player>(this@CivilizationMenu, Bukkit.getOnlinePlayers()) {
         override fun convertToItemStack(player: Player): ItemStack? {
-            if (viewers.contains(player))
+            if (player == viewer)
                 return null
             val skull = ItemStack(Material.PLAYER_HEAD, 1)
             val skullMeta = skull.itemMeta as SkullMeta

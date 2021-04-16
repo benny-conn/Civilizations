@@ -4,7 +4,6 @@
 
 package net.tolmikarc.civilizations.command.admin
 
-import net.tolmikarc.civilizations.adapter.TownyAdapter
 import net.tolmikarc.civilizations.task.TownyAdapterTask
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -12,7 +11,7 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class ATownyAdaptCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "townyadapt") {
     override fun onCommand() {
         tellSuccess("Beginning Town Adapting")
-        TownyAdapter.getResidentsUUIDS()
+//        TownyAdapter.getResidentsUUIDS()
         TownyAdapterTask(5).startChain()
     }
 
