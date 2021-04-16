@@ -148,7 +148,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         AsyncEnvironment.run {
             while (civPlayer.visualizing) {
                 for (region in visualizedRegions) {
-                    for (loc in region.boundingBox.filter { it.y in player.location.y - 5..player.location.y + 5 }) {
+                    for (loc in region.boundingBox.filter { player.location.distance(it) < 20 }) {
                         Settings.CLAIM_PARTICLE.spawnFor(player, loc)
                     }
                 }

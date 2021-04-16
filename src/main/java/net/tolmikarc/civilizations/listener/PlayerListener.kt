@@ -208,8 +208,6 @@ class PlayerListener : Listener {
                 if (Tag.SIGNS.isTagged(type)) return
                 if (type == Material.ENCHANTING_TABLE) return
                 if (PermissionChecker.isSwitchable(type)) {
-                    Common.log("${can(PermissionType.SWITCH, player, civilization)}")
-                    Common.log(civilization.permissions.getPlayerGroup(PlayerManager.fromBukkitPlayer(player)).name)
                     event.isCancelled = !can(PermissionType.SWITCH, player, civilization)
                 } else {
                     event.isCancelled = !can(PermissionType.INTERACT, player, civilization)

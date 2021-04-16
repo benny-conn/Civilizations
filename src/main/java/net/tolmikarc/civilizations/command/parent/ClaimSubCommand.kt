@@ -44,7 +44,7 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
         AsyncEnvironment.run {
             while (civPlayer.visualizing) {
                 for (region in visualizedRegions) {
-                    inner@ for (loc in region.boundingBox.filter { it.y in player.location.y - 5..player.location.y + 5 }) {
+                    inner@ for (loc in region.boundingBox.filter { player.location.distance(it) < 20 }) {
                         if (!loc.chunk.isLoaded) break@inner
                         Settings.CLAIM_PARTICLE.spawnFor(player, loc)
                     }
