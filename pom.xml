@@ -23,8 +23,8 @@
         <java.version>1.8</java.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.4.30-M1</kotlin.version>
-        <spigot.version>1.16.4-R0.1-SNAPSHOT</spigot.version>
+        <kotlin.version>1.4.32</kotlin.version>
+        <spigot.version>1.16.5-R0.1-SNAPSHOT</spigot.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
     </properties>
 
