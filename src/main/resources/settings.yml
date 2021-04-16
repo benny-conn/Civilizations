@@ -1,0 +1,304 @@
+#
+# Welcome to the main settings file.
+#
+# For help, visit {Discord}
+# Report all bugs and issues at https://github.com/Tolmikarc/Civilizations
+#
+
+# The prefix for messages from the plugin
+Prefix: "&5&lCIV &7// "
+# How many milliseconds should an action take before the lag is logged to console
+Log_Lag_Over_Milis: 100
+Locale: en
+# command aliases separated by "|". default command: /civilizations
+Aliases: "civ|c"
+
+# -------------------------- FORMULAS ----------------------------------
+#
+# Any configuration option marked with (FORMULA) can take in a formula as a result
+# FORMULAS MUST BE WRITTEN WITHIN QUOTES
+#
+# When writing a formula bellow you may use these variables and symbols along with any other number.
+# Variables:
+# {area} - total area of the new claim on a 2-dimensional plane
+# {total_claims} - total amount of claims the Civilization has not including this current claim
+# {total_area} - total area of all of the Civilization's claims combined not including this current claim
+# {citizens} - amount of citizens in the Civilization
+# {power} - power count of the Civilization
+# {money} - total money the civilization has
+#
+# * = multiply
+# + = add
+# - = subtract
+# / = divide
+# ^ = exponent
+
+# Which color pallet for the plugin messages?
+# (#) <primary> <secondary>
+# 1. light purple, dark purple
+# 2. light blue, dark blue
+# 3. yellow, gold
+# 4. light green, dark green
+Color_Pallet: 1
+
+# Will permissions be required for every command
+# NOTE: players will need a permission for every command in the plugin if true
+# NOTE: Civilizations performs its own permission checks even when this is set to false
+All_Permissions_Enabled: false
+
+Currency_Symbol: $
+
+Claim_Tool: WOODEN_SHOVEL
+
+# Should claims be claimed by right clicking then left clicking for each selection point (true) or
+# should the selected point alternate between primary and secondary regardless of right or left click
+Dual_Click_Claim: false
+
+Database:
+  # mysql or sqlite
+  Type: sqlite
+  Host: localhost
+  Name: db
+  Port: 3306
+  Username: root
+  Password: root
+  # how many days of inactivity before a civilization or player is deleted from the database permanently
+  Delete_After: 30
+Cooldowns:
+  # in seconds
+  Teleport: 10
+  # time after toggling pvp before you can toggle pvp again in seconds
+  PVP: 30
+  # spawn kill protection during raid cooldown in seconds
+  Respawn_Protection: 5
+  # tnt placement cooldown during raid in seconds
+  TNT: 10
+  # time before you can start another raid and before the war can be ended IN MINUTES
+  Raid: 60
+
+Claim:
+  # minimum distance a new claim can be from any other civilization. Set to -1 to disable limit
+  Min_Distance_From_Nearest_Claim: -1
+  # (FORMULA) the cost of a claim.
+  Claim_Cost: "(({area} / 10) * ({total_claims} / 2)) / {citizens}"
+  # (FORMULA) the amount of total claims (regardless of the size of claim) that a civilization can have. Set to -1 to disable limit
+  Max_Claim_Count: "-1"
+  # the amount of blocks on a 2d plane that a civilization can have. Set to -1 to disable limit
+  Max_Total_Area: -1
+  # the amount of blocks on a 2d plane that any given claim cannot exceed. Set to -1 to disable limit
+  Max_Claim_Size: -1
+  Colony:
+    # (FORMULA) the maximum amount of colonies for a given civilization
+    Max_Colonies: "{power} / 100"
+    # minimum distance a new colony can be from the current civilization home. Set to -1 to disable limit
+    Min_Distance_From_Nearest_Claim: 300
+Plots:
+  # (FORMULA) the max amount of plots in a civilization
+  Max_Plots: "{citizens} * 2"
+
+# (FORMULA) the amount of money a civilization loses every day in exchange for keeping their land
+Upkeep: "{total_area} / 1000"
+# max tax amount in currency that a civilization can charge per day to its citizens
+Tax_Cap: 200.00
+
+# how should players be notified when entering and leaving civs
+# 1: action bar
+# 2: title
+Notice_Type: 1
+
+Visualizing:
+  # particles displayed when visualizing claims
+  # find particle names at https://minecraft.gamepedia.com/Particles
+  Claim: END_ROD
+  Plot: TOTEM
+  # how many seconds between particles spawning
+  # WARNING: higher numbers could lead to lag
+  Particle_Frequency: 4
+
+# cost for creating a warp sign
+# sign creation with first line = [CivWarp] second line = warpname
+Warp_Sign_Cost: 0.00
+
+# how much power for a civilization added for every category
+Power:
+  # per currency unit
+  Money: 1
+  # per one citizen
+  Citizens: 10
+  # per one block of area on a 2d plane
+  Blocks: 1
+  # does each citizen's power get added to the civilization's total power?
+  Player_Power_Included: true
+  # how much power for a player added for every category
+  Player:
+    # (FORMULA) how much power for being the leader of a civilization
+    # REMINDER: {power} = Player's Civilization's power
+    Leader: "{power} / 2"
+    # (FORMULA) how much power for being the official of a civilization
+    Official: "{power} / 4"
+    # (FORMULA) how much power for being the citizen of a civilization
+    Citizen: "{power} / 8"
+  War:
+    # how much will be given to winner
+    Win: 1000
+    # how much power per player killed in war time (amount will be transferred from the killed to the killer)
+    PVP: 10
+    # how much power per block broken in war time (amount transferred from the attacked to the attacker and the amount will be added to the player who broke)
+    Block: 1
+
+Extra_Settings:
+  # (FORMULA) max warps for a civilization
+  Max_Warps: "{power} / 20"
+  # will a Civilization's home coords be shown in the /civ info command
+  Show_Coords_In_Info: true
+  # is /civ fly enabled for those given the permission civilizations.command.fly
+  Fly: true
+  # inform players about creating a civilization when they first use a chest
+  Tutorial: true
+
+War:
+  Blocks_Per_Second_Repair: 500
+  Repair_Cost_Per_Block: 0.10
+  # cost to end war early. money will go to enemy civ
+  Surrender_Cost: 5000.00
+  Raid:
+    # How much money to start a raid. Set to 0 for no buy in.
+    Buy_In: 0
+    # in minutes
+    Length: 3
+    # ratio of players online in both civilizations to start a raid. Set both to 0 to disable limit
+    # EXAMPLE: there must be one attacked player online for every attacking player
+    Online_Ratio:
+      Attacked: 1
+      Attacker: 1
+    # minimum amount of players in the enemy civilization online to start a raid. Set both to 0 to disable limit
+    # EXAMPLE: there can be no more than 5 attackers for every 3 players being attacked inside a Civilization that is being raided
+    In_Raid_Ratio:
+      Attacker: 5
+      Attacked: 3
+    # the amount of times a player can die before being removed from a raid
+    Lives: 3
+    # can raiders break switchable items like chests and shulker chests during war
+    # WARNING: if set to true, players can take items from enemies chests and they WILL NOT be restored during repairs
+    Break_Switchables: false
+    # can attackers teleport into the Civilization being raided
+    # NOTE: will be cancelled regardless of this setting if ratio of players allowed attacking is not met
+    Attacker_Teleport: false
+    # will pvp during a raid trigger a teleport cooldown for a damaged player to prevent teleporting out of combat. Set to -1 to disable limit
+    PVP_TP_Cooldown: true
+    # money transferred between players per kill in war
+    PVP_Transaction: 10.00
+Respawn:
+  # will players respawn at their Civilization home when they die?
+  # warning: will override other plugin's respawn
+  Civ_Home: false
+Outlaw:
+  # will outlaws be unable to do anything in a civilization where they are outlawed regardless
+  # of that civilization's permissions
+  Permissions_Disabled: true
+  # will outlaws be unable to teleport or walk into a civilization where they are outlawed
+  Enter_Disabled: false
+Permissions:
+  Groups:
+    Default:
+      Name: Member
+      Build: true
+      Break: true
+      Switch: true
+      Interact: true
+    Outsider:
+      Name: Outsider
+      Build: true
+      Break: true
+      Switch: true
+      Interact: true
+    Ally:
+      Name: Ally
+      Build: true
+      Break: true
+      Switch: true
+      Interact: true
+    Enemy:
+      Name: Enemy
+      Build: true
+      Break: true
+      Switch: true
+      Interact: true
+  # list of all blocks that are considered in the "switch" permission check. These blocks are considered before the
+  # interact check is performed (ex: if lever is on this list, and a town has interacting set to false and switch set to true
+  # the lever will be able to be switched. if the lever is not on this list, it will not be able to be switched)
+  Switchable_Blocks:
+    - DARK_OAK_DOOR
+    - ACACIA_DOOR
+    - BIRCH_DOOR
+    - CRIMSON_DOOR
+    - IRON_DOOR
+    - JUNGLE_DOOR
+    - DARK_OAK_DOOR
+    - OAK_DOOR
+    - SPRUCE_DOOR
+    - WARPED_DOOR
+    - ACACIA_TRAPDOOR
+    - BIRCH_TRAPDOOR
+    - CRIMSON_TRAPDOOR
+    - DARK_OAK_TRAPDOOR
+    - IRON_TRAPDOOR
+    - JUNGLE_TRAPDOOR
+    - OAK_TRAPDOOR
+    - SPRUCE_TRAPDOOR
+    - WARPED_TRAPDOOR
+    - ACACIA_FENCE_GATE
+    - BIRCH_FENCE_GATE
+    - CRIMSON_FENCE_GATE
+    - DARK_OAK_FENCE_GATE
+    - JUNGLE_FENCE_GATE
+    - OAK_FENCE_GATE
+    - SPRUCE_FENCE_GATE
+    - WARPED_FENCE_GATE
+    - LEVER
+    - BIRCH_BUTTON
+    - ACACIA_BUTTON
+    - CRIMSON_BUTTON
+    - DARK_OAK_BUTTON
+    - JUNGLE_BUTTON
+    - OAK_BUTTON
+    - POLISHED_BLACKSTONE_BUTTON
+    - SPRUCE_BUTTON
+    - STONE_BUTTON
+    - WARPED_BUTTON
+    - CHEST
+    - TRAPPED_CHEST
+    - ACACIA_PRESSURE_PLATE
+    - POLISHED_BLACKSTONE_PRESSURE_PLATE
+    - BIRCH_PRESSURE_PLATE
+    - CRIMSON_PRESSURE_PLATE
+    - DARK_OAK_PRESSURE_PLATE
+    - HEAVY_WEIGHTED_PRESSURE_PLATE
+    - JUNGLE_PRESSURE_PLATE
+    - LIGHT_WEIGHTED_PRESSURE_PLATE
+    - OAK_PRESSURE_PLATE
+    - SPRUCE_PRESSURE_PLATE
+    - STONE_PRESSURE_PLATE
+    - WARPED_PRESSURE_PLATE
+    - SHULKER_BOX
+    - BLACK_SHULKER_BOX
+    - BLUE_SHULKER_BOX
+    - BROWN_SHULKER_BOX
+    - CYAN_SHULKER_BOX
+    - GRAY_SHULKER_BOX
+    - GREEN_SHULKER_BOX
+    - LIGHT_BLUE_SHULKER_BOX
+    - LIGHT_GRAY_SHULKER_BOX
+    - LIME_SHULKER_BOX
+    - MAGENTA_SHULKER_BOX
+    - ORANGE_SHULKER_BOX
+    - PINK_SHULKER_BOX
+    - PURPLE_SHULKER_BOX
+    - RED_SHULKER_BOX
+    - WHITE_SHULKER_BOX
+    - YELLOW_SHULKER_BOX
+
+# Do not touch below this line
+# ---------------------------------------------------------------
+Debug: [ ]
+Version: 1

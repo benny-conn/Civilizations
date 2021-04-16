@@ -1,0 +1,5 @@
+name: Civilizations
+version: ${project.version}
+main: ${main.class}
+api-version: 1.13
+author: Tolmikarc
