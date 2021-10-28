@@ -46,7 +46,7 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
                 for (region in visualizedRegions) {
                     inner@ for (loc in region.boundingBox.filter { player.location.distance(it) < 20 }) {
                         if (!loc.chunk.isLoaded) break@inner
-                        Settings.CLAIM_PARTICLE.spawnFor(player, loc)
+                        Settings.CLAIM_PARTICLE.spawn(player, loc)
                     }
                 }
                 delay(1000 * Settings.PARTICLE_FREQUENCY.toLong())

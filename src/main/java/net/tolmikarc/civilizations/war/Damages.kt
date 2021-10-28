@@ -7,7 +7,6 @@ package net.tolmikarc.civilizations.war
 import org.bukkit.Location
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
-import java.util.*
 
 class Damages : ConfigSerializable {
     // String = block data

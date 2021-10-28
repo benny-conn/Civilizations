@@ -11,41 +11,39 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 public class UnclaimEvent extends Event {
-	private static final HandlerList handlers = new HandlerList();
+    private static final HandlerList handlers = new HandlerList();
 
-	private final Civ civ;
-	private final Region region;
-	private final Player player;
-
-
-	public UnclaimEvent(Civ civ, Region region, Player player) {
-		this.civ = civ;
-		this.region = region;
-		this.player = player;
-	}
-
-	public Player getPlayer() {
-		return player;
-	}
+    private final Civ civ;
+    private final Region region;
+    private final Player player;
 
 
-	public Region getClaim() {
-		return region;
-	}
+    public UnclaimEvent(Civ civ, Region region, Player player) {
+        this.civ = civ;
+        this.region = region;
+        this.player = player;
+    }
 
-	public Civ getCiv() {
-		return civ;
-	}
+    public static HandlerList getHandlerList() {
+        return handlers;
+    }
 
+    public Player getPlayer() {
+        return player;
+    }
 
-	@NotNull
-	@Override
-	public HandlerList getHandlers() {
-		return handlers;
-	}
+    public Region getClaim() {
+        return region;
+    }
 
-	public static HandlerList getHandlerList() {
-		return handlers;
-	}
+    public Civ getCiv() {
+        return civ;
+    }
+
+    @NotNull
+    @Override
+    public HandlerList getHandlers() {
+        return handlers;
+    }
 
 }

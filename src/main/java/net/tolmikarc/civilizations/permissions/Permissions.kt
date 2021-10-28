@@ -10,8 +10,6 @@ import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
-import kotlin.collections.HashSet
-import kotlin.collections.LinkedHashMap
 
 data class Permissions(val civ: Civ) : ConfigSerializable {
     val allRankNames: List<String>

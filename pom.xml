@@ -4,27 +4,27 @@
   ~ Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.tolmikarc</groupId>
     <artifactId>Civilizations</artifactId>
-    <version>0.0.10-BETA</version>
+    <version>0.0.11-BETA</version>
 
 
     <properties>
 
         <main.class>net.tolmikarc.civilizations.CivilizationsPlugin</main.class>
 
-        <foundation.version>5.8.1</foundation.version>
+        <foundation.version>5.11.2</foundation.version>
 
-        <java.version>1.8</java.version>
+        <java.version>11</java.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.4.32</kotlin.version>
-        <spigot.version>1.16.5-R0.1-SNAPSHOT</spigot.version>
+        <kotlin.version>1.5.31</kotlin.version>
+        <spigot.version>1.17.1-R0.1-SNAPSHOT</spigot.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
     </properties>
 
@@ -93,19 +93,13 @@
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-coroutines-core</artifactId>
-            <version>1.4.2</version>
+            <version>1.5.2-native-mt</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.github.kangarko</groupId>
             <artifactId>Foundation</artifactId>
             <version>${foundation.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.TownyAdvanced</groupId>
-            <artifactId>Towny</artifactId>
-            <version>0.96.7.0</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -216,8 +210,8 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <source>8</source>
-                    <target>8</target>
+                    <source>11</source>
+                    <target>11</target>
                 </configuration>
             </plugin>
         </plugins>

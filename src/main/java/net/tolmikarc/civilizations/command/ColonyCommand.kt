@@ -17,7 +17,6 @@ import org.bukkit.Location
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
-import java.util.*
 
 class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "colony") {
     override fun onCommand() {

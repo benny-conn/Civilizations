@@ -149,7 +149,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             while (civPlayer.visualizing) {
                 for (region in visualizedRegions) {
                     for (loc in region.boundingBox.filter { player.location.distance(it) < 20 }) {
-                        Settings.CLAIM_PARTICLE.spawnFor(player, loc)
+                        Settings.CLAIM_PARTICLE.spawn(player, loc)
                     }
                 }
                 delay(((1000 * Settings.PARTICLE_FREQUENCY) / visualizedRegions.size).toLong())

@@ -10,35 +10,35 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 public class RaidEndEvent extends Event {
-	private static final HandlerList handlers = new HandlerList();
+    private static final HandlerList handlers = new HandlerList();
 
-	private final Raid raid;
+    private final Raid raid;
 
 
-	public RaidEndEvent(Raid raid) {
-		this.raid = raid;
-	}
+    public RaidEndEvent(Raid raid) {
+        this.raid = raid;
+    }
 
-	public Raid getRaid() {
-		return raid;
-	}
+    public static HandlerList getHandlerList() {
+        return handlers;
+    }
 
-	public Civ getAttacker() {
-		return raid.getCivRaiding();
-	}
+    public Raid getRaid() {
+        return raid;
+    }
 
-	public Civ getDefender() {
-		return raid.getCivBeingRaided();
-	}
+    public Civ getAttacker() {
+        return raid.getCivRaiding();
+    }
 
-	@NotNull
-	@Override
-	public HandlerList getHandlers() {
-		return handlers;
-	}
+    public Civ getDefender() {
+        return raid.getCivBeingRaided();
+    }
 
-	public static HandlerList getHandlerList() {
-		return handlers;
-	}
+    @NotNull
+    @Override
+    public HandlerList getHandlers() {
+        return handlers;
+    }
 
 }

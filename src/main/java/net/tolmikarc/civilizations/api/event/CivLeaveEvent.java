@@ -12,56 +12,55 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 public class CivLeaveEvent extends Event implements Cancellable {
-	private static final HandlerList handlers = new HandlerList();
+    private static final HandlerList handlers = new HandlerList();
 
-	private final Civ civ;
-	private final Player player;
-	private boolean cancelled;
-	private final Location from;
-	private final Location to;
-
-
-	public CivLeaveEvent(Civ civ, Player player, Location from, Location to) {
-		this.civ = civ;
-		this.player = player;
-		this.from = from;
-		this.to = to;
-	}
+    private final Civ civ;
+    private final Player player;
+    private final Location from;
+    private final Location to;
+    private boolean cancelled;
 
 
-	public Player getPlayer() {
-		return player;
-	}
+    public CivLeaveEvent(Civ civ, Player player, Location from, Location to) {
+        this.civ = civ;
+        this.player = player;
+        this.from = from;
+        this.to = to;
+    }
 
-	public Civ getCiv() {
-		return civ;
-	}
+    public static HandlerList getHandlerList() {
+        return handlers;
+    }
 
-	public Location getFrom() {
-		return from;
-	}
+    public Player getPlayer() {
+        return player;
+    }
 
-	public Location getTo() {
-		return to;
-	}
+    public Civ getCiv() {
+        return civ;
+    }
 
-	@Override
-	public boolean isCancelled() {
-		return cancelled;
-	}
+    public Location getFrom() {
+        return from;
+    }
 
-	@Override
-	public void setCancelled(boolean b) {
-		cancelled = b;
-	}
+    public Location getTo() {
+        return to;
+    }
 
-	@NotNull
-	@Override
-	public HandlerList getHandlers() {
-		return handlers;
-	}
+    @Override
+    public boolean isCancelled() {
+        return cancelled;
+    }
 
-	public static HandlerList getHandlerList() {
-		return handlers;
-	}
+    @Override
+    public void setCancelled(boolean b) {
+        cancelled = b;
+    }
+
+    @NotNull
+    @Override
+    public HandlerList getHandlers() {
+        return handlers;
+    }
 }

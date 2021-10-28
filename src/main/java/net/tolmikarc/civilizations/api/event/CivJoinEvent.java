@@ -10,35 +10,33 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 public class CivJoinEvent extends Event {
-	private static final HandlerList handlers = new HandlerList();
+    private static final HandlerList handlers = new HandlerList();
 
-	private final Civ civ;
-	private final Player player;
-
-
-	public CivJoinEvent(Civ civ, Player player) {
-		this.civ = civ;
-		this.player = player;
-	}
-
-	public Player getPlayer() {
-		return player;
-	}
+    private final Civ civ;
+    private final Player player;
 
 
-	public Civ getCiv() {
-		return civ;
-	}
+    public CivJoinEvent(Civ civ, Player player) {
+        this.civ = civ;
+        this.player = player;
+    }
 
+    public static HandlerList getHandlerList() {
+        return handlers;
+    }
 
-	@NotNull
-	@Override
-	public HandlerList getHandlers() {
-		return handlers;
-	}
+    public Player getPlayer() {
+        return player;
+    }
 
-	public static HandlerList getHandlerList() {
-		return handlers;
-	}
+    public Civ getCiv() {
+        return civ;
+    }
+
+    @NotNull
+    @Override
+    public HandlerList getHandlers() {
+        return handlers;
+    }
 
 }

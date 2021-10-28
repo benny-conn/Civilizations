@@ -13,7 +13,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
 import java.util.regex.Pattern
-import kotlin.collections.HashMap
 import kotlin.collections.set
 
 internal class UUIDFetcher(private val names: MutableList<String>) {
@@ -26,8 +25,8 @@ internal class UUIDFetcher(private val names: MutableList<String>) {
         for (player in players) {
             if (player.name != null) {
                 lookupCache[player.name!!] = player.uniqueId
-                lookupCache[player.name!!.toLowerCase()] = player.uniqueId
-                correctedNames[player.name!!.toLowerCase()] = player.name!!
+                lookupCache[player.name!!.lowercase(Locale.getDefault())] = player.uniqueId
+                correctedNames[player.name!!.lowercase(Locale.getDefault())] = player.name!!
             }
         }
 
@@ -115,7 +114,7 @@ internal class UUIDFetcher(private val names: MutableList<String>) {
                         val uuid = getUUID(id)
                         Common.log("$name --> $uuid")
                         lookupCache[name] = uuid
-                        lookupCache[name.toLowerCase()] = uuid
+                        lookupCache[name.lowercase(Locale.getDefault())] = uuid
                     }
                 }
                 i++
@@ -126,7 +125,7 @@ internal class UUIDFetcher(private val names: MutableList<String>) {
                 val uuid = UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray(Charsets.UTF_8))
                 Common.log("$name --> $uuid")
                 lookupCache[name] = uuid
-                lookupCache[name.toLowerCase()] = uuid
+                lookupCache[name.lowercase(Locale.getDefault())] = uuid
             }
         }
     }

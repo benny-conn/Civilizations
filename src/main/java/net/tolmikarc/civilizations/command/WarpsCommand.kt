@@ -10,7 +10,6 @@ import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
-import java.util.*
 
 class WarpsCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warps") {
     override fun onCommand() {

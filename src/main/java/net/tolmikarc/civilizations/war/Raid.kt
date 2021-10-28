@@ -21,7 +21,6 @@ import org.mineacademy.fo.Common
 import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.model.Countdown
 import org.mineacademy.fo.remain.Remain
-import java.util.*
 
 class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RAID_LENGTH) {
 

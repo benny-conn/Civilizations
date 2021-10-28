@@ -11,41 +11,41 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 public class PlayerJoinRaidEvent extends Event {
-	private static final HandlerList handlers = new HandlerList();
+    private static final HandlerList handlers = new HandlerList();
 
-	private final Raid raid;
-	private final Player player;
+    private final Raid raid;
+    private final Player player;
 
 
-	public PlayerJoinRaidEvent(Raid raid, Player player) {
-		this.raid = raid;
-		this.player = player;
-	}
+    public PlayerJoinRaidEvent(Raid raid, Player player) {
+        this.raid = raid;
+        this.player = player;
+    }
 
-	public Raid getRaid() {
-		return raid;
-	}
+    public static HandlerList getHandlerList() {
+        return handlers;
+    }
 
-	public Civ getAttacker() {
-		return raid.getCivRaiding();
-	}
+    public Raid getRaid() {
+        return raid;
+    }
 
-	public Civ getDefender() {
-		return raid.getCivBeingRaided();
-	}
+    public Civ getAttacker() {
+        return raid.getCivRaiding();
+    }
 
-	public Player getPlayer() {
-		return player;
-	}
+    public Civ getDefender() {
+        return raid.getCivBeingRaided();
+    }
 
-	@NotNull
-	@Override
-	public HandlerList getHandlers() {
-		return handlers;
-	}
+    public Player getPlayer() {
+        return player;
+    }
 
-	public static HandlerList getHandlerList() {
-		return handlers;
-	}
+    @NotNull
+    @Override
+    public HandlerList getHandlers() {
+        return handlers;
+    }
 
 }
