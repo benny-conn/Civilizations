@@ -68,7 +68,7 @@ class CivilizationsPlugin : SimplePlugin() {
     private fun registerAllTasks() {
         Common.runTimerAsync(20, CooldownTask())
         Common.runTimerAsync(20 * 60 * 60, UpkeepTaxesTask())
-        Common.runTimerAsync(20 * 10, MobRemovalTask())
+        Common.runTimer(20 * 10, MobRemovalTask())
     }
 
     private fun registerAllPlaceholders() {

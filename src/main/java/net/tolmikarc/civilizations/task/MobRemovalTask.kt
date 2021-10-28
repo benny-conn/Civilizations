@@ -12,7 +12,7 @@ import org.mineacademy.fo.Common
 
 class MobRemovalTask : BukkitRunnable() {
 
-    val mobsToRemove = mutableSetOf<Monster>()
+    private val mobsToRemove = mutableSetOf<Monster>()
 
     override fun run() {
         for (world in Bukkit.getWorlds()) {
@@ -34,7 +34,7 @@ class MobRemovalTask : BukkitRunnable() {
             }
         }
 
-        Common.runLater(0) {
+        Common.runLaterAsync(0) {
             mobsToRemove.forEach { it.remove() }
         }
 

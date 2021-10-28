@@ -20,7 +20,7 @@
 
         <foundation.version>5.11.2</foundation.version>
 
-        <java.version>11</java.version>
+        <java.version>1.8</java.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.version>1.5.31</kotlin.version>
@@ -124,19 +124,33 @@
                             <finalName>${project.name}-${project.version}</finalName>
                             <artifactSet>
                                 <includes>
-                                    <include>org.mineacademy:Foundation*</include>
-                                    <include>org.jetbrains.kotlin:kotlin-stdlib:*</include>
-                                    <include>org.jetbrains.kotlinx:kotlinx-coroutines-core:*</include>
+                                    <include>org.mineacademy:Game*</include>
+                                    <include>com.github.kangarko:Foundation*</include>
+                                    <include>org.jetbrains.kotlin:*</include>
+                                    <include>org.jetbrains.kotlinx:*</include>
                                     <include>io.papermc:*</include>
                                 </includes>
                                 <excludes>
                                     <exclude>org.mineacademy:GameAPI*</exclude>
+                                    <exclude>/META-INF/versions/*</exclude>
                                 </excludes>
                             </artifactSet>
                             <relocations>
                                 <relocation>
+                                    <pattern>org.jetbrains.kotlin</pattern>
+                                    <shadedPattern>${project.groupId}.${project.artifactId}.lib.kotlin</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.jetbrains.kotlinx</pattern>
+                                    <shadedPattern>${project.groupId}.${project.artifactId}.lib.kotlinx</shadedPattern>
+                                </relocation>
+                                <relocation>
                                     <pattern>kotlin</pattern>
                                     <shadedPattern>${project.groupId}.${project.artifactId}.lib.kotlin</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>kotlinx</pattern>
+                                    <shadedPattern>${project.groupId}.${project.artifactId}.lib.kotlinx</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>io.papermc.lib</pattern>
@@ -144,13 +158,17 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>org.mineacademy</pattern>
-                                    <shadedPattern>${project.groupId}.${project.artifactId}.lib</shadedPattern>
+                                    <shadedPattern>${project.groupId}.${project.artifactId}.lib.mineacademy</shadedPattern>
                                     <excludes>
                                         <exclude>org.mineacademy.${project.artifactId}.*</exclude>
                                         <exclude>org.mineacademy.gameapi.*</exclude>
                                         <exclude>org.mineacademy.boss.*</exclude>
                                         <exclude>org.mineacademy.worldeditbridge.*</exclude>
                                     </excludes>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.github.kangarko</pattern>
+                                    <shadedPattern>${project.groupId}.${project.artifactId}.lib.kangarko</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
@@ -171,6 +189,7 @@
                             <sourceDirs>
                                 <sourceDir>${project.basedir}/src/main/java</sourceDir>
                             </sourceDirs>
+                            <jvmTarget>1.8</jvmTarget>
                         </configuration>
                     </execution>
                     <execution>
@@ -210,8 +229,8 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
                 </configuration>
             </plugin>
         </plugins>
