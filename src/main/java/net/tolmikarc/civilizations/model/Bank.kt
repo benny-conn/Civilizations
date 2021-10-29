@@ -2,10 +2,9 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.model.impl
+package net.tolmikarc.civilizations.model
 
 import net.tolmikarc.civilizations.manager.CivManager
-import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import net.tolmikarc.civilizations.util.MathUtil
@@ -14,7 +13,7 @@ import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
 import kotlin.math.abs
 
-data class Bank(val civilization: Civ) : ConfigSerializable {
+data class Bank(val civilization: Civilization) : ConfigSerializable {
 
     var balance: Double = 0.0
     val upkeep: Double

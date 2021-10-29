@@ -3,7 +3,7 @@
  */
 package net.tolmikarc.civilizations.conversation
 
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.util.MathUtil
 import org.bukkit.conversations.ConversationCanceller
@@ -17,7 +17,7 @@ import org.mineacademy.fo.conversation.SimpleDecimalPrompt
 import org.mineacademy.fo.model.HookManager
 import java.text.DecimalFormat
 
-class BankTranscationConversation(private val transaction: Transaction, val civ: Civ, val player: Player) :
+class BankTranscationConversation(private val transaction: Transaction, val civ: Civilization, val player: Player) :
     SimpleConversation() {
     override fun getFirstPrompt(): Prompt? {
         if (transaction == Transaction.DEPOSIT)
@@ -32,7 +32,7 @@ class BankTranscationConversation(private val transaction: Transaction, val civ:
         return SimpleCanceller(Localization.CANCEL)
     }
 
-    inner class DepositPrompt(val civilization: Civ, val player: Player) : SimpleDecimalPrompt() {
+    inner class DepositPrompt(val civilization: Civilization, val player: Player) : SimpleDecimalPrompt() {
 
         override fun acceptValidatedInput(context: ConversationContext?, input: Double): Prompt? {
             val cost = MathUtil.doubleToMoney(input)
@@ -67,7 +67,7 @@ class BankTranscationConversation(private val transaction: Transaction, val civ:
 
     }
 
-    inner class WithdrawPrompt(val civilization: Civ, val player: Player) : SimpleDecimalPrompt() {
+    inner class WithdrawPrompt(val civilization: Civilization, val player: Player) : SimpleDecimalPrompt() {
 
         override fun acceptValidatedInput(p0: ConversationContext, p1: Double): Prompt? {
             val cost = MathUtil.doubleToMoney(p1)

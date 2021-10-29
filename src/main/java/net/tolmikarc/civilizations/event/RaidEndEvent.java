@@ -1,9 +1,10 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.api.event;
+package net.tolmikarc.civilizations.event;
 
-import net.tolmikarc.civilizations.model.Civ;
+
+import net.tolmikarc.civilizations.model.Civilization;
 import net.tolmikarc.civilizations.war.Raid;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -27,11 +28,11 @@ public class RaidEndEvent extends Event {
         return raid;
     }
 
-    public Civ getAttacker() {
+    public Civilization getAttacker() {
         return raid.getCivRaiding();
     }
 
-    public Civ getDefender() {
+    public Civilization getDefender() {
         return raid.getCivBeingRaided();
     }
 

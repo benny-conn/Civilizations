@@ -7,7 +7,7 @@ package net.tolmikarc.civilizations.db
 import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.CivPlayer
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.debug.Debugger
@@ -24,7 +24,7 @@ object PlayerDatastore : Datastore() {
         removeOldEntries()
     }
 
-    fun load(cache: CPlayer) {
+    fun load(cache: CivPlayer) {
         try {
             if (!isStored(cache.uuid)) {
                 return
@@ -52,7 +52,7 @@ object PlayerDatastore : Datastore() {
         }
     }
 
-    fun save(cache: CPlayer) {
+    fun save(cache: CivPlayer) {
         try {
             val map = SerializedMap().apply {
                 put("Name", cache.playerName)

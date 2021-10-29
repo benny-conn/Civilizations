@@ -3,14 +3,12 @@
  */
 package net.tolmikarc.civilizations.listener
 
-import net.tolmikarc.civilizations.api.event.CivEnterEvent
-import net.tolmikarc.civilizations.api.event.CivLeaveEvent
-import net.tolmikarc.civilizations.api.event.PlotEnterEvent
+import net.tolmikarc.civilizations.event.CivEnterEvent
+import net.tolmikarc.civilizations.event.CivLeaveEvent
+import net.tolmikarc.civilizations.event.PlotEnterEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
-import net.tolmikarc.civilizations.util.CivUtil
-import net.tolmikarc.civilizations.util.WarUtil
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.mineacademy.fo.Common
@@ -23,11 +21,11 @@ class CivListener : Listener {
     fun onEnterCiv(event: CivEnterEvent) {
         val player = event.player
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
-        val playersCiv = civPlayer.civilization
+        val playersCivilization = civPlayer.civilization
         // does the player have a civilization that is raiding the new civ?
-        if (WarUtil.isBeingRaided(event.civ, playersCiv) || WarUtil.isBeingRaidedByAlly(event.civ, playersCiv)) {
+        if (event.civ.isBeingRaidedBy(playersCivilization) || event.civ.isBeingRaidedByAllyOf(playersCivilization)) {
             // if the player ratio isn't valid, he cannot participate in raid :(
-            if (!WarUtil.isPlayerToPlayerRatioValid(event.civ, playersCiv)) {
+            if (!event.civ.isPlayerToPlayerRatioValid()) {
                 Common.tell(event.player, Localization.Warnings.Raid.TOO_MANY_PLAYERS)
                 return
             }
@@ -36,7 +34,7 @@ class CivListener : Listener {
             civPlayer.lastLocationBeforeRaid = event.from
         }
 
-        if (CivUtil.isPlayerOutlaw(PlayerManager.fromBukkitPlayer(player), event.civ)) {
+        if (event.civ.isPlayerOutlaw(PlayerManager.fromBukkitPlayer(player))) {
             // if the settings say no outlaws in, make sure no outlaws come in
             if (Settings.OUTLAW_ENTER_DISABLED) {
                 Messenger.warn(player, Localization.Warnings.OUTLAW_ENTER)

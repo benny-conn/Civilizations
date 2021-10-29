@@ -3,7 +3,7 @@
  */
 package net.tolmikarc.civilizations.conversation
 
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.Rank
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -16,7 +16,7 @@ import org.mineacademy.fo.conversation.SimpleCanceller
 import org.mineacademy.fo.conversation.SimpleConversation
 import org.mineacademy.fo.conversation.SimplePrompt
 
-class RankRenameConversation(val rank: Rank, val civ: Civ, val player: Player) :
+class RankRenameConversation(val rank: Rank, val civ: Civilization, val player: Player) :
     SimpleConversation() {
 
 

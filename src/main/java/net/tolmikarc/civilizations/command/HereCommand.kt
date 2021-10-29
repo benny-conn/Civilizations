@@ -14,7 +14,7 @@ class HereCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "here"
         checkConsole()
         val civ = ClaimUtil.getCivFromLocation(player.location)
         if (civ == null)
-            tellError("There is no Civ at your location")
+            tellError("There is no Civilization at your location")
         else
             tellSuccess("[${civ.name}]")
     }

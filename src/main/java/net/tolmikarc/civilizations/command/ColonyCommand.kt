@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.command
 
 import io.papermc.lib.PaperLib
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.impl.Colony
+import net.tolmikarc.civilizations.model.Colony
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask

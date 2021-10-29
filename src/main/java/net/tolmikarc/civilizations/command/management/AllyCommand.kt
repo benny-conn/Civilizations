@@ -19,32 +19,32 @@ class AllyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ally"
             checkNotNull(it.civilization, Localization.Warnings.NO_CIV)
             it.civilization?.apply {
                 checkBoolean(PermissionChecker.canManageCiv(it, this), Localization.Warnings.CANNOT_MANAGE_CIV)
-                val allyCiv = CivManager.getByName(args[1])
+                val allyCivilization = CivManager.getByName(args[1])
                 checkNotNull(
-                    allyCiv,
+                    allyCivilization,
                     Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
                 )
-                checkBoolean(allyCiv != this, Localization.Warnings.CANNOT_SPECIFY_SELF)
+                checkBoolean(allyCivilization != this, Localization.Warnings.CANNOT_SPECIFY_SELF)
                 when {
                     args[0].equals("add", ignoreCase = true) -> {
                         checkBoolean(
-                            !relationships.allies.contains(allyCiv),
+                            !relationships.allies.contains(allyCivilization),
                             Localization.Warnings.ALREADY_ALLIES
                         )
                         checkBoolean(
-                            !relationships.enemies.contains(allyCiv),
+                            !relationships.enemies.contains(allyCivilization),
                             Localization.Warnings.ALLY_ENEMY
                         )
-                        relationships.addAlly(allyCiv!!)
-                        tellSuccess(Localization.Notifications.ALLIES_TRUE.replace("{civ}", allyCiv.name!!))
+                        relationships.addAlly(allyCivilization!!)
+                        tellSuccess(Localization.Notifications.ALLIES_TRUE.replace("{civ}", allyCivilization.name!!))
                     }
                     args[0].equals("remove", ignoreCase = true) -> {
                         checkBoolean(
-                            relationships.allies.contains(allyCiv),
+                            relationships.allies.contains(allyCivilization),
                             Localization.Warnings.NOT_ALLY
                         )
-                        relationships.removeAlly(allyCiv!!)
-                        tellSuccess(Localization.Notifications.ALLIES_FALSE.replace("{civ}", allyCiv.name!!))
+                        relationships.removeAlly(allyCivilization!!)
+                        tellSuccess(Localization.Notifications.ALLIES_FALSE.replace("{civ}", allyCivilization.name!!))
                     }
                     else -> {
                         returnInvalidArgs()

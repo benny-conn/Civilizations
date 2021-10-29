@@ -2,12 +2,10 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.model.impl
+package net.tolmikarc.civilizations.model
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.permissions.Toggleables
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
@@ -15,18 +13,18 @@ import java.util.*
 import java.util.stream.Collectors
 
 data class Plot(
-    val civ: Civ,
+    val civ: Civilization,
     val id: Int,
     val region: Region,
-    var owner: CPlayer
+    var owner: CivPlayer
 ) : ConfigSerializable {
     var price = 0.0
     var forSale = false
-    var members: MutableSet<CPlayer> = HashSet()
+    var members: MutableSet<CivPlayer> = HashSet()
     var toggleables = Toggleables()
 
 
-    fun addMember(player: CPlayer) {
+    fun addMember(player: CivPlayer) {
         members.add(player)
         CivManager.queueForSaving(civ)
     }
@@ -54,7 +52,7 @@ data class Plot(
             val plot = Plot(civ, id, region, owner)
             val price = map.getInteger("Price")
             val forSale = map.getBoolean("For_Sale")
-            val members: MutableSet<CPlayer> =
+            val members: MutableSet<CivPlayer> =
                 map.getSet("Members", UUID::class.java).stream().map { PlayerManager.getByUUID(it) }
                     .collect(Collectors.toSet())
             val claimToggleables = map.get("Toggleables", Toggleables::class.java)

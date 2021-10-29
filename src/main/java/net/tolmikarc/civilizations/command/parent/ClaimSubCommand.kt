@@ -6,11 +6,11 @@ package net.tolmikarc.civilizations.command.parent
 import kotlinx.coroutines.delay
 import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.PermissionChecker
-import net.tolmikarc.civilizations.api.event.ClaimEvent
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Colony
-import net.tolmikarc.civilizations.model.impl.Region
+import net.tolmikarc.civilizations.event.ClaimEvent
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Colony
+import net.tolmikarc.civilizations.model.Region
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
@@ -20,7 +20,6 @@ import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
 import java.text.DecimalFormat
-import java.util.*
 import kotlin.math.abs
 
 
@@ -29,7 +28,7 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
     }
 
 
-    fun visualize(civPlayer: CPlayer, civilization: Civ) {
+    fun visualize(civPlayer: CivPlayer, civilization: Civilization) {
         civPlayer.visualizing = !civPlayer.visualizing
         val visualizedRegions: MutableSet<Region> = HashSet()
         if (args.size > 1 && args[1].equals("here", ignoreCase = true))
@@ -54,7 +53,7 @@ open class ClaimSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(paren
         }
     }
 
-    fun claim(civilization: Civ, player: CPlayer, isColony: Boolean) {
+    fun claim(civilization: Civilization, player: CivPlayer, isColony: Boolean) {
         checkBoolean(PermissionChecker.canManageCiv(player, civilization), Localization.Warnings.CANNOT_MANAGE_CIV)
         checkBoolean(!player.visualizing, Localization.Warnings.Claim.STOP_VISUALIZING)
         checkBoolean(player.selection.bothPointsSelected(), Localization.Warnings.Claim.INCOMPLETE_SELECTION)

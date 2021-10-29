@@ -23,12 +23,12 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
             checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
                 checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
-                val enemyCiv = CivManager.getByName(args[0])
+                val enemyCivilization = CivManager.getByName(args[0])
                 checkNotNull(
-                    enemyCiv,
+                    enemyCivilization,
                     Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
                 )
-                if (!relationships.warring.contains(enemyCiv)) returnTell(Localization.Warnings.NOT_WARRING)
+                if (!relationships.warring.contains(enemyCivilization)) returnTell(Localization.Warnings.NOT_WARRING)
                 fun run() {
                     if (hasCooldown(this, CooldownTask.CooldownType.END_WAR)) {
                         checkBoolean(
@@ -39,15 +39,15 @@ class SurrenderCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "
                             )
                         )
                         bank.removeBalance(Settings.SURRENDER_COST)
-                        enemyCiv?.bank?.addBalance(Settings.SURRENDER_COST)
+                        enemyCivilization?.bank?.addBalance(Settings.SURRENDER_COST)
                     }
-                    relationships.enemies.remove(enemyCiv)
-                    enemyCiv?.addPower(Settings.POWER_WAR_WIN)
-                    tellSuccess(Localization.Notifications.SURRENDERED.replace("{civ}", enemyCiv?.name!!))
+                    relationships.enemies.remove(enemyCivilization)
+                    enemyCivilization?.addPower(Settings.POWER_WAR_WIN)
+                    tellSuccess(Localization.Notifications.SURRENDERED.replace("{civ}", enemyCivilization?.name!!))
                 }
                 ConfirmMenu(
                     "&4Surrender?",
-                    "Give up the war with ${enemyCiv!!.name}. If you end a war early you may have to pay.",
+                    "Give up the war with ${enemyCivilization!!.name}. If you end a war early you may have to pay.",
                     ::run
                 ).displayTo(player)
             }

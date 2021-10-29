@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command
 
-import net.tolmikarc.civilizations.api.event.CreateCivEvent
+import net.tolmikarc.civilizations.event.CreateCivEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization

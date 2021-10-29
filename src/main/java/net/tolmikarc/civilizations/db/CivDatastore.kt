@@ -5,10 +5,9 @@
 package net.tolmikarc.civilizations.db
 
 import net.tolmikarc.civilizations.manager.CivManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Bank
-import net.tolmikarc.civilizations.model.impl.Civilization
+import net.tolmikarc.civilizations.model.Bank
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.war.Damages
 import org.bukkit.Location
 import org.mineacademy.fo.Common
@@ -25,7 +24,7 @@ object CivDatastore : Datastore() {
         removeOldEntries()
     }
 
-    fun load(civ: Civ) {
+    fun load(civ: Civilization) {
         try {
             if (!isStored(civ.uuid)) {
                 CivManager.removeCiv(civ)
@@ -50,7 +49,7 @@ object CivDatastore : Datastore() {
                     val home: Location? = deserializedCiv.home
                     val claims = deserializedCiv.claims
                     val warps: MutableMap<String, Location> = deserializedCiv.warps
-                    val citizens: MutableSet<CPlayer> = deserializedCiv.citizens
+                    val citizens: MutableSet<CivPlayer> = deserializedCiv.citizens
                     val relationships = deserializedCiv.relationships
                     val bank: Bank = deserializedCiv.bank
                     val permissions = deserializedCiv.permissions
@@ -80,7 +79,7 @@ object CivDatastore : Datastore() {
         }
     }
 
-    fun save(cache: Civ) {
+    fun save(cache: Civilization) {
         try {
             val map: SerializedMap = SerializedMap().apply {
                 put("Name", cache.name)

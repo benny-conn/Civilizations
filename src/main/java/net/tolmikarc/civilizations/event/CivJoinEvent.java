@@ -1,26 +1,24 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.api.event;
+package net.tolmikarc.civilizations.event;
 
-import net.tolmikarc.civilizations.model.Civ;
-import net.tolmikarc.civilizations.model.impl.Region;
+
+import net.tolmikarc.civilizations.model.Civilization;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
-public class UnclaimEvent extends Event {
+public class CivJoinEvent extends Event {
     private static final HandlerList handlers = new HandlerList();
 
-    private final Civ civ;
-    private final Region region;
+    private final Civilization civ;
     private final Player player;
 
 
-    public UnclaimEvent(Civ civ, Region region, Player player) {
+    public CivJoinEvent(Civilization civ, Player player) {
         this.civ = civ;
-        this.region = region;
         this.player = player;
     }
 
@@ -32,11 +30,7 @@ public class UnclaimEvent extends Event {
         return player;
     }
 
-    public Region getClaim() {
-        return region;
-    }
-
-    public Civ getCiv() {
+    public Civilization getCiv() {
         return civ;
     }
 

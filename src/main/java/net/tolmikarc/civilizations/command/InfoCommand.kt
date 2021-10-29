@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.command
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -19,7 +19,7 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
     override fun onCommand() {
         checkConsole()
         PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
-            val civilization: Civ?
+            val civilization: Civilization?
             if (args.isNotEmpty()) {
                 civilization = CivManager.getByName(args[0])
                 checkNotNull(
@@ -37,7 +37,7 @@ class InfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "info"
         }
     }
 
-    private fun sendInfo(civilization: Civ) {
+    private fun sendInfo(civilization: Civilization) {
         val permissions = civilization.permissions
         val toggleables = civilization.toggleables
         val citizenNames: MutableList<String?> = ArrayList()

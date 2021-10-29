@@ -12,6 +12,7 @@ import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
+import java.util.*
 
 class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enemy") {
     override fun onCommand() {
@@ -20,35 +21,41 @@ class EnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "enem
             checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
                 checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
-                val enemyCiv = CivManager.getByName(args[1])
+                val enemyCivilization = CivManager.getByName(args[1])
                 checkNotNull(
-                    enemyCiv,
+                    enemyCivilization,
                     Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
                 )
-                checkBoolean(enemyCiv != this, Localization.Warnings.CANNOT_SPECIFY_SELF)
-                when (args[0].toLowerCase()) {
+                checkBoolean(enemyCivilization != this, Localization.Warnings.CANNOT_SPECIFY_SELF)
+                when (args[0].lowercase(Locale.getDefault())) {
                     "add" -> {
                         checkBoolean(
-                            !relationships.enemies.contains(enemyCiv),
+                            !relationships.enemies.contains(enemyCivilization),
                             Localization.Warnings.ALREADY_ENEMIES
                         )
-                        checkBoolean(!relationships.allies.contains(enemyCiv), Localization.Warnings.ENEMY_ALLY)
-                        relationships.addEnemy(enemyCiv!!)
-                        tellSuccess(Localization.Notifications.ENEMIES_TRUE.replace("{civ}", enemyCiv.name!!))
-                        if (enemyCiv.relationships.enemies.contains(this))
+                        checkBoolean(
+                            !relationships.allies.contains(enemyCivilization),
+                            Localization.Warnings.ENEMY_ALLY
+                        )
+                        relationships.addEnemy(enemyCivilization!!)
+                        tellSuccess(Localization.Notifications.ENEMIES_TRUE.replace("{civ}", enemyCivilization.name!!))
+                        if (enemyCivilization.relationships.enemies.contains(this))
                             Messenger.broadcastWarn(
                                 Localization.Notifications.WAR.replace("{civ1}", this.name!!)
-                                    .replace("{civ2}", enemyCiv.name!!)
+                                    .replace("{civ2}", enemyCivilization.name!!)
                             )
 
                     }
                     "remove" -> {
-                        checkBoolean(relationships.enemies.contains(enemyCiv), Localization.Warnings.ALLY_ENEMY)
+                        checkBoolean(
+                            relationships.enemies.contains(enemyCivilization),
+                            Localization.Warnings.ALLY_ENEMY
+                        )
                         // TODO make sure that there is no cooldown
-                        if (relationships.warring.contains(enemyCiv))
+                        if (relationships.warring.contains(enemyCivilization))
                             returnTell(Localization.Warnings.SURRENDER)
-                        relationships.removeEnemy(enemyCiv!!)
-                        tellSuccess(Localization.Notifications.ENEMIES_FALSE.replace("{civ}", enemyCiv.name!!))
+                        relationships.removeEnemy(enemyCivilization!!)
+                        tellSuccess(Localization.Notifications.ENEMIES_FALSE.replace("{civ}", enemyCivilization.name!!))
                     }
                     else -> {
                         returnInvalidArgs()

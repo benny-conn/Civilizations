@@ -4,7 +4,7 @@
 package net.tolmikarc.civilizations
 
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.impl.Region
+import net.tolmikarc.civilizations.model.Region
 import net.tolmikarc.civilizations.util.ClaimUtil
 import org.bukkit.Location
 import org.bukkit.entity.Player
@@ -18,15 +18,15 @@ class MapDrawer(val region: Region) : MapRenderer() {
     override fun render(map: MapView, canvas: MapCanvas, player: Player) {
         AsyncEnvironment.run {
             val civPlayer = PlayerManager.fromBukkitPlayer(player)
-            val playersCiv = civPlayer.civilization
+            val playersCivilization = civPlayer.civilization
             for (location in region.blocks.map { it.location })
                 if (ClaimUtil.isLocationInACiv(location)) {
                     val civ = ClaimUtil.getCivFromLocation(location)!!
                     var color = MapPalette.BLUE
-                    if (playersCiv != null) {
-                        if (playersCiv.relationships.enemies.contains(civ))
+                    if (playersCivilization != null) {
+                        if (playersCivilization.relationships.enemies.contains(civ))
                             color = MapPalette.RED
-                        if (playersCiv.relationships.allies.contains(civ))
+                        if (playersCivilization.relationships.allies.contains(civ))
                             color = MapPalette.LIGHT_GREEN
                     }
                     canvas.setPixel(

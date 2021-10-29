@@ -33,7 +33,7 @@ abstract class Datastore {
         autoReconnect: Boolean = true
     ) {
         this.connect(
-            "jdbc:mysql://$host:$port/$database?useSSL=false&useUnicode=yes{3}haracterEncoding=UTF-8&autoReconnect=$autoReconnect",
+            "jdbc:mysql://$host:$port/$database?useSSL=false&useUnicode=yes&characterEncoding=UTF-8&autoReconnect=$autoReconnect",
             user,
             password,
             table
@@ -46,8 +46,8 @@ abstract class Datastore {
             lastCredentials = LastCredentials(url, user, password, table)
             connection = DriverManager.getConnection(url, user, password)
             createTablesIfNotExist()
-        } catch (var6: SQLException) {
-            if (Common.getOrEmpty(var6.message).contains("No suitable driver found")) {
+        } catch (sqlException: SQLException) {
+            if (Common.getOrEmpty(sqlException.message).contains("No suitable driver found")) {
                 Common.logFramed(
                     true,
                     "Failed to look up MySQL driver",
@@ -61,7 +61,12 @@ abstract class Datastore {
                     "your hosting provider."
                 )
             } else {
-                Common.logFramed(true, "Failed to connect to MySQL database", "URL: $url", "Error: " + var6.message)
+                Common.logFramed(
+                    true,
+                    "Failed to connect to MySQL database",
+                    "URL: $url",
+                    "Error: " + sqlException.message
+                )
             }
         }
     }
@@ -135,16 +140,16 @@ abstract class Datastore {
             if (!isConnected) {
                 connectUsingLastCredentials()
             }
-            val sql = replaceVariables(sql)
+            val s = replaceVariables(sql)
             Valid.checkBoolean(
-                !sql.contains("{table}"),
+                !s.contains("{table}"),
                 "Table not set! Either use connect() method that specifies it or call addVariable(table, 'yourtablename') in your constructor!"
             )
-            Debugger.debug("mysql", "Updating MySQL with: $sql")
+            Debugger.debug("mysql", "Updating MySQL with: $s")
             try {
-                connection!!.createStatement().run { executeUpdate(sql) }
+                connection!!.createStatement().run { executeUpdate(s) }
             } catch (var5: SQLException) {
-                Common.error(var5, "Error on updating MySQL with: $sql")
+                Common.error(var5, "Error on updating MySQL with: $s")
             }
         }
     }

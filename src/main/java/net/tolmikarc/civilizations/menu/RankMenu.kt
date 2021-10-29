@@ -1,7 +1,7 @@
 package net.tolmikarc.civilizations.menu
 
 import net.tolmikarc.civilizations.conversation.RankRenameConversation
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.permissions.Rank
 import org.bukkit.entity.Player
@@ -12,7 +12,7 @@ import org.mineacademy.fo.menu.button.Button
 import org.mineacademy.fo.menu.model.ItemCreator
 import org.mineacademy.fo.remain.CompMaterial
 
-class RankMenu(rank: Rank, civilization: Civ, parent: Menu?) : Menu(parent) {
+class RankMenu(rank: Rank, civilization: Civilization, parent: Menu?) : Menu(parent) {
 
     private val nameButton: Button
     private val buildButton: Button
@@ -130,7 +130,7 @@ class RankMenu(rank: Rank, civilization: Civ, parent: Menu?) : Menu(parent) {
                     CompMaterial.DIAMOND,
                     "&4&lAdmin: " + if (civilization.permissions.adminGroups.contains(rank)) "&aTrue" else "&cFalse",
                     "",
-                    "&7Can this rank manage this Civ?"
+                    "&7Can this rank manage this Civilization?"
                 ).build().make()
             }
         }

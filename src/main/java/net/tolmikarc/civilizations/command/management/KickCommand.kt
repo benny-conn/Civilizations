@@ -6,8 +6,8 @@ package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.PermissionChecker.canManageCiv
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -29,7 +29,7 @@ class KickCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "kick"
         }
     }
 
-    private fun executeCommand(civilization: Civ, kickedCache: CPlayer?) {
+    private fun executeCommand(civilization: Civilization, kickedCache: CivPlayer?) {
         checkNotNull(
             kickedCache,
             Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.PLAYER)

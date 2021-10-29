@@ -2,64 +2,68 @@
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
 
-package net.tolmikarc.civilizations.model.impl
+package net.tolmikarc.civilizations.model
 
 import net.tolmikarc.civilizations.chat.CivChannel
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.permissions.Permissions
 import net.tolmikarc.civilizations.permissions.Toggleables
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
+import net.tolmikarc.civilizations.util.ClaimUtil
+import net.tolmikarc.civilizations.util.WarUtil
 import net.tolmikarc.civilizations.war.Damages
 import net.tolmikarc.civilizations.war.Raid
 import org.bukkit.Location
+import org.bukkit.block.Block
+import org.bukkit.entity.Player
+import org.bukkit.util.Vector
 import org.mineacademy.fo.collection.SerializedMap
+import org.mineacademy.fo.model.ConfigSerializable
 import java.sql.SQLException
 import java.util.*
 import java.util.function.Predicate
 import java.util.stream.Collectors
 import kotlin.collections.set
 
-data class Civilization(override val uuid: UUID) : Civ {
+data class Civilization(override val uuid: UUID) : UniquelyIdentifiable, ConfigSerializable {
 
 
-    override var name: String? = null
+    var name: String? = null
         set(value) {
             if (value != null) {
-                CivManager.byName[value.toLowerCase()] = this
+                CivManager.byName[value.lowercase(Locale.getDefault())] = this
             }
             field = value
         }
-    override var description: String? = null
-    override var power = 0
-    override var leader: CPlayer? = null
-    override var bank: Bank = Bank(this)
-    override var home: Location? = null
-    override var claims = Claims(this)
-    override var warps: MutableMap<String, Location> = LinkedHashMap()
+    var description: String? = null
+    var power = 0
+    var leader: CivPlayer? = null
+    var bank: Bank = Bank(this)
+    var home: Location? = null
+    var claims = Claims(this)
+    var warps: MutableMap<String, Location> = LinkedHashMap()
 
-    override val citizens = mutableSetOf<CPlayer>()
-    override var relationships = Relationships(this)
+    val citizens = mutableSetOf<CivPlayer>()
+    var relationships = Relationships(this)
 
-    override var damages: Damages? = null
+    var damages: Damages? = null
 
-    override var permissions: Permissions = Permissions(this)
-    override var toggleables = Toggleables()
+    var permissions: Permissions = Permissions(this)
+    var toggleables = Toggleables()
 
-    override var raid: Raid? = null
+    var raid: Raid? = null
 
-    override val channel = CivChannel()
+    val channel = CivChannel()
 
-    override fun addPower(power: Int) {
+    fun addPower(power: Int) {
         this.power += power
         CivManager.queueForSaving(this)
     }
 
-    override fun removePower(power: Int) {
+    fun removePower(power: Int) {
         if (this.power - power >= 0)
             this.power -= power
         else
@@ -68,18 +72,18 @@ data class Civilization(override val uuid: UUID) : Civ {
     }
 
 
-    override fun addWarp(name: String, location: Location) {
+    fun addWarp(name: String, location: Location) {
         warps[name] = location
         CivManager.saveAsync(this)
     }
 
-    override fun removeWarp(warp: String) {
+    fun removeWarp(warp: String) {
         warps.remove(warp)
         CivManager.saveAsync(this)
     }
 
 
-    override fun addCitizen(player: CPlayer) {
+    fun addCitizen(player: CivPlayer) {
         player.civilizationInvite = null
         player.civilization = this
         citizens.add(player)
@@ -92,7 +96,7 @@ data class Civilization(override val uuid: UUID) : Civ {
         CivManager.queueForSaving(this)
     }
 
-    override fun removeCitizen(player: CPlayer) {
+    fun removeCitizen(player: CivPlayer) {
         player.civilization = null
         citizens.remove(player)
         permissions.playerGroupMap.remove(player.uuid)
@@ -102,6 +106,92 @@ data class Civilization(override val uuid: UUID) : Civ {
         }
         player.removePower(CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, this).toInt())
         CivManager.queueForSaving(this)
+    }
+
+    fun isPlayerOutlaw(player: CivPlayer): Boolean {
+        return relationships.outlaws.contains(player)
+    }
+
+    fun isPlayerRaiding(player: CivPlayer): Boolean {
+        val raid = raid ?: return false
+        return raid.playersInvolved.containsKey(player)
+    }
+
+    fun canAttackCivilization(player: CivPlayer): Boolean {
+        return isPlayerRaiding(player) && isPlayerLivesValid(player)
+    }
+
+    fun isPlayerToPlayerRatioValid(): Boolean {
+        val raid = raid ?: return false
+        return ClaimUtil.playersInCivClaims(raid.civBeingRaided, raid.civBeingRaided) / ClaimUtil.playersInCivClaims(
+            raid.civBeingRaided,
+            raid.civRaiding
+        ) >= Settings.RAID_RATIO_MAX_IN_RAID!!
+    }
+
+    // checks if the attacking civ is attacking the attacked civ
+    fun isBeingRaidedBy(attackingCivilization: Civilization?): Boolean {
+        if (attackingCivilization == null) return false
+        val raid = raid ?: return false
+        return raid.civBeingRaided == this && raid.civRaiding == attackingCivilization
+    }
+
+    // checks if the attacking civ is attacking the attacked civ
+    fun isRaiding(attackedCivilization: Civilization?): Boolean {
+        if (attackedCivilization == null) return false
+        val raid = raid ?: return false
+        return raid.civBeingRaided == attackedCivilization && raid.civRaiding == this
+    }
+
+    fun isBeingRaidedByAllyOf(civWithAlly: Civilization?): Boolean {
+        if (civWithAlly == null) return false
+        val raid = raid ?: return false
+        return raid.civBeingRaided == this && civWithAlly.relationships.allies.contains(
+            raid.civRaiding
+        )
+    }
+
+    fun isInRaid(): Boolean {
+        return raid != null
+    }
+
+    private fun getRaidLives(player: CivPlayer): Int {
+        return raid?.playersInvolved?.get(player) ?: 0
+    }
+
+    private fun isPlayerLivesValid(player: CivPlayer): Boolean {
+        return if (Settings.RAID_LIVES == -1) true else getRaidLives(player) > 0
+    }
+
+    fun isAtWarWith(player: Player): Boolean {
+        val cache = PlayerManager.fromBukkitPlayer(player)
+        val playerCivilization = cache.civilization
+        if (playerCivilization != null) {
+            return relationships.warring.contains(playerCivilization) || playerCivilization.relationships.warring.contains(
+                this
+            )
+        }
+        return false
+    }
+
+    fun addDamages(attackingCiv: Civilization, block: Block) {
+        if (damages == null) damages = Damages()
+        damages!!.brokenBlocksMap[block.location] = block.blockData.asString
+        removePower(Settings.POWER_RAID_BLOCK)
+        attackingCiv.addPower(Settings.POWER_BLOCKS_WEIGHT)
+        CivManager.queueForSaving(this, attackingCiv)
+    }
+
+    fun shootBlockAndAddDamages(attackingCiv: Civilization, block: Block) {
+        if (damages == null) damages = Damages()
+        damages!!.brokenBlocksMap[block.location] = block.blockData.asString
+        WarUtil.shootBlock(
+            block,
+            Vector.getRandom()
+        )
+        removePower(Settings.POWER_RAID_BLOCK)
+        attackingCiv.addPower(Settings.POWER_BLOCKS_WEIGHT)
+        CivManager.queueForSaving(this, attackingCiv)
     }
 
 
@@ -135,7 +225,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             val name = map.getString("Name")
             val description = map.getString("Description")
             val power = map.getInteger("Power")
-            var leader: CPlayer? = null
+            var leader: CivPlayer? = null
             try {
                 leader =
                     if (PlayerDatastore.isStored(map.get("Leader", UUID::class.java)))
@@ -147,7 +237,7 @@ data class Civilization(override val uuid: UUID) : Civ {
             val home = map.getLocation("Home")
             val claims = map.get("Claims", Claims::class.java)
             val warps: Map<String, Location>? = map.getMap("Warps", String::class.java, Location::class.java)
-            val citizens: MutableSet<CPlayer> =
+            val citizens: MutableSet<CivPlayer> =
                 map.getSet("Citizens", UUID::class.java).stream().filter(playerRemoveFilter)
                     .map { PlayerManager.getByUUID(it) }
                     .collect(Collectors.toSet())

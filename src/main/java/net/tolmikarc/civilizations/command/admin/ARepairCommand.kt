@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.command.admin
 
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.CivManager
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.war.Damages
@@ -48,7 +48,7 @@ class ARepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "re
 
     private fun repairDamages(
         damages: Damages,
-        civ: Civ,
+        civ: Civilization,
         locationList: List<Location>,
         percentage: Int
     ) {

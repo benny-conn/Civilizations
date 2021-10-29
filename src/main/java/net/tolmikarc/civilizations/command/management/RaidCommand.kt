@@ -11,8 +11,6 @@ import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.ClaimUtil.isLocationInCiv
 import net.tolmikarc.civilizations.util.ClaimUtil.playersInCivOnline
-import net.tolmikarc.civilizations.util.WarUtil.isInRaid
-import net.tolmikarc.civilizations.util.WarUtil.isPlayerAtWar
 import net.tolmikarc.civilizations.war.Raid
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
@@ -25,26 +23,26 @@ class RaidCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "raid")
             checkNotNull(civPlayer.civilization, Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
                 checkBoolean(PermissionChecker.canManageCiv(civPlayer, this), Localization.Warnings.CANNOT_MANAGE_CIV)
-                val enemyCiv = CivManager.getByName(args[0])
+                val enemyCivilization = CivManager.getByName(args[0])
                 checkNotNull(
-                    enemyCiv,
+                    enemyCivilization,
                     Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION)
                 )
-                checkBoolean(!isInRaid(enemyCiv!!), Localization.Warnings.Raid.ALREADY_IN_RAID)
-                checkBoolean(isPlayerAtWar(player, enemyCiv), Localization.Warnings.Raid.NO_WAR)
-                checkBoolean(enemyCiv.claims.totalClaimCount > 0, Localization.Warnings.Raid.NO_LAND)
+                checkBoolean(!enemyCivilization!!.isInRaid(), Localization.Warnings.Raid.ALREADY_IN_RAID)
+                checkBoolean(enemyCivilization.isAtWarWith(player), Localization.Warnings.Raid.NO_WAR)
+                checkBoolean(enemyCivilization.claims.totalClaimCount > 0, Localization.Warnings.Raid.NO_LAND)
                 checkBoolean(
-                    !isLocationInCiv(player.location, enemyCiv),
+                    !isLocationInCiv(player.location, enemyCivilization),
                     Localization.Warnings.Raid.IN_ENEMY_LAND
                 )
                 if (Settings.RAID_RATIO_MAX_IN_RAID != -1) checkBoolean(
-                    playersInCivOnline(enemyCiv) / playersInCivOnline(
+                    playersInCivOnline(enemyCivilization) / playersInCivOnline(
                         this
                     ) >= Settings.RAID_RATIO_ONLINE_PLAYERS!!,
                     Localization.Warnings.Raid.NOT_ENOUGH_PLAYERS
                 )
-                val raid = Raid(enemyCiv, this)
-                enemyCiv.raid = raid
+                val raid = Raid(enemyCivilization, this)
+                enemyCivilization.raid = raid
                 this.raid = raid
                 setCooldown(Settings.RAID_COOLDOWN, TimeUnit.MINUTES)
             }

@@ -1,17 +1,16 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.model.impl
+package net.tolmikarc.civilizations.model
 
 import net.tolmikarc.civilizations.manager.CivManager
-import net.tolmikarc.civilizations.model.Civ
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
 import kotlin.math.abs
 
-class Claims(val civ: Civ) : ConfigSerializable {
+class Claims(val civ: Civilization) : ConfigSerializable {
 
 
     val claims = mutableSetOf<Region>()

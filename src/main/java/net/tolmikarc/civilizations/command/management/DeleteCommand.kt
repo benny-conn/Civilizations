@@ -4,7 +4,7 @@
 
 package net.tolmikarc.civilizations.command.management
 
-import net.tolmikarc.civilizations.api.event.DeleteCivEvent
+import net.tolmikarc.civilizations.event.DeleteCivEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.menu.ConfirmMenu
@@ -22,7 +22,7 @@ class DeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "del
             civPlayer.civilization?.let { civ ->
                 checkBoolean(civ.leader == civPlayer, Localization.Warnings.LEADER)
                 val info = "Are you sure you would like to delete your Civilization?"
-                val title = "&4Delete Civ?"
+                val title = "&4Delete Civilization?"
 
 
                 fun run() {

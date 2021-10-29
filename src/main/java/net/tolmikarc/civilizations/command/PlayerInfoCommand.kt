@@ -5,7 +5,7 @@
 package net.tolmikarc.civilizations.command
 
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
+import net.tolmikarc.civilizations.model.CivPlayer
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -14,7 +14,7 @@ import org.mineacademy.fo.command.SimpleSubCommand
 class PlayerInfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "player") {
     override fun onCommand() {
         checkConsole()
-        val civPlayer: CPlayer?
+        val civPlayer: CivPlayer?
         if (args.isNotEmpty()) {
             civPlayer = PlayerManager.getByName(args[0])
             checkNotNull(
@@ -25,7 +25,7 @@ class PlayerInfoCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
         civPlayer?.run { sendInfo(this) }
     }
 
-    private fun sendInfo(civPlayer: CPlayer) {
+    private fun sendInfo(civPlayer: CivPlayer) {
         var playerGroup = civPlayer.civilization?.permissions?.getPlayerGroup(civPlayer)?.name ?: "None"
         if (civPlayer.civilization?.leader == civPlayer) playerGroup = "Leader"
 

@@ -6,9 +6,9 @@ package net.tolmikarc.civilizations
 
 import net.tolmikarc.civilizations.constants.Permissions
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Plot
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Plot
 import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
@@ -21,7 +21,7 @@ import org.bukkit.entity.Player
 
 object PermissionChecker {
 
-    fun can(permType: PermissionType, player: Player, civilization: Civ): Boolean {
+    fun can(permType: PermissionType, player: Player, civilization: Civilization): Boolean {
         val claimPermissions = civilization.permissions
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         if (canBypass(permType, civPlayer)) {
@@ -31,7 +31,7 @@ object PermissionChecker {
         if (claimPermissions.adminGroups.contains(permissionGroup)) {
             return true
         }
-        if (Settings.OUTLAW_PERMISSIONS_DISABLED) if (CivUtil.isPlayerOutlaw(civPlayer, civilization)) return false
+        if (Settings.OUTLAW_PERMISSIONS_DISABLED) if (civilization.isPlayerOutlaw(civPlayer)) return false
         if (civilization.leader == civPlayer) {
             return true
         }
@@ -43,29 +43,29 @@ object PermissionChecker {
         }
     }
 
-    private fun canBypass(permType: PermissionType, player: CPlayer): Boolean {
+    private fun canBypass(permType: PermissionType, player: CivPlayer): Boolean {
         if (isAdmin(player)) {
             return true
         }
         val bukkitPlayer = Bukkit.getPlayer(player.uuid) ?: return false
         return when (permType) {
-            PermissionType.BUILD -> bukkitPlayer.hasPermission(Permissions.Bypass.BUILD)
-            PermissionType.BREAK -> bukkitPlayer.hasPermission(Permissions.Bypass.BREAK)
-            PermissionType.SWITCH -> bukkitPlayer.hasPermission(Permissions.Bypass.SWITCH)
+            PermissionType.BUILD    -> bukkitPlayer.hasPermission(Permissions.Bypass.BUILD)
+            PermissionType.BREAK    -> bukkitPlayer.hasPermission(Permissions.Bypass.BREAK)
+            PermissionType.SWITCH   -> bukkitPlayer.hasPermission(Permissions.Bypass.SWITCH)
             PermissionType.INTERACT -> bukkitPlayer.hasPermission(Permissions.Bypass.INTERACT)
         }
     }
 
-    fun isAdmin(player: CPlayer): Boolean {
+    fun isAdmin(player: CivPlayer): Boolean {
         val bukkitPlayer = Bukkit.getPlayer(player.uuid) ?: return false
         return bukkitPlayer.hasPermission(Permissions.ADMIN)
     }
 
-    fun canManageCiv(player: CPlayer, civilization: Civ): Boolean {
+    fun canManageCiv(player: CivPlayer, civilization: Civilization): Boolean {
         return when {
-            isAdmin(player) -> return true
+            isAdmin(player)               -> return true
             player == civilization.leader -> return true
-            else -> civilization.permissions.adminGroups.contains(
+            else                          -> civilization.permissions.adminGroups.contains(
                 civilization.permissions.getPlayerGroup(
                     player
                 )
@@ -73,7 +73,7 @@ object PermissionChecker {
         }
     }
 
-    fun canManagePlot(civ: Civ, plot: Plot, player: CPlayer): Boolean {
+    fun canManagePlot(civ: Civilization, plot: Plot, player: CivPlayer): Boolean {
         return if (canManageCiv(player, civ)) true else plot.owner == player
     }
 

@@ -4,7 +4,7 @@
 package net.tolmikarc.civilizations.command
 
 import net.tolmikarc.civilizations.MapDrawer
-import net.tolmikarc.civilizations.model.impl.Region
+import net.tolmikarc.civilizations.model.Region
 import net.tolmikarc.civilizations.settings.Localization
 import org.bukkit.Location
 import org.bukkit.Material

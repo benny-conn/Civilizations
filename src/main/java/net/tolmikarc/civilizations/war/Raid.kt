@@ -4,12 +4,12 @@
 
 package net.tolmikarc.civilizations.war
 
-import net.tolmikarc.civilizations.api.event.PlayerJoinRaidEvent
-import net.tolmikarc.civilizations.api.event.RaidBeginEvent
-import net.tolmikarc.civilizations.api.event.RaidEndEvent
+import net.tolmikarc.civilizations.event.PlayerJoinRaidEvent
+import net.tolmikarc.civilizations.event.RaidBeginEvent
+import net.tolmikarc.civilizations.event.RaidEndEvent
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.task.CooldownTask
 import net.tolmikarc.civilizations.task.RaidParticleTask
@@ -22,10 +22,10 @@ import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.model.Countdown
 import org.mineacademy.fo.remain.Remain
 
-class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RAID_LENGTH) {
+class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Countdown(Settings.RAID_LENGTH) {
 
     // map of players and their lives
-    val playersInvolved: MutableMap<CPlayer, Int> = HashMap()
+    val playersInvolved: MutableMap<CivPlayer, Int> = HashMap()
     val openTasks = mutableSetOf<RaidParticleTask>()
 
     fun addPlayerToRaid(player: Player) {
@@ -45,16 +45,12 @@ class Raid(val civBeingRaided: Civ, val civRaiding: Civ) : Countdown(Settings.RA
             if (playersInvolved[it] == Settings.RAID_LIVES) Common.callEvent(PlayerJoinRaidEvent(this, player))
 
             if (Common.doesPluginExist("ProtocolLib")) {
-                val onlinePlayersFromOppositeCiv = mutableListOf<Player>()
+                val onlinePlayersFromOppositeCivilization = mutableListOf<Player>()
                 for (p in Bukkit.getOnlinePlayers()) {
-                    if (civRaiding == it.civilization)
-                        if (PlayerManager.fromBukkitPlayer(p).civilization == civBeingRaided)
-                            onlinePlayersFromOppositeCiv.add(p)
-                    if (civBeingRaided == it.civilization)
-                        if (PlayerManager.fromBukkitPlayer(p).civilization == civRaiding)
-                            onlinePlayersFromOppositeCiv.add(p)
+                    if ((civRaiding == it.civilization && PlayerManager.fromBukkitPlayer(p).civilization == civBeingRaided ) || (civBeingRaided == it.civilization && PlayerManager.fromBukkitPlayer(p).civilization == civRaiding))
+                            onlinePlayersFromOppositeCivilization.add(p)
                 }
-                val task = RaidParticleTask(player, onlinePlayersFromOppositeCiv)
+                val task = RaidParticleTask(player, onlinePlayersFromOppositeCivilization)
                 Common.runTimerAsync(10, task)
                 openTasks.add(task)
 

@@ -6,7 +6,7 @@ package net.tolmikarc.civilizations.command.management
 
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -47,7 +47,7 @@ class PermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
     }
 
     override fun tabComplete(): List<String>? {
-        var civ: Civ? = null
+        var civ: Civilization? = null
         if (PlayerManager.fromBukkitPlayer(player).civilization != null)
             civ = PlayerManager.fromBukkitPlayer(player).civilization
         return when (args.size) {

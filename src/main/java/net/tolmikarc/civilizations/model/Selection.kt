@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.model.impl
+package net.tolmikarc.civilizations.model
 
 import org.bukkit.Bukkit
 import org.bukkit.Location
@@ -20,7 +20,7 @@ class Selection {
 
     fun select(block: Block, player: Player, clickType: ClickType) {
         when (clickType) {
-            ClickType.LEFT -> {
+            ClickType.LEFT  -> {
                 if (primary != null)
                     player.sendBlockChange(primary!!, Bukkit.createBlockData(primary!!.block.type))
                 primary = block.location
@@ -39,15 +39,15 @@ class Selection {
     fun selectNoClickType(block: Block, player: Player): SelectionType {
         var selectionType: SelectionType = SelectionType.PRIMARY
         when {
-            primary == null -> {
+            primary == null                          -> {
                 primary = block.location
                 selectionType = SelectionType.PRIMARY
             }
-            secondary == null -> {
+            secondary == null                        -> {
                 secondary = block.location
                 selectionType = SelectionType.SECONDARY
             }
-            lastSelection == SelectionType.PRIMARY -> {
+            lastSelection == SelectionType.PRIMARY   -> {
                 player.sendBlockChange(primary!!, Bukkit.createBlockData(primary!!.block.type))
                 secondary = block.location
                 selectionType = SelectionType.SECONDARY

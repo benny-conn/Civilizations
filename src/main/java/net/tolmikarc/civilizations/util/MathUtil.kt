@@ -4,8 +4,8 @@
 
 package net.tolmikarc.civilizations.util
 
-import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Region
+import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Region
 import org.bukkit.Location
 import org.mineacademy.fo.MathUtil
 import java.math.RoundingMode
@@ -25,7 +25,7 @@ object MathUtil {
         return df.format(dubble).toDouble()
     }
 
-    fun replaceVariablesAndCalculateFormula(formula: String, civilization: Civ, region: Region?): Double {
+    fun replaceVariablesAndCalculateFormula(formula: String, civilization: Civilization, region: Region?): Double {
         var replacedVariables = formula
             .replace("{citizens}", civilization.citizens.size.toString())
             .replace("{power}", civilization.power.toString())

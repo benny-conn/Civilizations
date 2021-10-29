@@ -1,24 +1,22 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.model.impl
+package net.tolmikarc.civilizations.model
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
 
-class Relationships(val civ: Civ) : ConfigSerializable {
-    val allies = mutableSetOf<Civ>()
-    val enemies = mutableSetOf<Civ>()
-    val outlaws = mutableSetOf<CPlayer>()
+class Relationships(val civ: Civilization) : ConfigSerializable {
+    val allies = mutableSetOf<Civilization>()
+    val enemies = mutableSetOf<Civilization>()
+    val outlaws = mutableSetOf<CivPlayer>()
 
-    val warring: Set<Civ>
+    val warring: Set<Civilization>
         get() {
-            val set = mutableSetOf<Civ>()
+            val set = mutableSetOf<Civilization>()
             for (c in enemies) {
                 if (c.relationships.enemies.contains(civ))
                     set.add(c)
@@ -26,32 +24,32 @@ class Relationships(val civ: Civ) : ConfigSerializable {
             return set
         }
 
-    fun addAlly(ally: Civ) {
+    fun addAlly(ally: Civilization) {
         allies.add(ally)
         CivManager.saveAsync(civ)
     }
 
-    fun removeAlly(ally: Civ) {
+    fun removeAlly(ally: Civilization) {
         allies.remove(ally)
         CivManager.saveAsync(civ)
     }
 
-    fun addEnemy(enemy: Civ) {
+    fun addEnemy(enemy: Civilization) {
         enemies.add(enemy)
         CivManager.saveAsync(civ)
     }
 
-    fun removeEnemy(enemy: Civ) {
+    fun removeEnemy(enemy: Civilization) {
         enemies.remove(enemy)
         CivManager.saveAsync(civ)
     }
 
-    fun addOutlaw(player: CPlayer) {
+    fun addOutlaw(player: CivPlayer) {
         outlaws.add(player)
         CivManager.saveAsync(civ)
     }
 
-    fun removeOutlaw(player: CPlayer) {
+    fun removeOutlaw(player: CivPlayer) {
         outlaws.remove(player)
         CivManager.saveAsync(civ)
     }

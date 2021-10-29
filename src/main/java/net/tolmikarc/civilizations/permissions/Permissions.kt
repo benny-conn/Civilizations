@@ -4,14 +4,14 @@
 package net.tolmikarc.civilizations.permissions
 
 import net.tolmikarc.civilizations.manager.CivManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.collection.SerializedMap
 import org.mineacademy.fo.model.ConfigSerializable
 import java.util.*
 
-data class Permissions(val civ: Civ) : ConfigSerializable {
+data class Permissions(val civ: Civilization) : ConfigSerializable {
     val allRankNames: List<String>
         get() {
             val list = mutableListOf<String>()
@@ -41,11 +41,11 @@ data class Permissions(val civ: Civ) : ConfigSerializable {
         }
     }
 
-    fun setPlayerGroup(player: CPlayer, group: Rank) {
+    fun setPlayerGroup(player: CivPlayer, group: Rank) {
         playerGroupMap[player.uuid] = group
     }
 
-    fun getPlayerGroup(player: CPlayer): Rank {
+    fun getPlayerGroup(player: CivPlayer): Rank {
         if (civ.leader == player) return defaultRank
         if (civ.relationships.allies.any { it.citizens.contains(player) })
             return allyRank

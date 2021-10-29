@@ -5,25 +5,24 @@ package net.tolmikarc.civilizations.manager
 
 import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.db.CivDatastore
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Civilization
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-object CivManager : Manager<Civ> {
-    override val all: Collection<Civ>
+object CivManager : Manager<Civilization> {
+    override val all: Collection<Civilization>
         get() = cacheMap.values
-    override val cacheMap: MutableMap<UUID, Civ> = ConcurrentHashMap()
-    override val byName: MutableMap<String, Civ> = ConcurrentHashMap()
-    override val queuedForSaving = mutableSetOf<Civ>()
+    override val cacheMap: MutableMap<UUID, Civilization> = ConcurrentHashMap()
+    override val byName: MutableMap<String, Civilization> = ConcurrentHashMap()
+    override val queuedForSaving = mutableSetOf<Civilization>()
 
     val civNames: MutableSet<String>
         get() = byName.keys
 
-    override fun getByUUID(uuid: UUID): Civ {
+    override fun getByUUID(uuid: UUID): Civilization {
         var civilization = cacheMap[uuid]
         if (civilization == null) {
             civilization = initialize(uuid)
@@ -32,37 +31,37 @@ object CivManager : Manager<Civ> {
         return civilization
     }
 
-    override fun getByName(name: String): Civ? {
+    override fun getByName(name: String): Civilization? {
         return byName[name.toLowerCase()]
     }
 
-    override fun save(saved: Civ) {
+    override fun save(saved: Civilization) {
         CivDatastore.save(saved)
     }
 
-    override fun saveAsync(saved: Civ) {
+    override fun saveAsync(saved: Civilization) {
         AsyncEnvironment.run { save(saved) }
     }
 
-    override fun load(loaded: Civ) {
+    override fun load(loaded: Civilization) {
         CivDatastore.load(loaded)
     }
 
-    override fun loadAsync(loaded: Civ) {
+    override fun loadAsync(loaded: Civilization) {
         AsyncEnvironment.run { load(loaded) }
     }
 
-    override fun queueForSaving(vararg queued: Civ) {
+    override fun queueForSaving(vararg queued: Civilization) {
         queuedForSaving.addAll(queued)
     }
 
-    override fun initialize(uuid: UUID): Civ {
+    override fun initialize(uuid: UUID): Civilization {
         val civilization = Civilization(uuid)
         cacheMap[uuid] = civilization
         return civilization
     }
 
-    fun createCiv(name: String, player: CPlayer): Civ {
+    fun createCiv(name: String, player: CivPlayer): Civilization {
         val uuid = UUID.randomUUID()
         val civilization = initialize(uuid)
         civilization.name = name
@@ -76,7 +75,7 @@ object CivManager : Manager<Civ> {
         return civilization
     }
 
-    fun createCiv(civilization: Civ): Civ {
+    fun createCiv(civilization: Civilization): Civilization {
         cacheMap[civilization.uuid] = civilization
         if (civilization.name != null)
             byName[civilization.name!!] = civilization
@@ -84,7 +83,7 @@ object CivManager : Manager<Civ> {
         return civilization
     }
 
-    fun removeCiv(civ: Civ) {
+    fun removeCiv(civ: Civilization) {
         for (c in cacheMap.values) {
             c.relationships.allies.remove(civ)
             c.relationships.enemies.remove(civ)

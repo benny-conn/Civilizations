@@ -19,7 +19,7 @@ class ADeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "de
                 CivManager.removeCiv(this)
                 tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
             }
-            ConfirmMenu("&4Delete Civ?", "Permanently remove this Civilization", ::run).displayTo(player)
+            ConfirmMenu("&4Delete Civilization?", "Permanently remove this Civilization", ::run).displayTo(player)
         }
     }
 

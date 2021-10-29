@@ -6,10 +6,10 @@ package net.tolmikarc.civilizations.adapter
 
 object TownyAdapter {
 
-//    private val convertedTowns: MutableMap<Town, Civ> = HashMap()
+//    private val convertedTowns: MutableMap<Town, Civilization> = HashMap()
 //
 //
-//    fun convertTownToCiv(town: Town): Civ? {
+//    fun convertTownToCiv(town: Town): Civilization? {
 //        val civ = Civilization(town.getUUID())
 //        try {
 //            civ.name = town.name
@@ -51,8 +51,8 @@ object TownyAdapter {
 //    fun adaptEnemiesAndAllies() {
 //        for (town in convertedTowns.keys) {
 //            try {
-//                val allies: MutableSet<Civ> = HashSet()
-//                val enemies: MutableSet<Civ> = HashSet()
+//                val allies: MutableSet<Civilization> = HashSet()
+//                val enemies: MutableSet<Civilization> = HashSet()
 //                if (town.hasNation()) {
 //                    val nation: Nation = town.nation
 //                    nation.allies.forEach(Consumer { nationAlly: Nation ->
@@ -82,13 +82,13 @@ object TownyAdapter {
 //        }
 //    }
 //
-//    private fun getConvertedPower(newCiv: Civ): Int {
+//    private fun getConvertedPower(newCiv: Civilization): Int {
 //        return Settings.POWER_BLOCKS_WEIGHT * newCiv.claims.totalBlocksCount +
 //                (Settings.POWER_MONEY_WEIGHT * newCiv.bank.balance).toInt()
 //    }
 //
 //
-//    private fun getConvertedRegions(town: Town, civ: Civ): MutableSet<Region> {
+//    private fun getConvertedRegions(town: Town, civ: Civilization): MutableSet<Region> {
 //        val newRegions: MutableSet<Region> = HashSet()
 //        val newColonies: MutableSet<Colony> = HashSet()
 //        var id = 0
@@ -132,7 +132,7 @@ object TownyAdapter {
 //        return newRegions
 //    }
 //
-//    private fun convertPermissions(town: Town, civ: Civ) {
+//    private fun convertPermissions(town: Town, civ: Civilization) {
 //        val ranks = civ.permissions
 //        for (rank in TownyPerms.getTownRanks()) {
 //            if (rank.equals("outsider", true)) continue

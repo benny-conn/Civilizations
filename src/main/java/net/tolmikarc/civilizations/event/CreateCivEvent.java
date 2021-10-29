@@ -1,22 +1,23 @@
 /*
  * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
  */
-package net.tolmikarc.civilizations.api.event;
+package net.tolmikarc.civilizations.event;
 
-import net.tolmikarc.civilizations.model.Civ;
+
+import net.tolmikarc.civilizations.model.Civilization;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
-public class DeleteCivEvent extends Event {
+public class CreateCivEvent extends Event {
     private static final HandlerList handlers = new HandlerList();
 
-    private final Civ civ;
+    private final Civilization civ;
     private final Player player;
 
 
-    public DeleteCivEvent(Civ civ, Player player) {
+    public CreateCivEvent(Civilization civ, Player player) {
         this.civ = civ;
         this.player = player;
     }
@@ -29,7 +30,7 @@ public class DeleteCivEvent extends Event {
         return player;
     }
 
-    public Civ getCiv() {
+    public Civilization getCiv() {
         return civ;
     }
 

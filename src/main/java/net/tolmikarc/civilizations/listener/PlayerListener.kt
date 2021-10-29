@@ -6,13 +6,13 @@ package net.tolmikarc.civilizations.listener
 
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.PermissionChecker.can
-import net.tolmikarc.civilizations.api.event.CivEnterEvent
-import net.tolmikarc.civilizations.api.event.CivLeaveEvent
-import net.tolmikarc.civilizations.api.event.PlotEnterEvent
 import net.tolmikarc.civilizations.constants.Constants
+import net.tolmikarc.civilizations.event.CivEnterEvent
+import net.tolmikarc.civilizations.event.CivLeaveEvent
+import net.tolmikarc.civilizations.event.PlotEnterEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.impl.Selection
+import net.tolmikarc.civilizations.model.Selection
 import net.tolmikarc.civilizations.permissions.PermissionType
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -22,10 +22,6 @@ import net.tolmikarc.civilizations.task.CooldownTask.Companion.getCooldownRemain
 import net.tolmikarc.civilizations.task.CooldownTask.Companion.hasCooldown
 import net.tolmikarc.civilizations.util.ClaimUtil.getCivFromLocation
 import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
-import net.tolmikarc.civilizations.util.WarUtil.addDamages
-import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
-import net.tolmikarc.civilizations.util.WarUtil.increaseBlocksBroken
-import net.tolmikarc.civilizations.util.WarUtil.isInRaid
 import org.bukkit.*
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Monster
@@ -131,7 +127,7 @@ class PlayerListener : Listener {
             val player = PlayerManager.fromBukkitPlayer(event.player)
             player.civilization?.let {
                 it.home?.let { home -> event.respawnLocation = home }
-                if (isInRaid(it) && player.lastLocationBeforeRaid != null)
+                if (it.isInRaid() && player.lastLocationBeforeRaid != null)
                     event.respawnLocation = player.lastLocationBeforeRaid!!
             }
         }
@@ -234,15 +230,15 @@ class PlayerListener : Listener {
                 val block = event.block
                 val civilization = getCivFromLocation(block.location) ?: return
                 // if a player is raiding he can break
-                if (canAttackCivilization(civPlayer, civilization)) {
+                if (civilization.canAttackCivilization(civPlayer)) {
                     // except player cannot break things that are defined in settings so long as the settings says player cant
                     if (!Settings.RAID_BREAK_SWITCHABLES) if (PermissionChecker.isSwitchable(block.type)) {
                         event.isCancelled = true
                         return
                     }
-                    civPlayer.civilization?.let { playerCiv ->
-                        addDamages(civilization, playerCiv, block)
-                        increaseBlocksBroken(civPlayer)
+                    civPlayer.civilization?.let { playerCivilization ->
+                        civilization.addDamages(playerCivilization, block)
+                        civPlayer.addRaidBlocksDestroyed(1)
                     }
                 } else {
                     event.isCancelled = !can(PermissionType.BREAK, player, civilization)
@@ -276,7 +272,7 @@ class PlayerListener : Listener {
 
                 val civilization = getCivFromLocation(block.location) ?: return
                 // if a player can attack (is in a raid currently and valid player proportions) then let him place tnt
-                if (canAttackCivilization(civPlayer, civilization)) {
+                if (civilization.canAttackCivilization(civPlayer)) {
                     if (Settings.RAID_TNT_COOLDOWN != -1) {
                         if (block.type == Material.TNT) {
                             // make sure player doesnt have a tnt cooldown
@@ -426,7 +422,7 @@ class PlayerListener : Listener {
             val civDamager = PlayerManager.fromBukkitPlayer(damager)
             val location = damaged.getLocation()
             val civilization = getCivFromLocation(location) ?: return
-            if (canAttackCivilization(civDamager, civilization) && canAttackCivilization(civDamaged, civilization)) {
+            if (civilization.canAttackCivilization(civDamager) && civilization.canAttackCivilization(civDamaged)) {
                 event.isCancelled = hasCooldown(civDamaged, CooldownTask.CooldownType.RESPAWN_PROTECTION)
                 if (!event.isCancelled) {
                     // prevent pvplogging
@@ -479,12 +475,12 @@ class PlayerListener : Listener {
     fun onPlayerChat(event: AsyncPlayerChatEvent) {
         val civPlayer = PlayerManager.fromBukkitPlayer(event.player)
         val civ = civPlayer.civilization
-        civ?.let { theCiv ->
-            if (theCiv.channel.players.contains(event.player)) {
+        civ?.let { theCivilization ->
+            if (theCivilization.channel.players.contains(event.player)) {
                 event.format =
-                    "{1}[{2}${theCiv.name}{1}] {2}${event.player.displayName}{1}:"
+                    "{1}[{2}${theCivilization.name}{1}] {2}${event.player.displayName}{1}:"
                 for (player in Bukkit.getOnlinePlayers()) {
-                    event.recipients.removeIf { !theCiv.citizens.contains(PlayerManager.fromBukkitPlayer(player)) }
+                    event.recipients.removeIf { !theCivilization.citizens.contains(PlayerManager.fromBukkitPlayer(player)) }
                 }
                 event.recipients.add(event.player)
             }

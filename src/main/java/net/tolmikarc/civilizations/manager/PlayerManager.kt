@@ -5,20 +5,19 @@ package net.tolmikarc.civilizations.manager
 
 import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.db.PlayerDatastore
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.impl.CivPlayer
+import net.tolmikarc.civilizations.model.CivPlayer
 import org.bukkit.entity.Player
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-object PlayerManager : Manager<CPlayer> {
-    override val all: Collection<CPlayer>
+object PlayerManager : Manager<CivPlayer> {
+    override val all: Collection<CivPlayer>
         get() = cacheMap.values
-    override val cacheMap: MutableMap<UUID, CPlayer> = ConcurrentHashMap()
-    override val byName: MutableMap<String, CPlayer> = ConcurrentHashMap()
-    override val queuedForSaving = mutableSetOf<CPlayer>()
+    override val cacheMap: MutableMap<UUID, CivPlayer> = ConcurrentHashMap()
+    override val byName: MutableMap<String, CivPlayer> = ConcurrentHashMap()
+    override val queuedForSaving = mutableSetOf<CivPlayer>()
 
-    override fun getByUUID(uuid: UUID): CPlayer {
+    override fun getByUUID(uuid: UUID): CivPlayer {
         var civPlayer = cacheMap[uuid]
         if (civPlayer == null) {
             civPlayer = initialize(uuid)
@@ -27,38 +26,38 @@ object PlayerManager : Manager<CPlayer> {
         return civPlayer
     }
 
-    override fun getByName(name: String): CPlayer? {
+    override fun getByName(name: String): CivPlayer? {
         return byName[name.toLowerCase()]
     }
 
-    override fun save(saved: CPlayer) {
+    override fun save(saved: CivPlayer) {
         PlayerDatastore.save(saved)
     }
 
-    override fun saveAsync(saved: CPlayer) {
+    override fun saveAsync(saved: CivPlayer) {
         AsyncEnvironment.run { save(saved) }
     }
 
-    override fun load(loaded: CPlayer) {
+    override fun load(loaded: CivPlayer) {
         PlayerDatastore.load(loaded)
     }
 
 
-    override fun loadAsync(loaded: CPlayer) {
+    override fun loadAsync(loaded: CivPlayer) {
         AsyncEnvironment.run { load(loaded) }
     }
 
-    override fun queueForSaving(vararg queued: CPlayer) {
+    override fun queueForSaving(vararg queued: CivPlayer) {
         queuedForSaving.addAll(queued)
     }
 
-    override fun initialize(uuid: UUID): CPlayer {
+    override fun initialize(uuid: UUID): CivPlayer {
         val civPlayer = CivPlayer(uuid)
         cacheMap[uuid] = civPlayer
         return civPlayer
     }
 
-    fun fromBukkitPlayer(player: Player): CPlayer {
+    fun fromBukkitPlayer(player: Player): CivPlayer {
         return cacheMap[player.uniqueId] ?: initialize(player.uniqueId)
     }
 

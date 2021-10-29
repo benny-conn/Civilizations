@@ -5,15 +5,15 @@
 package net.tolmikarc.civilizations.menu
 
 import io.papermc.lib.PaperLib
-import net.tolmikarc.civilizations.api.event.DeleteCivEvent
+import net.tolmikarc.civilizations.event.DeleteCivEvent
 import net.tolmikarc.civilizations.conversation.BankTranscationConversation
 import net.tolmikarc.civilizations.conversation.RankCreationConversation
 import net.tolmikarc.civilizations.conversation.RenameConversation
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Colony
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Colony
 import net.tolmikarc.civilizations.permissions.Rank
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -39,7 +39,7 @@ import org.mineacademy.fo.remain.CompColor
 import org.mineacademy.fo.remain.CompMaterial
 import kotlin.math.roundToInt
 
-class CivilizationMenu(val civilization: Civ) : Menu() {
+class CivilizationMenu(val civilization: Civilization) : Menu() {
 
 
     // TODO finish this
@@ -289,8 +289,8 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
 
 
     inner class CitizensMenu :
-        MenuPagged<CPlayer>(this@CivilizationMenu, civilization.citizens) {
-        override fun convertToItemStack(civPlayer: CPlayer): ItemStack {
+        MenuPagged<CivPlayer>(this@CivilizationMenu, civilization.citizens) {
+        override fun convertToItemStack(civPlayer: CivPlayer): ItemStack {
             val skull = ItemStack(Material.PLAYER_HEAD, 1)
             val skullMeta = skull.itemMeta as SkullMeta
             skullMeta.owningPlayer = Bukkit.getPlayer(civPlayer.uuid)
@@ -309,12 +309,12 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
             return skull
         }
 
-        override fun onPageClick(p0: Player, p1: CPlayer, p2: ClickType) {
+        override fun onPageClick(p0: Player, p1: CivPlayer, p2: ClickType) {
             if (p1 != PlayerManager.fromBukkitPlayer(p0))
                 PlayerMenu(civilization, p1).displayTo(p0)
         }
 
-        inner class PlayerMenu(val civilization: Civ, val civPlayer: CPlayer) : Menu(this@CitizensMenu) {
+        inner class PlayerMenu(val civilization: Civilization, val civPlayer: CivPlayer) : Menu(this@CitizensMenu) {
             private val groupChangeButton: Button
             private val kickButton: Button
             private val outlawButton: Button
@@ -322,9 +322,9 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
 
             override fun getItemAt(slot: Int): ItemStack {
                 return when (slot) {
-                    2 -> groupChangeButton.item
-                    4 -> kickButton.item
-                    6 -> outlawButton.item
+                    2    -> groupChangeButton.item
+                    4    -> kickButton.item
+                    6    -> outlawButton.item
                     else -> emptyButton.item
                 }
             }
@@ -620,8 +620,8 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
             }
         }
 
-        inner class LeaderMenu : MenuPagged<CPlayer>(civilization.citizens) {
-            override fun convertToItemStack(civPlayer: CPlayer): ItemStack {
+        inner class LeaderMenu : MenuPagged<CivPlayer>(civilization.citizens) {
+            override fun convertToItemStack(civPlayer: CivPlayer): ItemStack {
                 val skull = ItemStack(Material.PLAYER_HEAD, 1)
                 val skullMeta = skull.itemMeta as SkullMeta
                 skullMeta.owningPlayer = Bukkit.getPlayer(civPlayer.uuid)
@@ -640,7 +640,7 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
                 return skull
             }
 
-            override fun onPageClick(player: Player, civPlayer: CPlayer, p2: ClickType?) {
+            override fun onPageClick(player: Player, civPlayer: CivPlayer, p2: ClickType?) {
                 fun leaderPlayer() {
                     civilization.permissions.setPlayerGroup(civilization.leader!!, civilization.permissions.defaultRank)
                     civilization.leader = civPlayer
@@ -754,7 +754,7 @@ class CivilizationMenu(val civilization: Civ) : Menu() {
                         CivManager.removeCiv(civilization)
                         Common.callEvent(DeleteCivEvent(civilization, player))
                     }
-                    ConfirmMenu("&4Delete Civ?", "WARNING: Irreversible", ::run).displayTo(player)
+                    ConfirmMenu("&4Delete Civilization?", "WARNING: Irreversible", ::run).displayTo(player)
                 }
 
                 override fun getItem(): ItemStack {

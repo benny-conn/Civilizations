@@ -9,9 +9,8 @@ import com.massivecraft.factions.FPlayer
 import com.massivecraft.factions.Faction
 import com.massivecraft.factions.perms.Role
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Civilization
-import net.tolmikarc.civilizations.model.impl.Region
+import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Region
 import net.tolmikarc.civilizations.permissions.Permissions
 import org.bukkit.Location
 import java.util.*
@@ -21,9 +20,9 @@ object FactionsUUIDAdapter {
     // TODO fix all of this
 
 
-    private val convertedFactions: MutableMap<Faction, Civ> = HashMap()
+    private val convertedFactions: MutableMap<Faction, Civilization> = HashMap()
 
-    fun convertFactionToCiv(faction: Faction, deleteAfterConversion: Boolean): Civ {
+    fun convertFactionToCiv(faction: Faction, deleteAfterConversion: Boolean): Civilization {
         val civ = Civilization(UUID.randomUUID())
         civ.name = faction.tag
         civ.leader = PlayerManager.getByUUID(faction.getFPlayersWhereRole(Role.ADMIN)[0].player.uniqueId)
@@ -38,7 +37,7 @@ object FactionsUUIDAdapter {
         return civ
     }
 
-    private fun getConvertedRegions(faction: Faction, civ: Civ): MutableSet<Region> {
+    private fun getConvertedRegions(faction: Faction, civ: Civilization): MutableSet<Region> {
         val handledFactionLocations: MutableSet<FLocation> = HashSet()
         val newRegions: MutableSet<Region> = HashSet()
         var id = 0

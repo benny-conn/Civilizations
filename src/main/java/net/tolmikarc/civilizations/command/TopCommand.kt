@@ -31,7 +31,7 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                         "power" -> it.power
                         "balance" -> it.bank.balance.toInt()
                         "land" -> it.claims.totalBlocksCount
-                        "citizens" -> it.citizenCount
+                        "citizens" -> it.citizens.size
                         else -> it.power
                     }
                 }
@@ -69,7 +69,7 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                         for (i in lowerLimit..upperLimit) {
                             if (i >= civilizationsSorted.size)
                                 break
-                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i - 1].name}: ${civilizationsSorted[i - 1].citizenCount} ")
+                            tellNoPrefix("${Settings.PRIMARY_COLOR} ${i}. ${civilizationsSorted[i - 1].name}: ${civilizationsSorted[i - 1].citizens.size} ")
                         }
                     }
                     else -> {

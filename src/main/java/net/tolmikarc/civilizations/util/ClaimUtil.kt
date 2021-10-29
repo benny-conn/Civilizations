@@ -6,9 +6,9 @@ package net.tolmikarc.civilizations.util
 
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Plot
-import net.tolmikarc.civilizations.model.impl.Region
+import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Plot
+import net.tolmikarc.civilizations.model.Region
 import net.tolmikarc.civilizations.util.MathUtil.isRegionInRegion
 import org.bukkit.Bukkit
 import org.bukkit.Location
@@ -16,7 +16,7 @@ import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 
 object ClaimUtil {
-    fun playersInCivClaims(civilization: Civ): Int {
+    fun playersInCivClaims(civilization: Civilization): Int {
         var count = 0
         for (region in civilization.claims.claims) {
             count += region.entities.stream().filter { entity: Entity? -> entity is Player }.count().toInt()
@@ -24,7 +24,7 @@ object ClaimUtil {
         return count
     }
 
-    fun playersInCivClaims(civWithPlayersInIt: Civ, fromThisCiv: Civ?): Int {
+    fun playersInCivClaims(civWithPlayersInIt: Civilization, fromThisCiv: Civilization?): Int {
         var count = 0
         for (region in civWithPlayersInIt.claims.claims) {
             for (entity in region.entities) if (entity is Player) if (fromThisCiv != null) {
@@ -34,7 +34,7 @@ object ClaimUtil {
         return if (count == 0) 1 else count
     }
 
-    fun playersInCivOnline(civilization: Civ): Int {
+    fun playersInCivOnline(civilization: Civilization): Int {
         var count = 0
         for (civPlayer in civilization.citizens) {
             count += if (Bukkit.getPlayer(civPlayer.uuid) != null) 1 else 0
@@ -42,7 +42,7 @@ object ClaimUtil {
         return count
     }
 
-    fun distanceFromNearestClaim(location: Location, civilization: Civ): Double {
+    fun distanceFromNearestClaim(location: Location, civilization: Civilization): Double {
         val distances: MutableList<Double> = ArrayList()
         for (region in civilization.claims.claims) {
             distances.add(location.distance(region.center))
@@ -69,7 +69,7 @@ object ClaimUtil {
     }
 
 
-    fun isLocationInCiv(location: Location, civilization: Civ): Boolean {
+    fun isLocationInCiv(location: Location, civilization: Civilization): Boolean {
         for (region in civilization.claims.claims) {
             if (region.isWithin(location)) return true
         }
@@ -88,7 +88,7 @@ object ClaimUtil {
         return null
     }
 
-    fun getPlotFromLocation(location: Location, civilization: Civ): Plot? {
+    fun getPlotFromLocation(location: Location, civilization: Civilization): Plot? {
         for (plot in civilization.claims.plots) {
             if (plot.region.isWithin(location)) return plot
         }
@@ -103,14 +103,14 @@ object ClaimUtil {
         return null
     }
 
-    fun getRegionFromLocation(location: Location, civilization: Civ): Region? {
+    fun getRegionFromLocation(location: Location, civilization: Civilization): Region? {
         for (region in civilization.claims.claims) {
             if (region.isWithin(location)) return region
         }
         return null
     }
 
-    fun getCivFromLocation(location: Location): Civ? {
+    fun getCivFromLocation(location: Location): Civilization? {
         for (civilization in CivManager.all) for (region in civilization.claims.claims) {
             if (region.isWithin(location)) return civilization
         }
@@ -118,7 +118,7 @@ object ClaimUtil {
     }
 
 
-    private fun regionsInSelection(region: Region, civilization: Civ): List<Region> {
+    private fun regionsInSelection(region: Region, civilization: Civilization): List<Region> {
         val regions: MutableList<Region> = ArrayList()
         for (claimedRegion in civilization.claims.claims) {
             if (claimedRegion == region) continue
@@ -146,7 +146,7 @@ object ClaimUtil {
         return plots
     }
 
-    fun isRegionConnected(region: Region, civilization: Civ): Boolean {
+    fun isRegionConnected(region: Region, civilization: Civilization): Boolean {
         val boundingBox = region.boundingBox.filter { it.y == 1.0 }
         for (claimedRegion in civilization.claims.claims) {
             val borderingBoundingBox = claimedRegion.boundingBox.filter { it.y == 1.0 }

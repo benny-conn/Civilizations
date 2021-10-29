@@ -12,10 +12,6 @@ import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.ClaimUtil
 import net.tolmikarc.civilizations.util.ClaimUtil.getCivFromLocation
 import net.tolmikarc.civilizations.util.ClaimUtil.getPlotFromLocation
-import net.tolmikarc.civilizations.util.WarUtil
-import net.tolmikarc.civilizations.util.WarUtil.addDamages
-import net.tolmikarc.civilizations.util.WarUtil.canAttackCivilization
-import net.tolmikarc.civilizations.util.WarUtil.shootBlockAndAddDamages
 import org.bukkit.Material
 import org.bukkit.Tag
 import org.bukkit.entity.EntityType
@@ -87,7 +83,7 @@ class EntityListener : Listener {
                     )!!
                 )
 
-                if (canAttackCivilization(attackingPlayer, civilization)) {
+                if (civilization.canAttackCivilization(attackingPlayer)) {
                     if (!Settings.RAID_BREAK_SWITCHABLES)
                         if (PermissionChecker.isSwitchable(block.type) || block.type == Material.TNT || Tag.STAIRS.isTagged(
                                 block.type
@@ -96,12 +92,12 @@ class EntityListener : Listener {
                             blockIterator.remove()
                             continue
                         }
-                    val attackingCiv = attackingPlayer.civilization!!
+                    val attackingCivilization = attackingPlayer.civilization!!
                     if (RandomUtil.chance(75))
-                        shootBlockAndAddDamages(civilization, attackingCiv, block)
+                        civilization.shootBlockAndAddDamages( attackingCivilization, block)
                     else
-                        addDamages(civilization, attackingCiv, block)
-                    WarUtil.increaseBlocksBroken(attackingPlayer)
+                        civilization.addDamages( attackingCivilization, block)
+                    attackingPlayer.addRaidBlocksDestroyed(1)
                     continue
                 }
             }

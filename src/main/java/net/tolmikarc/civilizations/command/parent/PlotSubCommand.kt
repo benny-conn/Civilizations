@@ -7,10 +7,10 @@ import kotlinx.coroutines.delay
 import net.tolmikarc.civilizations.AsyncEnvironment
 import net.tolmikarc.civilizations.PermissionChecker
 import net.tolmikarc.civilizations.manager.PlayerManager
-import net.tolmikarc.civilizations.model.CPlayer
-import net.tolmikarc.civilizations.model.Civ
-import net.tolmikarc.civilizations.model.impl.Plot
-import net.tolmikarc.civilizations.model.impl.Region
+import net.tolmikarc.civilizations.model.CivPlayer
+import net.tolmikarc.civilizations.model.Civilization
+import net.tolmikarc.civilizations.model.Plot
+import net.tolmikarc.civilizations.model.Region
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import net.tolmikarc.civilizations.util.CivUtil
@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
 
 open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "plot") {
 
-    fun addMemberToPlot(civPlayer: CPlayer, civilization: Civ) {
+    fun addMemberToPlot(civPlayer: CivPlayer, civilization: Civilization) {
         val plot: Plot? = ClaimUtil.getPlotFromLocation(player.location, civilization)
         checkNotNull(plot, Localization.Warnings.Claim.NO_PLOT)
         checkBoolean(
@@ -45,7 +45,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         }
     }
 
-    fun setPlotForSale(civPlayer: CPlayer, civilization: Civ) {
+    fun setPlotForSale(civPlayer: CivPlayer, civilization: Civilization) {
         val plot: Plot? = ClaimUtil.getPlotFromLocation(player.location, civilization)
         checkNotNull(plot, Localization.Warnings.Claim.NO_PLOT)
         plot?.apply {
@@ -65,7 +65,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         }
     }
 
-    fun claimPlot(civPlayer: CPlayer, civilization: Civ) {
+    fun claimPlot(civPlayer: CivPlayer, civilization: Civilization) {
         val plot: Plot? = ClaimUtil.getPlotFromLocation(player.location, civilization)
         checkNotNull(plot, Localization.Warnings.Claim.NO_PLOT)
         plot?.apply {
@@ -86,7 +86,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         }
     }
 
-    fun definePlot(civPlayer: CPlayer, civilization: Civ) {
+    fun definePlot(civPlayer: CivPlayer, civilization: Civilization) {
         checkBoolean(PermissionChecker.canManageCiv(civPlayer, civilization), Localization.Warnings.CANNOT_MANAGE_CIV)
         checkBoolean(civPlayer.selection.bothPointsSelected(), Localization.Warnings.Claim.INCOMPLETE_SELECTION)
         val maxPlots = CivUtil.calculateFormulaForCiv(Settings.MAX_PLOTS_FORMULA, civilization)
@@ -120,7 +120,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
             .also { tellSuccess(Localization.Notifications.SUCCESS_COMMAND) }
     }
 
-    fun deletePlot(civPlayer: CPlayer, civilization: Civ) {
+    fun deletePlot(civPlayer: CivPlayer, civilization: Civilization) {
         checkBoolean(PermissionChecker.canManageCiv(civPlayer, civilization), Localization.Warnings.CANNOT_MANAGE_CIV)
         val plot = ClaimUtil.getPlotFromLocation(player.location, civilization)
         checkNotNull(plot, Localization.Warnings.Claim.NO_PLOT)
@@ -130,7 +130,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         }
     }
 
-    fun visualize(civPlayer: CPlayer, civilization: Civ) {
+    fun visualize(civPlayer: CivPlayer, civilization: Civilization) {
         civPlayer.visualizing = !civPlayer.visualizing
         val visualizedRegions: MutableSet<Region> = HashSet()
         if (args.size > 1) {
@@ -157,7 +157,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         }
     }
 
-    fun toggle(civPlayer: CPlayer, civilization: Civ) {
+    fun toggle(civPlayer: CivPlayer, civilization: Civilization) {
         checkArgs(2, "Please specify a value to toggle")
         val arg = args[1]
         val plot: Plot = ClaimUtil.getPlotFromLocation(player.location, civilization) ?: return
@@ -167,7 +167,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
                 Localization.Warnings.CANNOT_MANAGE_CIV
             )
             when (arg) {
-                "fire" -> toggleables.fire =
+                "fire"       -> toggleables.fire =
                     !toggleables.fire.also {
                         tellSuccess(
                             Localization.Notifications.SUCCESS_TOGGLE.replace(
@@ -227,7 +227,7 @@ open class PlotSubCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent
         }
     }
 
-    fun info(civilization: Civ) {
+    fun info(civilization: Civilization) {
         val plot: Plot = ClaimUtil.getPlotFromLocation(player.location, civilization) ?: return
         val toggleables = plot.toggleables
         val membersNames: MutableList<String?> = ArrayList()
