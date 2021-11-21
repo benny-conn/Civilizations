@@ -19,15 +19,15 @@ class PlotCommand(parent: SimpleCommandGroup?) : PlotSubCommand(parent) {
                 if (args.isNotEmpty())
                     when (args[0].toLowerCase()) {
                         "visualize" -> visualize(civPlayer, this)
-                        "define" -> definePlot(civPlayer, this)
-                        "claim" -> claimPlot(civPlayer, this)
-                        "delete" -> deletePlot(civPlayer, this)
-                        "forsale" -> setPlotForSale(civPlayer, this)
-                        "toggle" -> toggle(civPlayer, this)
-                        "add" -> addMemberToPlot(civPlayer, this)
-                        "info" -> info(this)
+                        "define"    -> definePlot(civPlayer, this)
+                        "claim"     -> claimPlot(civPlayer, this)
+                        "delete"    -> deletePlot(civPlayer, this)
+                        "forsale"   -> setPlotForSale(civPlayer, this)
+                        "toggle"    -> toggle(civPlayer, this)
+                        "add"       -> addMemberToPlot(civPlayer, this)
+                        "info"      -> info(this)
                     }
-                PlayerManager.queueForSaving(civPlayer)
+                PlayerManager.saveAsync(civPlayer)
             }
         }
     }

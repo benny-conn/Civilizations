@@ -10,6 +10,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
+import java.util.*
 
 class AClaimCommand(parent: SimpleCommandGroup?) : ClaimSubCommand(parent) {
     override fun onCommand() {
@@ -19,11 +20,11 @@ class AClaimCommand(parent: SimpleCommandGroup?) : ClaimSubCommand(parent) {
         checkNotNull(civ, Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", Localization.CIVILIZATION))
         civ?.apply {
             if (args.isNotEmpty()) {
-                when (args[0].toLowerCase()) {
+                when (args[0].lowercase(Locale.getDefault())) {
                     "visualize" -> {
                         visualize(civPlayer, this)
                     }
-                    "colony" -> {
+                    "colony"    -> {
                         claim(this, civPlayer, true)
                     }
                 }

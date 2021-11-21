@@ -26,7 +26,7 @@ data class Plot(
 
     fun addMember(player: CivPlayer) {
         members.add(player)
-        CivManager.queueForSaving(civ)
+        CivManager.saveAsync(civ)
     }
 
     override fun serialize(): SerializedMap {

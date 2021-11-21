@@ -11,7 +11,7 @@
 
     <groupId>net.tolmikarc</groupId>
     <artifactId>Civilizations</artifactId>
-    <version>0.0.11-BETA</version>
+    <version>0.0.13-BETA</version>
 
 
     <properties>
@@ -158,7 +158,8 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>org.mineacademy</pattern>
-                                    <shadedPattern>${project.groupId}.${project.artifactId}.lib.mineacademy</shadedPattern>
+                                    <shadedPattern>${project.groupId}.${project.artifactId}.lib.mineacademy
+                                    </shadedPattern>
                                     <excludes>
                                         <exclude>org.mineacademy.${project.artifactId}.*</exclude>
                                         <exclude>org.mineacademy.gameapi.*</exclude>

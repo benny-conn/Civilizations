@@ -5,10 +5,10 @@
 package net.tolmikarc.civilizations.menu
 
 import io.papermc.lib.PaperLib
-import net.tolmikarc.civilizations.event.DeleteCivEvent
 import net.tolmikarc.civilizations.conversation.BankTranscationConversation
 import net.tolmikarc.civilizations.conversation.RankCreationConversation
 import net.tolmikarc.civilizations.conversation.RenameConversation
+import net.tolmikarc.civilizations.event.DeleteCivEvent
 import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.model.CivPlayer
@@ -58,15 +58,15 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
 
     override fun getItemAt(slot: Int): ItemStack {
         return when (slot) {
-            1 -> infoButton.item
-            3 -> citizensMenuButton.item
-            5 -> economyMenuButton.item
-            7 -> toggleMenuButton.item
+            1         -> infoButton.item
+            3         -> citizensMenuButton.item
+            5         -> economyMenuButton.item
+            7         -> toggleMenuButton.item
             9 * 2 + 1 -> permissionsMenuButton.item
             9 * 2 + 3 -> inviteMenuButton.item
             9 * 2 + 5 -> generalSettingsButton.item
             9 * 2 + 7 -> actionsButton.item
-            else -> emptyButton.item
+            else      -> emptyButton.item
         }
     }
 
@@ -107,13 +107,13 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
 
         override fun getItemAt(slot: Int): ItemStack {
             return when (slot) {
-                1 -> pvp.item
-                3 -> mobs.item
-                5 -> explosions.item
-                7 -> fire.item
+                1     -> pvp.item
+                3     -> mobs.item
+                5     -> explosions.item
+                7     -> fire.item
                 9 + 2 -> public.item
                 9 + 6 -> inviteOnly.item
-                else -> emptyButton.item
+                else  -> emptyButton.item
             }
         }
 
@@ -225,9 +225,9 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
 
         override fun getItemAt(slot: Int): ItemStack {
             return when (slot) {
-                1 -> balanceButton.item
-                4 -> depositButton.item
-                7 -> withdrawButton.item
+                1    -> balanceButton.item
+                4    -> depositButton.item
+                7    -> withdrawButton.item
                 else -> emptyButton.item
             }
         }
@@ -423,12 +423,12 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
 
         override fun getItemAt(slot: Int): ItemStack {
             return when (slot) {
-                9 + 2 -> homeButton.item
-                9 + 6 -> leaderButton.item
+                9 + 2     -> homeButton.item
+                9 + 6     -> leaderButton.item
                 9 * 2 + 1 -> statsButton.item
                 9 * 3 + 4 -> toggleablesButton.item
                 9 * 3 + 7 -> relationshipsButton.item
-                else -> return emptyButton.item
+                else      -> return emptyButton.item
             }
         }
 
@@ -577,9 +577,9 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
 
         override fun getItemAt(slot: Int): ItemStack {
             return when (slot) {
-                2 -> renameButton.item
-                4 -> descriptionButton.item
-                6 -> leaderButton.item
+                2    -> renameButton.item
+                4    -> descriptionButton.item
+                6    -> leaderButton.item
                 else -> emptyButton.item
             }
         }
@@ -667,12 +667,12 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
 
         override fun getItemAt(slot: Int): ItemStack {
             return when (slot) {
-                2 -> homeButton.item
-                4 -> warpButton.item
-                6 -> colonyButton.item
+                2     -> homeButton.item
+                4     -> warpButton.item
+                6     -> colonyButton.item
                 9 + 2 -> createRankButton.item
                 9 + 6 -> deleteButton.item
-                else -> emptyButton.item
+                else  -> emptyButton.item
             }
         }
 
@@ -749,7 +749,7 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
                         Messenger.success(player, Localization.Notifications.SUCCESS_COMMAND)
                         for (citizen in civilization.citizens) {
                             citizen.civilization = null
-                            PlayerManager.queueForSaving(citizen)
+                            PlayerManager.saveAsync(citizen)
                         }
                         CivManager.removeCiv(civilization)
                         Common.callEvent(DeleteCivEvent(civilization, player))

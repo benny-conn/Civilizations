@@ -11,7 +11,6 @@ import net.tolmikarc.civilizations.command.admin.AdminCommandGroup
 import net.tolmikarc.civilizations.db.CivDatastore
 import net.tolmikarc.civilizations.db.PlayerDatastore
 import net.tolmikarc.civilizations.listener.*
-import net.tolmikarc.civilizations.manager.CivManager
 import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
@@ -49,8 +48,8 @@ class CivilizationsPlugin : SimplePlugin() {
             task.cancel()
         }
         Common.log("Saving Data and Closing Datastore Connections")
-        PlayerManager.saveQueuedForSaving()
-        CivManager.saveQueuedForSaving()
+//        PlayerManager.saveQueuedForSaving()
+//        CivManager.saveQueuedForSaving()
         CivDatastore.close()
         PlayerDatastore.close()
 
@@ -117,7 +116,7 @@ class CivilizationsPlugin : SimplePlugin() {
                     "civ_civs"
                 )
             }
-            Settings.DB_TYPE.equals("mysql", ignoreCase = true) -> {
+            Settings.DB_TYPE.equals("mysql", ignoreCase = true)  -> {
                 PlayerDatastore.connect(
                     Settings.DB_HOST,
                     Settings.DB_PORT,
@@ -135,7 +134,7 @@ class CivilizationsPlugin : SimplePlugin() {
                     "civ_civs"
                 )
             }
-            else -> {
+            else                                                 -> {
                 Common.error(Throwable("NoDataSource"), "No datasource for saving and loading, disabling plugin.")
                 Bukkit.getPluginManager().disablePlugin(this)
             }

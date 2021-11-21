@@ -13,7 +13,7 @@ data class CivPlayer(override val uuid: UUID) : UniquelyIdentifiable {
     var playerName: String? = null
         set(value) {
             if (value != null)
-                PlayerManager.byName[value.toLowerCase()] = this
+                PlayerManager.byName[value.lowercase(Locale.getDefault())] = this
             field = value
         }
     var civilization: Civilization? = null
@@ -28,7 +28,7 @@ data class CivPlayer(override val uuid: UUID) : UniquelyIdentifiable {
 
     fun addPower(power: Int) {
         this.power += power
-        PlayerManager.queueForSaving(this)
+        PlayerManager.saveAsync(this)
     }
 
     fun removePower(power: Int) {
@@ -36,7 +36,7 @@ data class CivPlayer(override val uuid: UUID) : UniquelyIdentifiable {
             this.power -= power
         else
             this.power = 0
-        PlayerManager.queueForSaving(this)
+        PlayerManager.saveAsync(this)
     }
 
     fun addRaidBlocksDestroyed(amount: Int) {

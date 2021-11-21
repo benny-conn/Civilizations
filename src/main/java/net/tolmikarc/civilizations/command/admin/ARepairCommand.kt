@@ -73,7 +73,7 @@ class ARepairCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "re
             override fun onFinish() {
                 damages.brokenBlocksMap.keys.removeAll(handledLocations)
                 if (damages.brokenBlocksMap.isEmpty()) civ.damages = null
-                CivManager.queueForSaving(civ)
+                CivManager.saveAsync(civ)
                 tellSuccess(
                     Localization.Notifications.SUCCESS_REPAIR.replace(
                         "{blocks}",

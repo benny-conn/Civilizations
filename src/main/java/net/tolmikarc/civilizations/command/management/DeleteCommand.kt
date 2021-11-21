@@ -29,7 +29,7 @@ class DeleteCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "del
                     tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                     for (citizen in civ.citizens) {
                         citizen.civilization = null
-                        PlayerManager.queueForSaving(citizen)
+                        PlayerManager.saveAsync(citizen)
                     }
                     CivManager.removeCiv(civ)
                     Common.callEvent(DeleteCivEvent(civ, player))

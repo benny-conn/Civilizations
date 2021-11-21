@@ -51,9 +51,9 @@ object CivManager : Manager<Civilization> {
         AsyncEnvironment.run { load(loaded) }
     }
 
-    override fun queueForSaving(vararg queued: Civilization) {
-        queuedForSaving.addAll(queued)
-    }
+//    override fun queueForSaving(vararg queued: Civilization) {
+//        queuedForSaving.addAll(queued)
+//    }
 
     override fun initialize(uuid: UUID): Civilization {
         val civilization = Civilization(uuid)

@@ -21,13 +21,13 @@ class APlotCommand(parent: SimpleCommandGroup?) : PlotSubCommand(parent) {
             if (args.isNotEmpty())
                 when (args[1].toLowerCase()) {
                     "visualize" -> visualize(civPlayer, this)
-                    "define" -> definePlot(civPlayer, this)
-                    "claim" -> claimPlot(civPlayer, this)
-                    "delete" -> deletePlot(civPlayer, this)
-                    "forsale" -> setPlotForSale(civPlayer, this)
-                    "add" -> addMemberToPlot(civPlayer, this)
+                    "define"    -> definePlot(civPlayer, this)
+                    "claim"     -> claimPlot(civPlayer, this)
+                    "delete"    -> deletePlot(civPlayer, this)
+                    "forsale"   -> setPlotForSale(civPlayer, this)
+                    "add"       -> addMemberToPlot(civPlayer, this)
                 }
-            PlayerManager.queueForSaving(civPlayer)
+            PlayerManager.saveAsync(civPlayer)
 
         }
     }

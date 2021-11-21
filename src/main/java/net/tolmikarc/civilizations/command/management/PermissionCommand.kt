@@ -13,6 +13,7 @@ import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.Common
 import org.mineacademy.fo.command.SimpleCommandGroup
 import org.mineacademy.fo.command.SimpleSubCommand
+import java.util.*
 
 class PermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "perms|permissions") {
     override fun onCommand() {
@@ -38,7 +39,7 @@ class PermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
                 if (args.size == 3) {
                     val group = permissions.getGroupByName(args[0])
                     if (group == null) returnInvalidArgs()
-                    group?.adjust(PermissionType.valueOf(args[1].toUpperCase()), args[2].toBoolean())
+                    group?.adjust(PermissionType.valueOf(args[1].uppercase(Locale.getDefault())), args[2].toBoolean())
                     tellSuccess(Localization.Notifications.SUCCESS_COMMAND)
                 } else
                     returnInvalidArgs()
@@ -51,9 +52,9 @@ class PermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, 
         if (PlayerManager.fromBukkitPlayer(player).civilization != null)
             civ = PlayerManager.fromBukkitPlayer(player).civilization
         return when (args.size) {
-            1 -> civ?.permissions?.ranks?.map { it.name } ?: super.tabComplete()
-            2 -> listOf("build", "break", "switch", "interact")
-            3 -> listOf("true", "false")
+            1    -> civ?.permissions?.ranks?.map { it.name } ?: super.tabComplete()
+            2    -> listOf("build", "break", "switch", "interact")
+            3    -> listOf("true", "false")
             else -> super.tabComplete()
         }
     }

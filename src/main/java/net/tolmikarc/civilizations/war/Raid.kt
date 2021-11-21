@@ -26,7 +26,7 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
 
     // map of players and their lives
     val playersInvolved: MutableMap<CivPlayer, Int> = HashMap()
-    val openTasks = mutableSetOf<RaidParticleTask>()
+    private val openTasks = mutableSetOf<RaidParticleTask>()
 
     fun addPlayerToRaid(player: Player) {
 
@@ -47,8 +47,10 @@ class Raid(val civBeingRaided: Civilization, val civRaiding: Civilization) : Cou
             if (Common.doesPluginExist("ProtocolLib")) {
                 val onlinePlayersFromOppositeCivilization = mutableListOf<Player>()
                 for (p in Bukkit.getOnlinePlayers()) {
-                    if ((civRaiding == it.civilization && PlayerManager.fromBukkitPlayer(p).civilization == civBeingRaided ) || (civBeingRaided == it.civilization && PlayerManager.fromBukkitPlayer(p).civilization == civRaiding))
-                            onlinePlayersFromOppositeCivilization.add(p)
+                    if ((civRaiding == it.civilization && PlayerManager.fromBukkitPlayer(p).civilization == civBeingRaided) || (civBeingRaided == it.civilization && PlayerManager.fromBukkitPlayer(
+                            p
+                        ).civilization == civRaiding))
+                        onlinePlayersFromOppositeCivilization.add(p)
                 }
                 val task = RaidParticleTask(player, onlinePlayersFromOppositeCivilization)
                 Common.runTimerAsync(10, task)

@@ -8,7 +8,6 @@ import net.tolmikarc.civilizations.util.ClaimUtil
 import org.bukkit.Bukkit
 import org.bukkit.entity.Monster
 import org.bukkit.scheduler.BukkitRunnable
-import org.mineacademy.fo.Common
 
 class MobRemovalTask : BukkitRunnable() {
 
@@ -19,25 +18,23 @@ class MobRemovalTask : BukkitRunnable() {
             world.entities.forEach {
                 if (it is Monster) {
                     val location = it.location
-                    val civ = ClaimUtil.getCivFromLocation(location)
-                    if (civ != null) {
-                        val plot = ClaimUtil.getPlotFromLocation(location, civ)
-                        if (plot != null) {
-                            if (!plot.toggleables.mobs)
-                                mobsToRemove.add(it)
-                        } else {
-                            if (!civ.toggleables.mobs)
-                                mobsToRemove.add(it)
+                    if (location.chunk.isLoaded) {
+                        val civ = ClaimUtil.getCivFromLocation(location)
+                        if (civ != null) {
+                            val plot = ClaimUtil.getPlotFromLocation(location, civ)
+                            if (plot != null) {
+                                if (!plot.toggleables.mobs)
+                                    mobsToRemove.add(it)
+                            } else {
+                                if (!civ.toggleables.mobs)
+                                    mobsToRemove.add(it)
+                            }
                         }
                     }
                 }
             }
         }
-
-        Common.runLaterAsync(0) {
-            mobsToRemove.forEach { it.remove() }
-        }
-
+        mobsToRemove.forEach { it.remove() }
     }
 
 }

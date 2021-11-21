@@ -49,10 +49,10 @@ class PlayerListener : Listener {
         val player = event.player
         val civPlayer = PlayerManager.fromBukkitPlayer(player)
         civPlayer.playerName = player.name
-        PlayerManager.queueForSaving(civPlayer)
+        PlayerManager.saveAsync(civPlayer)
         if (civPlayer.civilization != null) {
             val civ = civPlayer.civilization!!
-            CivManager.queueForSaving(civ)
+            CivManager.saveAsync(civ)
         }
     }
 

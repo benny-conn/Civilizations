@@ -47,9 +47,9 @@ object PlayerManager : Manager<CivPlayer> {
         AsyncEnvironment.run { load(loaded) }
     }
 
-    override fun queueForSaving(vararg queued: CivPlayer) {
-        queuedForSaving.addAll(queued)
-    }
+//    override fun queueForSaving(vararg queued: CivPlayer) {
+//        queuedForSaving.addAll(queued)
+//    }
 
     override fun initialize(uuid: UUID): CivPlayer {
         val civPlayer = CivPlayer(uuid)

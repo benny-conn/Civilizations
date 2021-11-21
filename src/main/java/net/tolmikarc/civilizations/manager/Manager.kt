@@ -17,10 +17,10 @@ interface Manager<T> {
     fun saveAsync(saved: T)
     fun load(loaded: T)
     fun loadAsync(loaded: T)
-    fun queueForSaving(vararg queued: T)
-    fun saveQueuedForSaving() {
-        for (saved in queuedForSaving) {
-            save(saved)
-        }
-    }
+//    fun queueForSaving(vararg queued: T)
+//    fun saveQueuedForSaving() {
+//        for (saved in queuedForSaving) {
+//            save(saved)
+//        }
+//    }
 }

@@ -10,6 +10,7 @@ import net.tolmikarc.civilizations.manager.PlayerManager
 import net.tolmikarc.civilizations.settings.Localization
 import net.tolmikarc.civilizations.settings.Settings
 import org.mineacademy.fo.command.SimpleCommandGroup
+import java.util.*
 
 class ClaimCommand(parent: SimpleCommandGroup?) : ClaimSubCommand(parent) {
     override fun onCommand() {
@@ -18,7 +19,7 @@ class ClaimCommand(parent: SimpleCommandGroup?) : ClaimSubCommand(parent) {
             checkNotNull(it.civilization, Localization.Warnings.NO_CIV)
             it.civilization?.apply {
                 if (args.isNotEmpty()) {
-                    when (args[0].toLowerCase()) {
+                    when (args[0].lowercase(Locale.getDefault())) {
                         "visualize" -> {
                             if (args.size > 1 && !args[1].equals("here", true))
                                 if (CivManager.getByName(args[1]) != null)
@@ -28,10 +29,10 @@ class ClaimCommand(parent: SimpleCommandGroup?) : ClaimSubCommand(parent) {
                             else
                                 visualize(it, this)
                         }
-                        "colony" -> {
+                        "colony"    -> {
                             claim(this, it, true)
                         }
-                        "?" -> {
+                        "?"         -> {
                             // TODO add info for claiming
                         }
                     }

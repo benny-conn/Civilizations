@@ -60,7 +60,7 @@ data class Civilization(override val uuid: UUID) : UniquelyIdentifiable, ConfigS
 
     fun addPower(power: Int) {
         this.power += power
-        CivManager.queueForSaving(this)
+        CivManager.saveAsync(this)
     }
 
     fun removePower(power: Int) {
@@ -68,7 +68,7 @@ data class Civilization(override val uuid: UUID) : UniquelyIdentifiable, ConfigS
             this.power -= power
         else
             this.power = 0
-        CivManager.queueForSaving(this)
+        CivManager.saveAsync(this)
     }
 
 
@@ -93,7 +93,7 @@ data class Civilization(override val uuid: UUID) : UniquelyIdentifiable, ConfigS
             addPower(player.power)
         }
         player.addPower(CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, this).toInt())
-        CivManager.queueForSaving(this)
+        CivManager.saveAsync(this)
     }
 
     fun removeCitizen(player: CivPlayer) {
@@ -105,7 +105,7 @@ data class Civilization(override val uuid: UUID) : UniquelyIdentifiable, ConfigS
             removePower(player.power)
         }
         player.removePower(CivUtil.calculateFormulaForCiv(Settings.POWER_CITIZEN_FORMULA, this).toInt())
-        CivManager.queueForSaving(this)
+        CivManager.saveAsync(this)
     }
 
     fun isPlayerOutlaw(player: CivPlayer): Boolean {
@@ -179,7 +179,8 @@ data class Civilization(override val uuid: UUID) : UniquelyIdentifiable, ConfigS
         damages!!.brokenBlocksMap[block.location] = block.blockData.asString
         removePower(Settings.POWER_RAID_BLOCK)
         attackingCiv.addPower(Settings.POWER_BLOCKS_WEIGHT)
-        CivManager.queueForSaving(this, attackingCiv)
+        CivManager.saveAsync(this)
+        CivManager.saveAsync(attackingCiv)
     }
 
     fun shootBlockAndAddDamages(attackingCiv: Civilization, block: Block) {
@@ -191,7 +192,8 @@ data class Civilization(override val uuid: UUID) : UniquelyIdentifiable, ConfigS
         )
         removePower(Settings.POWER_RAID_BLOCK)
         attackingCiv.addPower(Settings.POWER_BLOCKS_WEIGHT)
-        CivManager.queueForSaving(this, attackingCiv)
+        CivManager.saveAsync(this)
+        CivManager.saveAsync(attackingCiv)
     }
 
 
