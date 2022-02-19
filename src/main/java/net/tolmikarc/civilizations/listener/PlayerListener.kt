@@ -312,46 +312,50 @@ class PlayerListener : Listener {
         val from: Location = event.from
         LagCatcher.start("move")
         try {
-            // Are we going into a new block?
-            if (from.blockX != to.blockX || from.blockZ != to.blockZ) {
-                val civTo = getCivFromLocation(to.block.location)
-                val civFrom = getCivFromLocation(from.block.location)
-                // make sure some civilization is involved, else what would this code be for?
-                if (civTo == null && civFrom == null) return
-                // are we entering a new civ?
-                if (civTo != null && civTo != civFrom) {
-                    if (!Common.callEvent(
-                            CivEnterEvent(
-                                civTo,
-                                event.player,
-                                from, to
-                            )
-                        )
-                    ) event.isCancelled = true
-                } else if (civTo == null && civFrom != null) { // are we leaving the civ?
-                    if (!Common.callEvent(
-                            CivLeaveEvent(
-                                civFrom,
-                                event.player,
-                                from, to
-                            )
-                        )
-                    ) event.isCancelled = true
-                }
-                val plotTo = getPlotFromLocation(event.to!!)
-                val plotFrom = getPlotFromLocation(event.from)
-                // are we entering a new plot
-                if (plotTo != null && plotTo != plotFrom) {
-                    if (!Common.callEvent(
-                            PlotEnterEvent(
-                                plotTo,
-                                event.player,
-                                from, to
-                            )
-                        )
-                    ) event.isCancelled = true
-                }
+
+            if (from.blockX == to.blockX && from.blockZ == to.blockZ) {
+                // we did not move an entire block, don't do anything
+                return
             }
+            
+            val civTo = getCivFromLocation(to.block.location)
+            val civFrom = getCivFromLocation(from.block.location)
+            // make sure some civilization is involved, else what would this code be for?
+            if (civTo == null && civFrom == null) return
+            // are we entering a new civ?
+            if (civTo != null && civTo != civFrom) {
+                if (!Common.callEvent(
+                        CivEnterEvent(
+                            civTo,
+                            event.player,
+                            from, to
+                        )
+                    )
+                ) event.isCancelled = true
+            } else if (civTo == null && civFrom != null) { // are we leaving the civ?
+                if (!Common.callEvent(
+                        CivLeaveEvent(
+                            civFrom,
+                            event.player,
+                            from, to
+                        )
+                    )
+                ) event.isCancelled = true
+            }
+            val plotTo = getPlotFromLocation(event.to!!)
+            val plotFrom = getPlotFromLocation(event.from)
+            // are we entering a new plot
+            if (plotTo != null && plotTo != plotFrom) {
+                if (!Common.callEvent(
+                        PlotEnterEvent(
+                            plotTo,
+                            event.player,
+                            from, to
+                        )
+                    )
+                ) event.isCancelled = true
+            }
+
         } finally {
             LagCatcher.end("move")
         }

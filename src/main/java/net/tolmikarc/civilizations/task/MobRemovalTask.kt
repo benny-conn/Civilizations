@@ -16,21 +16,21 @@ class MobRemovalTask : BukkitRunnable() {
     override fun run() {
         for (world in Bukkit.getWorlds()) {
             world.entities.forEach {
-                if (it is Monster) {
-                    val location = it.location
-                    if (location.chunk.isLoaded) {
-                        val civ = ClaimUtil.getCivFromLocation(location)
-                        if (civ != null) {
-                            val plot = ClaimUtil.getPlotFromLocation(location, civ)
-                            if (plot != null) {
-                                if (!plot.toggleables.mobs)
-                                    mobsToRemove.add(it)
-                            } else {
-                                if (!civ.toggleables.mobs)
-                                    mobsToRemove.add(it)
-                            }
-                        }
-                    }
+                if (it !is Monster) {
+                    return
+                }
+                val location = it.location
+                if (!location.chunk.isLoaded) {
+                    return
+                }
+                val civ = ClaimUtil.getCivFromLocation(location) ?: return
+                val plot = ClaimUtil.getPlotFromLocation(location, civ)
+                if (plot != null) {
+                    if (!plot.toggleables.mobs)
+                        mobsToRemove.add(it)
+                } else {
+                    if (!civ.toggleables.mobs)
+                        mobsToRemove.add(it)
                 }
             }
         }

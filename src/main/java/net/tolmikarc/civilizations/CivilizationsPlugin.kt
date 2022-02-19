@@ -27,10 +27,7 @@ import java.io.File
 
 class CivilizationsPlugin : SimplePlugin() {
 
-    // TODO
-    //  placeholder support
-    //  more integrations
-    //
+
     override fun onPluginStart() {
         loadDatabase()
         registerAllCommands()
@@ -48,8 +45,7 @@ class CivilizationsPlugin : SimplePlugin() {
             task.cancel()
         }
         Common.log("Saving Data and Closing Datastore Connections")
-//        PlayerManager.saveQueuedForSaving()
-//        CivManager.saveQueuedForSaving()
+
         CivDatastore.close()
         PlayerDatastore.close()
 
