@@ -11,7 +11,7 @@ Prefix: "&5&lCIV &7// "
 Log_Lag_Over_Milis: 100
 Locale: en
 # command aliases separated by "|". default command: /civilizations
-Aliases: "civ|c"
+Command_Aliases: "civ|c"
 
 # -------------------------- FORMULAS ----------------------------------
 #
