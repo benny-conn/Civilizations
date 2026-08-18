@@ -11,6 +11,7 @@ version = "0.0.16-BETA"
 val paperVersion = providers.gradleProperty("paperVersion").get()
 val foundationVersion = "6.10.1"
 val coroutinesVersion = "1.11.0"
+val sqliteJdbcVersion = "3.53.2.1"
 val pluginMainClass = "io.bennyc.civilizations.CivilizationsPlugin"
 
 repositories {
@@ -37,6 +38,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
 
     testImplementation(kotlin("test"))
+    testRuntimeOnly("org.xerial:sqlite-jdbc:$sqliteJdbcVersion")
 }
 
 java {
@@ -92,6 +94,7 @@ tasks.assemble {
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
 tasks.register<Copy>("deployTestServerPlugin") {

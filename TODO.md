@@ -10,6 +10,14 @@ Audit date: 2026-08-18
 - Size: `XS` (hours), `S` (roughly a day), `M` (several days), `L` (roughly a week or more), `XL` (a multi-milestone system).
 - “MVP” means the smallest complete loop: create/provision civilizations, claim and protect land, fight one declared war, preserve the pre-war state, resolve the war, charge/award money, and visibly reconstruct the damage.
 
+## Architecture rework progress
+
+- [x] Slice 1: add a Foundation-free claim domain, correct rectangle geometry, world/chunk spatial index, and randomized parity tests. This is merged but not yet connected to legacy listeners.
+- [x] Slice 2: add season/civilization/membership domain records, a repository port, versioned relational schema, transactional SQLite implementation, database constraints, and integration tests. This remains isolated from live plugin startup until the cutover slice.
+- [ ] Slice 3: add application services for season setup, landless civilization provisioning, membership assignment/leadership transfer, and claim placement; wire admin commands to V2 without Foundation business logic.
+- [ ] Slice 4: load the active season and spatial index during plugin startup, route Paper protection events through a centralized policy, then retire legacy claim reads.
+- [ ] Slice 5+: add the persisted war/damage/repair lifecycle, migrate remaining commands/configuration/UI adapters, and remove Foundation when no surviving imports remain.
+
 ## Recommended direction
 
 - [ ] **[P0][S] Adopt the vertical slice below as the first playable target.** Do not try to finish every existing Towny-style feature before testing warfare and reconstruction.

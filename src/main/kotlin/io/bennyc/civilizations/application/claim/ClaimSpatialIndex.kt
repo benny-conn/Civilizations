@@ -7,6 +7,7 @@ import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.identity.CivilizationId
+import io.bennyc.civilizations.domain.identity.SeasonId
 
 /**
  * A derived, thread-confined index for hot claim queries.
@@ -14,7 +15,10 @@ import io.bennyc.civilizations.domain.identity.CivilizationId
  * Authoritative claims live in persistence. This index is rebuilt at startup
  * and then mutated on the Paper server thread alongside accepted claim changes.
  */
-class ClaimSpatialIndex(initialClaims: Iterable<Claim> = emptyList()) {
+class ClaimSpatialIndex(
+    val seasonId: SeasonId,
+    initialClaims: Iterable<Claim> = emptyList(),
+) {
     private val claimsById = linkedMapOf<ClaimId, Claim>()
     private val claimIdsByWorldAndChunk =
         mutableMapOf<WorldId, MutableMap<ChunkKey, MutableSet<ClaimId>>>()
@@ -29,6 +33,9 @@ class ClaimSpatialIndex(initialClaims: Iterable<Claim> = emptyList()) {
     fun get(claimId: ClaimId): Claim? = claimsById[claimId]
 
     fun add(claim: Claim) {
+        require(claim.seasonId == seasonId) {
+            "Claim ${claim.id} belongs to season ${claim.seasonId}, not indexed season $seasonId"
+        }
         require(claim.id !in claimsById) { "Claim ${claim.id} is already indexed" }
 
         claimsById[claim.id] = claim
@@ -61,6 +68,9 @@ class ClaimSpatialIndex(initialClaims: Iterable<Claim> = emptyList()) {
             mutableMapOf<WorldId, MutableMap<ChunkKey, MutableSet<ClaimId>>>()
 
         for (claim in claims) {
+            require(claim.seasonId == seasonId) {
+                "Claim ${claim.id} belongs to season ${claim.seasonId}, not indexed season $seasonId"
+            }
             require(replacementClaims.putIfAbsent(claim.id, claim) == null) {
                 "Claim ${claim.id} occurs more than once during index rebuild"
             }
@@ -81,8 +91,8 @@ class ClaimSpatialIndex(initialClaims: Iterable<Claim> = emptyList()) {
         var found: Claim? = null
         forEachCandidate(position.worldId, position.chunkKey) { claim ->
             if (claim.bounds.contains(position)) {
-                check(found == null) {
-                    "Overlapping claims ${found!!.id} and ${claim.id} contain $position"
+                found?.let { previous ->
+                    error("Overlapping claims ${previous.id} and ${claim.id} contain $position")
                 }
                 found = claim
             }

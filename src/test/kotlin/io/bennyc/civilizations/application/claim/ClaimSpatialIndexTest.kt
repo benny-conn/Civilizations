@@ -6,6 +6,7 @@ import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.identity.CivilizationId
+import io.bennyc.civilizations.domain.identity.SeasonId
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.Test
@@ -19,12 +20,13 @@ class ClaimSpatialIndexTest {
     private val nether = WorldId("minecraft:the_nether")
     private val firstCivilization = civilizationId(1)
     private val secondCivilization = civilizationId(2)
+    private val seasonId = SeasonId(UUID(2L, 1L))
 
     @Test
     fun `finds claims across chunks and negative coordinates`() {
         val negative = claim(1, firstCivilization, overworld, -33, -20, -1, -1)
         val positive = claim(2, secondCivilization, overworld, 16, 16, 48, 48)
-        val index = ClaimSpatialIndex(listOf(negative, positive))
+        val index = ClaimSpatialIndex(seasonId, listOf(negative, positive))
 
         assertSame(negative, index.claimAt(BlockPosition2D(overworld, -17, -8)))
         assertSame(positive, index.claimAt(BlockPosition2D(overworld, 48, 48)))
@@ -36,7 +38,7 @@ class ClaimSpatialIndexTest {
     fun `filters same-chunk candidates with exact rectangle containment`() {
         val first = claim(1, firstCivilization, overworld, 0, 0, 2, 2)
         val second = claim(2, secondCivilization, overworld, 12, 12, 15, 15)
-        val index = ClaimSpatialIndex(listOf(first, second))
+        val index = ClaimSpatialIndex(seasonId, listOf(first, second))
 
         assertSame(first, index.claimAt(BlockPosition2D(overworld, 1, 1)))
         assertNull(index.claimAt(BlockPosition2D(overworld, 8, 8)))
@@ -48,7 +50,7 @@ class ClaimSpatialIndexTest {
         val horizontal = claim(1, firstCivilization, overworld, -10, -2, 10, 2)
         val unrelatedSameChunk = claim(2, firstCivilization, overworld, 11, 11, 12, 12)
         val otherWorld = claim(3, firstCivilization, nether, -10, -2, 10, 2)
-        val index = ClaimSpatialIndex(listOf(horizontal, unrelatedSameChunk, otherWorld))
+        val index = ClaimSpatialIndex(seasonId, listOf(horizontal, unrelatedSameChunk, otherWorld))
         val vertical = ClaimBounds.between(overworld, -2, -10, 2, 10)
 
         assertEquals(setOf(horizontal.id), index.findIntersecting(vertical).map { it.id }.toSet())
@@ -59,7 +61,7 @@ class ClaimSpatialIndexTest {
         val ownedNeighbor = claim(1, firstCivilization, overworld, 0, 1, 4, 3)
         val foreignNeighbor = claim(2, secondCivilization, overworld, 6, 5, 8, 8)
         val cornerOnly = claim(3, firstCivilization, overworld, 10, 5, 12, 7)
-        val index = ClaimSpatialIndex(listOf(ownedNeighbor, foreignNeighbor, cornerOnly))
+        val index = ClaimSpatialIndex(seasonId, listOf(ownedNeighbor, foreignNeighbor, cornerOnly))
         val proposed = ClaimBounds.between(overworld, 5, 0, 9, 4)
 
         assertEquals(
@@ -76,7 +78,7 @@ class ClaimSpatialIndexTest {
     fun `remove and rebuild replace all derived index state`() {
         val first = claim(1, firstCivilization, overworld, 0, 0, 20, 20)
         val second = claim(2, secondCivilization, nether, -20, -20, 0, 0)
-        val index = ClaimSpatialIndex(listOf(first))
+        val index = ClaimSpatialIndex(seasonId, listOf(first))
 
         assertSame(first, index.remove(first.id))
         assertNull(index.claimAt(BlockPosition2D(overworld, 10, 10)))
@@ -93,7 +95,7 @@ class ClaimSpatialIndexTest {
     fun `duplicate add and failed rebuild do not corrupt existing state`() {
         val first = claim(1, firstCivilization, overworld, 0, 0, 4, 4)
         val duplicate = first.copy(bounds = ClaimBounds.between(overworld, 10, 10, 12, 12))
-        val index = ClaimSpatialIndex(listOf(first))
+        val index = ClaimSpatialIndex(seasonId, listOf(first))
 
         assertFailsWith<IllegalArgumentException> { index.add(duplicate) }
         assertFailsWith<IllegalArgumentException> { index.rebuild(listOf(first, duplicate)) }
@@ -107,11 +109,28 @@ class ClaimSpatialIndexTest {
     fun `strict point lookup exposes corrupt overlapping ownership`() {
         val first = claim(1, firstCivilization, overworld, 0, 0, 10, 10)
         val second = claim(2, secondCivilization, overworld, 5, 5, 15, 15)
-        val index = ClaimSpatialIndex(listOf(first, second))
+        val index = ClaimSpatialIndex(seasonId, listOf(first, second))
         val overlap = BlockPosition2D(overworld, 7, 7)
 
         assertEquals(setOf(first.id, second.id), index.claimsAt(overlap).map { it.id }.toSet())
         assertFailsWith<IllegalStateException> { index.claimAt(overlap) }
+    }
+
+    @Test
+    fun `rejects claims from a different season`() {
+        val index = ClaimSpatialIndex(seasonId)
+        val foreignSeasonClaim = claim(
+            1,
+            firstCivilization,
+            overworld,
+            0,
+            0,
+            4,
+            4,
+        ).copy(seasonId = SeasonId(UUID(2L, 2L)))
+
+        assertFailsWith<IllegalArgumentException> { index.add(foreignSeasonClaim) }
+        assertEquals(0, index.size)
     }
 
     @Test
@@ -134,7 +153,7 @@ class ClaimSpatialIndexTest {
                 minZ + depth - 1,
             )
         }
-        val index = ClaimSpatialIndex(claims)
+        val index = ClaimSpatialIndex(seasonId, claims)
 
         repeat(5_000) {
             val point = BlockPosition2D(
@@ -176,6 +195,7 @@ class ClaimSpatialIndexTest {
         secondZ: Int,
     ): Claim = Claim(
         ClaimId(UUID(0L, id.toLong())),
+        seasonId,
         civilizationId,
         ClaimBounds.between(worldId, firstX, firstZ, secondX, secondZ),
     )

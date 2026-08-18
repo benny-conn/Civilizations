@@ -2,6 +2,8 @@
 
 Civilizations is an in-progress Paper plugin for civilization, territory, economy, and warfare gameplay.
 
+The plugin is undergoing an incremental architecture rework. See [TODO.md](TODO.md) for the prioritized roadmap and [docs/architecture.md](docs/architecture.md) for the dependency and persistence boundaries followed by new code.
+
 ## Current platform
 
 - Minecraft/Paper 26.2, compiled against Paper build 112
