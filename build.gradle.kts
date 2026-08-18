@@ -35,6 +35,8 @@ dependencies {
 
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+
+    testImplementation(kotlin("test"))
 }
 
 java {
@@ -86,6 +88,10 @@ tasks.jar {
 
 tasks.assemble {
     dependsOn(tasks.shadowJar)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.register<Copy>("deployTestServerPlugin") {
