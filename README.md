@@ -2,7 +2,7 @@
 
 Civilizations is an in-progress Paper plugin for civilization, territory, economy, and warfare gameplay.
 
-The plugin is undergoing an incremental architecture rework. See [TODO.md](TODO.md) for the prioritized roadmap and [docs/architecture.md](docs/architecture.md) for the dependency and persistence boundaries followed by new code.
+The plugin is undergoing an incremental architecture rework. See [TODO.md](TODO.md) for the prioritized product roadmap, [docs/architecture.md](docs/architecture.md) for dependency and persistence boundaries, and [docs/worktree-roadmap.md](docs/worktree-roadmap.md) for the dependency-aware multi-worktree merge queue.
 
 The V2 core is now the live runtime. It includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, a durable war/timed-battle lifecycle, and a first-write-wins battle damage journal.
 
@@ -27,6 +27,14 @@ No global Gradle or Kotlin installation is required. The wrapper also uses a Jav
 ```
 
 The deployable plugin is written to `build/libs/Civilizations-0.0.16-BETA.jar`.
+
+## Codex worktrees
+
+The checked-in Codex local environment at `.codex/environments/environment.toml` makes new worktrees self-preparing. Its idempotent setup runs `./gradlew --no-daemon testClasses`, which downloads the checked-in Gradle distribution and provisions the configured Java 25 toolchain when the host does not already have it.
+
+The environment also exposes **Clean build**, **Run tests**, **Set up Paper**, and **Run Paper** actions. Each worktree gets its own ignored `server/` directory on demand; the root server fixture, its worlds, and its SQLite data are intentionally not copied through `.worktreeinclude`.
+
+Before assigning parallel tasks, use the lanes and merge order in [docs/worktree-roadmap.md](docs/worktree-roadmap.md). In particular, schema/repository changes are sequential, as are Paper runtime/lifecycle changes.
 
 ## Run
 

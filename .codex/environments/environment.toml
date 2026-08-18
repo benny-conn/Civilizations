@@ -1,0 +1,27 @@
+version = 1
+name = "Civilizations"
+
+[setup]
+script = """
+./gradlew --no-daemon testClasses
+"""
+
+[[actions]]
+name = "Clean build"
+icon = "test"
+command = "./gradlew --no-daemon clean build"
+
+[[actions]]
+name = "Run tests"
+icon = "test"
+command = "./gradlew --no-daemon test"
+
+[[actions]]
+name = "Set up Paper"
+icon = "tool"
+command = "./scripts/setup-test-server.sh"
+
+[[actions]]
+name = "Run Paper"
+icon = "run"
+command = "./scripts/run-test-server.sh"

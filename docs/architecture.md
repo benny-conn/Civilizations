@@ -42,7 +42,7 @@ The first migrated subsystem is the claim geometry and spatial index under `doma
 - Arbitrarily shaped territory remains a collection of rectangles. It is not converted into a materialized polygon or block set.
 - The index is derived state and is rebuilt from authoritative claims during startup.
 
-The legacy `Region` and `ClaimUtil` remain in place for this first slice. A later slice will load authoritative claim rows, build this index, and route Paper protection events through it before deleting the legacy implementation.
+The live runtime loads authoritative claim rows, builds this index, and routes Paper protection events through it. Legacy `Region` and `ClaimUtil` remain only as quarantined dead source until the Foundation-removal slice deletes the legacy graph.
 
 ## Relational persistence
 
@@ -137,3 +137,9 @@ The current event matrix is:
 | Movement | ordinary movement and teleport | Intentionally unrestricted for MVP; land ownership is not a border-entry rule |
 
 Later war integration must use the journal-before-mutation contract before it hands a conflict capability to any destructive Paper path. The visual TNT effect may never become the authoritative mutation.
+
+## Delivery and worktree sequencing
+
+The remaining architecture is split into a durable-core lane and a Paper-runtime lane. Schema/repository migrations are ordered and must not be developed concurrently with another schema slice. Paper plugin/runtime/listener lifecycle changes are likewise serialized. A branch in each lane may proceed concurrently when both use an application-owned port already present on `main`.
+
+[worktree-roadmap.md](worktree-roadmap.md) is the executable merge queue. In summary, damage reporting precedes the ledger, the ledger precedes repair jobs, and repair jobs precede the Paper repair runner. The simple-block Paper war adapter may proceed now against the existing first-write-wins journal, but it must not broaden support to containers, block entities, or cascading physics. Foundation removal is last so it can delete unused legacy adapters instead of porting them speculatively.
