@@ -37,7 +37,7 @@ Branches in different lanes may proceed together when their port contract alread
 
 ### Work that can start now
 
-After A1 merges, A2, B1, and C1 are the safe ready items in separate durable-feature, Paper-integration, and operations lanes. Merge C1 independently; rebase B1 onto the resulting `main`, run the real Paper check, then merge it. Keep A2 → A3 sequential in the durable-core lane while B2 and C2 proceed in their separate lanes.
+A2, B1, and C1 are now the safe ready items in separate durable-feature, Paper-integration, and operations lanes. Merge C1 independently; rebase B1 onto the resulting `main`, run the real Paper check, then merge it. Keep A2 → A3 sequential in the durable-core lane while B2 and C2 proceed in their separate lanes.
 
 A2 must implement the settled repair-economics settings through the validated configuration boundary and preserve their effective values for later repair-job snapshots. Do not start B3 until repair jobs have a durable cursor. The removed legacy frameworks and object graph are not available as implementation shortcuts.
 
