@@ -4,6 +4,9 @@ import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.civilization.ProvisionCivilization
 import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.claim.PlaceClaim
+import io.bennyc.civilizations.application.protection.PlayerProtectionAction
+import io.bennyc.civilizations.application.protection.PlayerProtectionRequest
+import io.bennyc.civilizations.application.protection.ProtectionDecision
 import io.bennyc.civilizations.application.support.SequentialIdGenerator
 import io.bennyc.civilizations.application.support.playerId
 import io.bennyc.civilizations.domain.civilization.Civilization
@@ -92,6 +95,25 @@ class CivilizationsRuntimeTest {
                     ?.claimAt(BlockPosition2D(world, -1, -1))
                     ?.civilizationId,
             )
+            val protectedPosition = BlockPosition2D(world, -1, -1)
+            assertIs<ProtectionDecision.Allowed>(
+                ready.activeSeason?.protection?.decidePlayerAction(
+                    PlayerProtectionRequest(
+                        actorId = playerId(1),
+                        action = PlayerProtectionAction.BLOCK_BREAK,
+                        target = protectedPosition,
+                    ),
+                ),
+            )
+            assertIs<ProtectionDecision.Denied>(
+                ready.activeSeason?.protection?.decidePlayerAction(
+                    PlayerProtectionRequest(
+                        actorId = playerId(99),
+                        action = PlayerProtectionAction.BLOCK_BREAK,
+                        target = protectedPosition,
+                    ),
+                ),
+            )
             runtime.close()
 
             val restarted = database.runtime()
@@ -99,6 +121,15 @@ class CivilizationsRuntimeTest {
             assertEquals("Season One", recovered.activeSeason?.season?.name)
             assertEquals(1, recovered.activeSeason?.civilizations?.size)
             assertEquals(1, recovered.activeSeason?.claimIndex?.size)
+            assertIs<ProtectionDecision.Allowed>(
+                recovered.activeSeason?.protection?.decidePlayerAction(
+                    PlayerProtectionRequest(
+                        actorId = playerId(2),
+                        action = PlayerProtectionAction.CONTAINER_ACCESS,
+                        target = BlockPosition2D(world, -16, -16),
+                    ),
+                ),
+            )
             restarted.close()
         }
     }

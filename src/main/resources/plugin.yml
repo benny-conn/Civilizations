@@ -10,3 +10,6 @@ permissions:
   civilizations.admin:
     description: Administer the Civilizations V2 runtime.
     default: op
+  civilizations.admin.bypass:
+    description: Bypass Civilizations V2 land protection.
+    default: op

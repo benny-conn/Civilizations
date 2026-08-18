@@ -4,9 +4,9 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The plugin is undergoing an incremental architecture rework. See [TODO.md](TODO.md) for the prioritized roadmap and [docs/architecture.md](docs/architecture.md) for the dependency and persistence boundaries followed by new code.
 
-The V2 core is now the live runtime. It includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, and validated claim placement.
+The V2 core is now the live runtime. It includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, and centralized land protection.
 
-Legacy commands, listeners, scheduled tasks, and JSON-blob datastores are temporarily quarantined rather than running beside V2 as a second source of truth. Until the next protection slice lands, this build is an administration/testing milestone rather than a playable server plugin.
+Legacy commands, scheduled tasks, and JSON-blob datastores are temporarily quarantined rather than running beside V2 as a second source of truth. V2 Paper listeners now protect claims, but there is intentionally no live war override until the persisted war and damage-journal slice can authorize and record destruction safely.
 
 ## Current platform
 
@@ -32,7 +32,7 @@ The deployable plugin is written to `build/libs/Civilizations-0.0.16-BETA.jar`.
 
 Run the plugin on Paper 26.2 with Java 25. Copy the built JAR into the server's `plugins` directory and restart the server. V2 packages its selected SQLite driver and stores its authoritative data in `plugins/Civilizations/civilizations-v2.db` by default.
 
-The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, and restart/index recovery.
+The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, and claimed-versus-wilderness explosion behavior. Protection decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
 
 ## V2 administration
 
@@ -45,6 +45,8 @@ The native `/civadmin` command requires `civilizations.admin`, which defaults to
 - civilization listing and rectangular admin claim creation.
 
 Claim size/count/connectivity rules and the V2 database filename are in `config.yml`. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
+
+Operators have the explicit `civilizations.admin.bypass` permission. Ordinary members may mutate their own claims; outsiders cannot build, break, use containers/switches, move fluids or pistons across a border, damage protected entities, or PVP inside claimed land. Movement and teleportation are not restricted by land ownership.
 
 ## Local test server
 

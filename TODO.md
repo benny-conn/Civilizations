@@ -12,12 +12,13 @@ Audit date: 2026-08-18
 
 ## Architecture rework progress
 
-- [x] Slice 1: add a Foundation-free claim domain, correct rectangle geometry, world/chunk spatial index, and randomized parity tests. This is merged but not yet connected to legacy listeners.
-- [x] Slice 2: add season/civilization/membership domain records, a repository port, versioned relational schema, transactional SQLite implementation, database constraints, and integration tests. This remains isolated from live plugin startup until the cutover slice.
+- [x] Slice 1: add a Foundation-free claim domain, correct rectangle geometry, world/chunk spatial index, and randomized parity tests. The index now serves live protection events.
+- [x] Slice 2: add season/civilization/membership domain records, a repository port, versioned relational schema, transactional SQLite implementation, database constraints, and integration tests. This is now the live authoritative store.
 - [x] Slice 3: add command-ready application services for season setup and war gating, landless civilization provisioning, membership assignment/leadership transfer, and validated claim placement. The services return structured outcomes and are covered against the real SQLite adapter.
 - [x] Slice 4: open/migrate V2 storage at startup, persist/select an active season, serialize mutations on a plugin-owned storage executor, publish copy-on-write server-thread state/indexes, quarantine legacy runtime entry points, and expose focused native Paper admin commands.
-- [ ] Slice 5: route Paper protection events through a centralized policy backed by the active claim index, then retire legacy claim reads.
-- [ ] Slice 6+: add the persisted war/damage/repair lifecycle, migrate remaining commands/configuration/UI adapters, and remove Foundation when no surviving imports remain.
+- [x] Slice 5: route Paper protection events through a centralized policy backed by the active claim index, use exact affected coordinates and cross-boundary checks, and keep all legacy claim reads off the live path.
+- [ ] Slice 6: add the persisted war state machine, battlefield/participant model, restart recovery, and live conflict-capability publication.
+- [ ] Slice 7: establish the first-write-wins damage journal, durable ledger/repair-job core, and finish adapter/legacy cleanup so Foundation can be removed. Full gameplay tuning remains post-architecture work.
 
 ## Recommended direction
 
@@ -36,10 +37,10 @@ The project compiles and starts on Paper 26.2. Its current gameplay is a broad p
 
 | Area | Present implementation | Readiness |
 | --- | --- | --- |
-| Civilizations | UUID/name, nullable leader/home, citizens, description, power, bank | Partial; normal player creation can be landless, but empty admin/draft civilizations are deleted or fail during loading |
-| Membership | Create, invite/accept/deny, leave, kick, leader transfer, admin add/kick | Partial; online/name-driven and several integrity/admin-command problems remain |
-| Land | Multiple rectangular claims, colonies, plots, selection tool, visualization, maps | Prototype; correctness and hot-path performance need redesign |
-| Protection | Build, break, switch, interact, PVP, fire, explosions, mobs, pistons | Prototype; incomplete event coverage and several checks use the wrong location or permission group |
+| Civilizations | V2 ID-based records with draft/active/dissolved states and landless provisioning | Live admin path; player-facing creation, homes, descriptions, and economy remain to design/port |
+| Membership | Relational one-civilization-per-season membership, offline UUID provisioning, leader transfer | Live admin path; invites/self-service and richer roster inspection are not yet exposed |
+| Land | Immutable inclusive rectangles, exact geometry, chunk spatial index, relational rows | Live admin claim/protection path; player selection, unclaim, settlements/colonies, and costs remain |
+| Protection | Central policy plus thin V2 listeners for blocks, containers, entities, PVP, fire, explosions, fluids, pistons, and automation boundaries | Live peacetime protection; conflict capabilities exist in policy but no live war is authorized until durable wars/journaling land |
 | Diplomacy | Allies, enemies, outlaws; mutual enemy status implies “warring” | Prototype; no durable declaration or treaty lifecycle |
 | Battles | Timed raid, participant lives, ratios, TNT tagging, physics-like falling blocks | Prototype; not restart-safe and contains correctness/unit bugs |
 | Damage | Saves a block-data string by Bukkit `Location` when a block is destroyed | Proof of concept; not a complete pre-war snapshot or auditable damage ledger |
@@ -47,8 +48,8 @@ The project compiles and starts on Paper 26.2. Its current gameplay is a broad p
 | Economy | Vault/Foundation balance hooks, civilization bank, deposits, withdrawals, taxes, upkeep | Partial; persistence and task behavior are unsafe |
 | Permissions | Default/outsider/ally/enemy ranks plus custom ranks and plots | Partial; configuration loading has a group-assignment bug and the policy is spread across listeners |
 | Utilities | Home, warps, colony teleports, flight, chat, signs, menus, info/list/top | Broad but not playtest-critical; several features should be quarantined until the core loop is stable |
-| Persistence | SQLite/MySQL, player table, civilization JSON blob | Unsafe for production; no migrations/transactions and several fields fail to round-trip |
-| Seasons/scarcity | A general mob toggle/removal prototype | Not implemented as a season or scarcity system |
+| Persistence | Versioned relational SQLite with prepared statements, transactions, constraints, WAL, and startup integrity checks | Live for seasons/civilizations/memberships/claims; war, damage, repair, ledger, and backup tooling remain |
+| Seasons/scarcity | Durable active-season selection and `SETUP/PEACE/WAR/FINALE/ARCHIVED` phase controls | Phase gate is live; reset and scarcity systems are not implemented |
 | Assassination/occupation/annexation | None | Not implemented |
 
 ## MVP acceptance scenario
@@ -142,30 +143,30 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 
 ### Protection policy
 
-- [ ] **[P0][L] Centralize protection in one `ProtectionService`.** Inputs should include actor, action, exact target coordinate/entity, owner/plot, season phase, active war, and admin bypass; return an allow/deny decision and reason.
-- [ ] **[P0][M] Make event listeners thin adapters.** They should translate Paper events into policy actions and apply the decision, not duplicate civilization/plot/war logic.
-- [ ] **[P0][M] Define and test an event coverage matrix.** Include block break/place/multi-place, interact, buckets, fluids, fire, explosions, pistons, entity block changes, hanging/armor-stand/vehicle changes, container access, projectiles, teleport/PVP, and cross-border source/destination cases.
-- [ ] **[P0][M] Use the affected block/entity location, not the player's feet, for authorization.** This closes border interactions and fixes plot/civilization mismatches.
-- [ ] **[P0][M] Make war permissions an explicit override in the same policy.** Only active participants, eligible actions, active time, and battlefield claims bypass peacetime protection.
-- [ ] **[P1][M] Simplify MVP roles to leader/member/outsider/admin unless playtesting proves custom ranks are necessary.** Preserve the richer rank UI as disabled legacy functionality rather than letting it block the core.
-- [ ] **[P1][S] Default outsiders/enemies to no build, break, switch, or container access.** Configuration and generated defaults must agree.
+- [x] **[P0][L] Centralize protection in one `ProtectionService`.** Inputs include actor, action, exact target, season phase, conflict capability, and admin bypass and return a reasoned allow/deny value.
+- [x] **[P0][M] Make event listeners thin adapters.** V2 listeners translate Paper events into policy actions and apply the decision without claim scans, database reads, or business rules.
+- [x] **[P0][M] Define and test an event coverage matrix.** `docs/architecture.md` records the live coverage and intentional movement/teleport pass-through; pure tests cover the policy matrix and boundary cases.
+- [x] **[P0][M] Use the affected block/entity location, not the player's feet, for authorization.** Block, entity, projectile target, and inventory endpoints use exact stable-world X/Z coordinates.
+- [x] **[P0][M] Make war permissions an explicit override in the same policy.** Capabilities are actor/action/phase/battlefield/PVP-target scoped; the runtime supplies none until persisted wars and journaling are available.
+- [x] **[P1][M] Simplify MVP roles to leader/member/outsider/admin unless playtesting proves custom ranks are necessary.** Protection treats leader/member as owners, all others as outsiders, and uses an explicit operator-default bypass.
+- [x] **[P1][S] Default outsiders/enemies to no build, break, switch, or container access.** The centralized live policy is default-deny on claimed land.
 
 ### Current claim/protection defects to cover or remove
 
-- [ ] **[P0][S] Every point query currently scans every civilization and claim; move, block, explosion, mob, and piston events multiply this cost.**
+- [x] **[P0][S] Every live point query uses the world/chunk claim index; legacy all-civilization scans are quarantined.**
 - [ ] **[P0][S] `Region.isWithin` uses `Double.toInt()`, which truncates toward zero and is wrong for negative fractional coordinates.**
 - [ ] **[P0][S] Area math omits inclusive rows/columns and gives a one-block-wide rectangle zero area.**
 - [ ] **[P0][S] Claim overlap checks only endpoints/containment and miss crossing rectangles with no corner inside the other.**
 - [ ] **[P0][S] Connectivity and visualization materialize 3D bounding boxes; `Region.blocks` can materialize the entire full-height volume.**
 - [ ] **[P0][S] Entity counting loads every chunk touched by a claim and is used in raid ratio logic.**
 - [ ] **[P0][S] The global `getPlotFromLocation` overload discards found plots and always returns `null`.**
-- [ ] **[P0][S] Interaction protection starts from `player.location`, not the clicked block; plot permission checks also use the player's location.**
+- [x] **[P0][S] Live interaction protection uses the clicked block, affected entity, or inventory endpoint rather than `player.location`.**
 - [ ] **[P0][S] A raider allowed to attack can place arbitrary blocks, while only TNT was intended; placed blocks are not added to damage recovery.**
-- [ ] **[P0][S] Piston handling returns early for any piston inside a claim, allowing cross-border movement from claimed land.**
-- [ ] **[P0][S] Hanging-entity protection blindly casts the remover to `Player`.**
+- [x] **[P0][S] Piston handling checks the head and every moved block from source to destination, including movement out of a claim.**
+- [x] **[P0][S] Hanging-entity protection safely resolves players, projectiles, and non-player/environmental removal.**
 - [ ] **[P0][S] Unclaiming can orphan homes, plots, colonies, damage records, and disconnected claims.**
 - [ ] **[P0][S] Distance helpers do not handle empty sets or different worlds safely.**
-- [ ] **[P0][S] Default permission loading accidentally adds outsider/ally/enemy values to the default member set, leaving the other effective sets empty.**
+- [x] **[P0][S] The live policy no longer loads legacy permission groups; membership and explicit conflict/admin capabilities determine access.**
 
 ## Milestone 3 — durable war lifecycle
 

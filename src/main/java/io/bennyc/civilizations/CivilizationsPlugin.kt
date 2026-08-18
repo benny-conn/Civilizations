@@ -2,6 +2,7 @@ package io.bennyc.civilizations
 
 import io.bennyc.civilizations.infrastructure.paper.V2AdminCommand
 import io.bennyc.civilizations.infrastructure.paper.V2PluginConfiguration
+import io.bennyc.civilizations.infrastructure.paper.protection.PaperProtectionListener
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeStartOutcome
 import org.bukkit.Bukkit
@@ -41,6 +42,7 @@ class CivilizationsPlugin : SimplePlugin() {
             listOf("civilizationsadmin"),
             V2AdminCommand(v2Runtime),
         )
+        server.pluginManager.registerEvents(PaperProtectionListener(v2Runtime), this)
         v2Runtime.start { outcome ->
             when (outcome) {
                 is RuntimeStartOutcome.Ready -> {
@@ -60,7 +62,8 @@ class CivilizationsPlugin : SimplePlugin() {
         }
 
         logger.warning(
-            "Legacy commands, listeners, tasks, and datastores are quarantined during the V2 cutover",
+            "Legacy commands, tasks, and datastores remain quarantined; " +
+                "V2 protection listeners are active",
         )
     }
 

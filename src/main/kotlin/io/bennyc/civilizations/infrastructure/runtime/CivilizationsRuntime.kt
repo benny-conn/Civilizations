@@ -7,6 +7,7 @@ import io.bennyc.civilizations.application.claim.ClaimService
 import io.bennyc.civilizations.application.claim.ClaimSpatialIndex
 import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
+import io.bennyc.civilizations.application.protection.ProtectionService
 import io.bennyc.civilizations.application.season.SeasonService
 import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.civilization.CivilizationName
@@ -157,12 +158,18 @@ class CivilizationsRuntime private constructor(
                 validate(loaded)
                 val index = ClaimSpatialIndex(loaded.season.id, loaded.claims)
                 validateNoOverlaps(loaded.claims, index)
+                val protection = ProtectionService(
+                    seasonStatus = loaded.season.status,
+                    claimIndex = index,
+                    memberships = loaded.memberships.values.flatten(),
+                )
                 CivilizationsRuntimeState.Ready(
                     activeSeason = ActiveSeasonRuntimeState(
                         season = loaded.season,
                         civilizations = loaded.civilizations,
                         memberships = loaded.memberships,
                         claimIndex = index,
+                        protection = protection,
                     ),
                 )
             }
@@ -319,6 +326,7 @@ data class ActiveSeasonRuntimeState(
     val civilizations: List<Civilization>,
     val memberships: Map<CivilizationId, List<Membership>>,
     val claimIndex: ClaimSpatialIndex,
+    val protection: ProtectionService,
 )
 
 sealed interface RuntimeStartOutcome {
