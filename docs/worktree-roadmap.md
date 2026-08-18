@@ -25,21 +25,21 @@ Branches in different lanes may proceed together when their port contract alread
 
 | ID | Branch suggestion | Lane | Depends on | Deliverable and boundary | Status |
 | --- | --- | --- | --- | --- | --- |
-| A1 | `feature/damage-reports` | Durable feature | Damage journal | Immutable per-battle damage report and deterministic eligible-change/cost basis. Accept final world observations through application-owned values; do not call Paper from the service. | Ready |
-| B0 | `benny/configurable-phase-rules` | Paper integration | Current `main` | Typed, validated YAML phase gates for roster changes, claim creation, and ordinary member land actions; document the configuration boundary and keep unsafe lifecycle combinations code-enforced. No schema changes or live reload. | In review |
+| A1 | `feature/damage-reports` | Durable feature | Damage journal | Immutable per-battle damage report and deterministic eligible-change/cost basis. Accept final world observations through application-owned values; do not call Paper from the service. | Complete |
+| B0 | `benny/configurable-phase-rules` | Paper integration | Current `main` | Typed, validated YAML phase gates for roster changes, claim creation, and ordinary member land actions; document the configuration boundary and keep unsafe lifecycle combinations code-enforced. No schema changes or live reload. | Complete |
 | B1 | `feature/paper-war-mutations` | Paper integration | Damage journal | First live cancel → journal off-thread → revalidate → apply-on-server-thread path for simple block break/place. Containers and cascading physics stay denied. No schema changes. | Ready |
 | C1 | `operations/ci-build` | Operations | Current `main` | GitHub Actions clean build/test using the wrapper and Java toolchain; no gameplay files. | Ready |
 | C2 | `operations/paper-smoke-fixture` | Operations | B1 | Explicit test-fixture reset/checkpoint scripts and an MVP Paper checklist. Destructive scripts must only target the resolved worktree `server/` directory. | Blocked by B1 |
-| A2 | `feature/economy-ledger` | Durable feature | A1 plus repair-economics decision | Civilization accounts and immutable idempotency-keyed ledger transfers for resolution, spoils, and repair payment. The plugin ledger is authoritative; any future external economy is an adapter. | Blocked by A1/rules |
-| A3 | `feature/repair-jobs` | Durable feature | A1, A2 | Persisted repair jobs, deterministic partial selection, cursors, lifecycle, and restart/idempotency tests. No Paper world mutation. | Blocked by A1/A2 |
+| A2 | `feature/economy-ledger` | Durable feature | A1 | Civilization accounts and immutable idempotency-keyed ledger transfers for resolution, spoils, and repair payment. Add typed validated YAML rules for initial balance, repair-unit prices, victor share, debt, and ordinary initiator roles; the plugin ledger remains authoritative. | Ready |
+| A3 | `feature/repair-jobs` | Durable feature | A1, A2 | Persisted repair jobs, deterministic partial selection, cursors, lifecycle, and restart/idempotency tests. No Paper world mutation. | Blocked by A2 |
 | B2 | `feature/battle-entry-adapter` | Paper integration | B1 | Hostile-claim-entry trigger, throttled movement lookup, boundary feedback, and admin recovery/inspection commands over existing `WarService` operations. | Blocked by B1 |
 | B3 | `feature/paper-repair-runner` | Paper integration | A3, B1 | Bounded server-thread repair batches, world-state conflict checks, pause/resume, and real-Paper restart verification. | Blocked by A3/B1 |
 
 ### Work that can start now
 
-While B0 is in review, the safe parallel work is A1 and C1 because B0 owns the serialized Paper runtime/configuration surface. Merge B0 before starting or rebasing B1. Then merge A1 and C1 in either order, rebase B1 onto the resulting `main`, run the real Paper check, and merge it. After that, keep A2 → A3 sequential in the durable-core lane while B2 and C2 proceed in their separate lanes.
+After A1 merges, A2, B1, and C1 are the safe ready items in separate durable-feature, Paper-integration, and operations lanes. Merge C1 independently; rebase B1 onto the resulting `main`, run the real Paper check, then merge it. Keep A2 → A3 sequential in the durable-core lane while B2 and C2 proceed in their separate lanes.
 
-Do not start A2 until the Season One repair-economics decision is written down. Do not start B3 until repair jobs have a durable cursor. The removed legacy frameworks and object graph are not available as implementation shortcuts.
+A2 must implement the settled repair-economics settings through the validated configuration boundary and preserve their effective values for later repair-job snapshots. Do not start B3 until repair jobs have a durable cursor. The removed legacy frameworks and object graph are not available as implementation shortcuts.
 
 ## Product decisions that still block code
 
@@ -47,7 +47,6 @@ These are deliberately decisions, not invitations for an implementation agent to
 
 - declaration approval/countdown and whether rosters remain locked during a war;
 - the first victory calculation and surrender/admin-resolution behavior;
-- per-block repair pricing, victor share, debt policy, and who may initiate repair;
 - behavior for coordinates with unresolved damage (the recommended MVP rule is to lock them);
 - which non-container block entities, if any, are safe in the first playtest.
 

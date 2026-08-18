@@ -6,8 +6,11 @@ import io.bennyc.civilizations.domain.civilization.Membership
 import io.bennyc.civilizations.domain.claim.Claim
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.damage.BattleBlockChange
+import io.bennyc.civilizations.domain.damage.BattleDamageReport
+import io.bennyc.civilizations.domain.damage.BattleDamageReportEntry
 import io.bennyc.civilizations.domain.damage.BlockPosition3D
 import io.bennyc.civilizations.domain.damage.BlockChangeCursor
+import io.bennyc.civilizations.domain.damage.ReportedBattleBlockChange
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
@@ -78,6 +81,14 @@ interface CivilizationsReadContext {
         after: BlockChangeCursor?,
         limit: Int,
     ): List<BattleBlockChange>
+
+    fun findDamageReport(battleId: BattleId): BattleDamageReport?
+
+    fun listReportedBlockChanges(
+        battleId: BattleId,
+        after: BlockChangeCursor?,
+        limit: Int,
+    ): List<ReportedBattleBlockChange>
 }
 
 interface CivilizationsWriteContext : CivilizationsReadContext {
@@ -113,6 +124,11 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
 
     /** Returns false only when this battle/coordinate was already journaled. */
     fun insertBlockChangeIfAbsent(blockChange: BattleBlockChange): Boolean
+
+    /** Report entries are staged before [insertDamageReport] seals the complete set. */
+    fun insertDamageReportEntry(entry: BattleDamageReportEntry)
+
+    fun insertDamageReport(report: BattleDamageReport)
 }
 
 class PersistenceRecordNotFoundException(message: String) : IllegalStateException(message)

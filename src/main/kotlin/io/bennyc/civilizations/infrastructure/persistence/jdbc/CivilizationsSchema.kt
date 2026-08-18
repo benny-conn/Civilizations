@@ -471,5 +471,172 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        SchemaMigration(
+            version = 5,
+            name = "immutable_battle_damage_reports",
+            statements = listOf(
+                """
+                CREATE TABLE battle_damage_reports (
+                    battle_id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    journaled_change_count INTEGER NOT NULL CHECK (journaled_change_count >= 0),
+                    eligible_change_count INTEGER NOT NULL CHECK (eligible_change_count >= 0),
+                    restored_during_battle_count INTEGER NOT NULL CHECK (
+                        restored_during_battle_count >= 0
+                    ),
+                    restore_original_block_count INTEGER NOT NULL CHECK (
+                        restore_original_block_count >= 0
+                    ),
+                    remove_placed_block_count INTEGER NOT NULL CHECK (
+                        remove_placed_block_count >= 0
+                    ),
+                    generated_at_ms INTEGER NOT NULL CHECK (generated_at_ms >= 0),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (
+                        journaled_change_count =
+                            eligible_change_count + restored_during_battle_count
+                    ),
+                    CHECK (
+                        eligible_change_count =
+                            restore_original_block_count + remove_placed_block_count
+                    ),
+                    UNIQUE (season_id, battle_id),
+                    FOREIGN KEY (season_id, battle_id)
+                        REFERENCES battles(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE TABLE battle_damage_report_entries (
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT NOT NULL,
+                    block_change_id TEXT NOT NULL,
+                    final_block_data TEXT NOT NULL,
+                    eligibility TEXT NOT NULL CHECK (
+                        eligibility IN ('ELIGIBLE', 'RESTORED_DURING_BATTLE')
+                    ),
+                    cost_category TEXT CHECK (
+                        cost_category IN ('RESTORE_ORIGINAL_BLOCK', 'REMOVE_PLACED_BLOCK')
+                    ),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(block_change_id) = 36),
+                    CHECK (length(final_block_data) BETWEEN 1 AND 32768),
+                    CHECK (
+                        (eligibility = 'ELIGIBLE' AND cost_category IS NOT NULL) OR
+                        (eligibility = 'RESTORED_DURING_BATTLE' AND cost_category IS NULL)
+                    ),
+                    PRIMARY KEY (battle_id, block_change_id),
+                    FOREIGN KEY (block_change_id)
+                        REFERENCES battle_block_changes(id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, battle_id)
+                        REFERENCES battle_damage_reports(season_id, battle_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                        DEFERRABLE INITIALLY DEFERRED
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX battle_damage_report_entries_by_battle
+                ON battle_damage_report_entries(battle_id, block_change_id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_damage_report_entries_validate_insert
+                BEFORE INSERT ON battle_damage_report_entries
+                WHEN EXISTS (
+                    SELECT 1 FROM battle_damage_reports report
+                    WHERE report.battle_id = NEW.battle_id
+                ) OR NOT EXISTS (
+                    SELECT 1 FROM battle_block_changes change
+                    WHERE change.id = NEW.block_change_id
+                      AND change.season_id = NEW.season_id
+                      AND change.battle_id = NEW.battle_id
+                      AND (
+                          (NEW.eligibility = 'RESTORED_DURING_BATTLE' AND
+                           NEW.cost_category IS NULL AND
+                           NEW.final_block_data = change.original_block_data) OR
+                          (NEW.eligibility = 'ELIGIBLE' AND
+                           NEW.final_block_data <> change.original_block_data AND
+                           (
+                               (change.original_block_data IN (
+                                   'minecraft:air', 'minecraft:cave_air', 'minecraft:void_air'
+                                ) AND NEW.cost_category = 'REMOVE_PLACED_BLOCK') OR
+                               (change.original_block_data NOT IN (
+                                   'minecraft:air', 'minecraft:cave_air', 'minecraft:void_air'
+                                ) AND NEW.cost_category = 'RESTORE_ORIGINAL_BLOCK')
+                           ))
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'damage report entry is invalid or report is sealed');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_damage_reports_validate_insert
+                BEFORE INSERT ON battle_damage_reports
+                WHEN NOT EXISTS (
+                    SELECT 1 FROM battles battle
+                    WHERE battle.id = NEW.battle_id
+                      AND battle.season_id = NEW.season_id
+                      AND battle.status = 'RESOLVING'
+                      AND NEW.generated_at_ms >= battle.resolving_at_ms
+                ) OR NEW.journaled_change_count <> (
+                    SELECT COUNT(*) FROM battle_block_changes change
+                    WHERE change.battle_id = NEW.battle_id
+                ) OR NEW.journaled_change_count <> (
+                    SELECT COUNT(*) FROM battle_damage_report_entries entry
+                    WHERE entry.battle_id = NEW.battle_id
+                ) OR NEW.eligible_change_count <> (
+                    SELECT COUNT(*) FROM battle_damage_report_entries entry
+                    WHERE entry.battle_id = NEW.battle_id
+                      AND entry.eligibility = 'ELIGIBLE'
+                ) OR NEW.restored_during_battle_count <> (
+                    SELECT COUNT(*) FROM battle_damage_report_entries entry
+                    WHERE entry.battle_id = NEW.battle_id
+                      AND entry.eligibility = 'RESTORED_DURING_BATTLE'
+                ) OR NEW.restore_original_block_count <> (
+                    SELECT COUNT(*) FROM battle_damage_report_entries entry
+                    WHERE entry.battle_id = NEW.battle_id
+                      AND entry.cost_category = 'RESTORE_ORIGINAL_BLOCK'
+                ) OR NEW.remove_placed_block_count <> (
+                    SELECT COUNT(*) FROM battle_damage_report_entries entry
+                    WHERE entry.battle_id = NEW.battle_id
+                      AND entry.cost_category = 'REMOVE_PLACED_BLOCK'
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'damage report is incomplete or battle is not resolving');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_damage_reports_are_immutable
+                BEFORE UPDATE ON battle_damage_reports
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle damage reports are immutable');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_damage_reports_cannot_be_deleted
+                BEFORE DELETE ON battle_damage_reports
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle damage reports cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_damage_report_entries_are_immutable
+                BEFORE UPDATE ON battle_damage_report_entries
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle damage report entries are immutable');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_damage_report_entries_cannot_be_deleted
+                BEFORE DELETE ON battle_damage_report_entries
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle damage report entries cannot be deleted');
+                END
+                """.trimIndent(),
+            ),
+        ),
     )
 }

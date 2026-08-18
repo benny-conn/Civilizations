@@ -14,10 +14,15 @@ import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.damage.BattleBlockChange
+import io.bennyc.civilizations.domain.damage.BattleDamageReport
+import io.bennyc.civilizations.domain.damage.BattleDamageReportEntry
 import io.bennyc.civilizations.domain.damage.BlockChangeId
 import io.bennyc.civilizations.domain.damage.BlockChangeCursor
 import io.bennyc.civilizations.domain.damage.BlockMutationCause
 import io.bennyc.civilizations.domain.damage.BlockPosition3D
+import io.bennyc.civilizations.domain.damage.DamageCostCategory
+import io.bennyc.civilizations.domain.damage.DamageReportEligibility
+import io.bennyc.civilizations.domain.damage.ReportedBattleBlockChange
 import io.bennyc.civilizations.domain.damage.SimpleBlockSnapshot
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
@@ -297,6 +302,57 @@ private open class JdbcReadContext(
         }
     }
 
+    override fun findDamageReport(battleId: BattleId): BattleDamageReport? = queryOne(
+        sql = "$DAMAGE_REPORT_SELECT WHERE battle_id = ?",
+        bind = { setString(1, battleId.toString()) },
+        map = ResultSet::toBattleDamageReport,
+    )
+
+    override fun listReportedBlockChanges(
+        battleId: BattleId,
+        after: BlockChangeCursor?,
+        limit: Int,
+    ): List<ReportedBattleBlockChange> {
+        require(limit in 1..MAX_BLOCK_CHANGE_PAGE_SIZE) {
+            "Reported block change page size must be between 1 and $MAX_BLOCK_CHANGE_PAGE_SIZE"
+        }
+        return if (after == null) {
+            queryMany(
+                sql = """
+                    $REPORTED_BLOCK_CHANGE_SELECT
+                    WHERE journal.battle_id = ?
+                    ORDER BY journal.recorded_at_ms, journal.id
+                    LIMIT ?
+                """.trimIndent(),
+                bind = {
+                    setString(1, battleId.toString())
+                    setInt(2, limit)
+                },
+                map = ResultSet::toReportedBattleBlockChange,
+            )
+        } else {
+            queryMany(
+                sql = """
+                    $REPORTED_BLOCK_CHANGE_SELECT
+                    WHERE journal.battle_id = ? AND (
+                        journal.recorded_at_ms > ? OR
+                        (journal.recorded_at_ms = ? AND journal.id > ?)
+                    )
+                    ORDER BY journal.recorded_at_ms, journal.id
+                    LIMIT ?
+                """.trimIndent(),
+                bind = {
+                    setString(1, battleId.toString())
+                    setLong(2, after.recordedAt.toEpochMilli())
+                    setLong(3, after.recordedAt.toEpochMilli())
+                    setString(4, after.id.toString())
+                    setInt(5, limit)
+                },
+                map = ResultSet::toReportedBattleBlockChange,
+            )
+        }
+    }
+
     protected fun executeUpdate(
         sql: String,
         bind: PreparedStatement.() -> Unit,
@@ -374,6 +430,23 @@ private open class JdbcReadContext(
                    block_x, block_y, block_z, original_block_data,
                    first_mutation_cause, first_actor_id, recorded_at_ms
             FROM battle_block_changes
+        """
+        const val DAMAGE_REPORT_SELECT = """
+            SELECT season_id, battle_id, journaled_change_count, eligible_change_count,
+                   restored_during_battle_count, restore_original_block_count,
+                   remove_placed_block_count, generated_at_ms
+            FROM battle_damage_reports
+        """
+        const val REPORTED_BLOCK_CHANGE_SELECT = """
+            SELECT journal.id, journal.season_id, journal.battle_id, journal.claim_id,
+                   journal.world_id, journal.block_x, journal.block_y, journal.block_z,
+                   journal.original_block_data, journal.first_mutation_cause,
+                   journal.first_actor_id, journal.recorded_at_ms,
+                   entry.final_block_data, entry.eligibility, entry.cost_category
+            FROM battle_block_changes journal
+            JOIN battle_damage_report_entries entry
+              ON entry.battle_id = journal.battle_id
+             AND entry.block_change_id = journal.id
         """
     }
 }
@@ -667,6 +740,45 @@ private class JdbcWriteContext(
             setLong(12, blockChange.recordedAt.toEpochMilli())
         } == 1
 
+    override fun insertDamageReportEntry(entry: BattleDamageReportEntry) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_damage_report_entries(
+                    season_id, battle_id, block_change_id, final_block_data,
+                    eligibility, cost_category
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, entry.seasonId.toString())
+            setString(2, entry.battleId.toString())
+            setString(3, entry.blockChangeId.toString())
+            setString(4, entry.finalState.blockData)
+            setString(5, entry.eligibility.name)
+            setString(6, entry.costCategory?.name)
+        }
+    }
+
+    override fun insertDamageReport(report: BattleDamageReport) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_damage_reports(
+                    season_id, battle_id, journaled_change_count, eligible_change_count,
+                    restored_during_battle_count, restore_original_block_count,
+                    remove_placed_block_count, generated_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, report.seasonId.toString())
+            setString(2, report.battleId.toString())
+            setLong(3, report.journaledChangeCount)
+            setLong(4, report.eligibleChangeCount)
+            setLong(5, report.restoredDuringBattleCount)
+            setLong(6, report.restoreOriginalBlockCount)
+            setLong(7, report.removePlacedBlockCount)
+            setLong(8, report.generatedAt.toEpochMilli())
+        }
+    }
+
     private fun requireUpdated(updated: Int, description: String) {
         if (updated != 1) {
             throw PersistenceRecordNotFoundException("$description does not exist")
@@ -789,6 +901,32 @@ private fun ResultSet.toBattleBlockChange(): BattleBlockChange = BattleBlockChan
     firstActorId = PlayerId(uuid("first_actor_id")),
     recordedAt = instant("recorded_at_ms"),
 )
+
+private fun ResultSet.toBattleDamageReport(): BattleDamageReport = BattleDamageReport(
+    seasonId = SeasonId(uuid("season_id")),
+    battleId = BattleId(uuid("battle_id")),
+    journaledChangeCount = getLong("journaled_change_count"),
+    eligibleChangeCount = getLong("eligible_change_count"),
+    restoredDuringBattleCount = getLong("restored_during_battle_count"),
+    restoreOriginalBlockCount = getLong("restore_original_block_count"),
+    removePlacedBlockCount = getLong("remove_placed_block_count"),
+    generatedAt = instant("generated_at_ms"),
+)
+
+private fun ResultSet.toReportedBattleBlockChange(): ReportedBattleBlockChange {
+    val journalEntry = toBattleBlockChange()
+    return ReportedBattleBlockChange(
+        journalEntry = journalEntry,
+        reportEntry = BattleDamageReportEntry(
+            seasonId = journalEntry.seasonId,
+            battleId = journalEntry.battleId,
+            blockChangeId = journalEntry.id,
+            finalState = SimpleBlockSnapshot(getString("final_block_data")),
+            eligibility = DamageReportEligibility.valueOf(getString("eligibility")),
+            costCategory = getString("cost_category")?.let(DamageCostCategory::valueOf),
+        ),
+    )
+}
 
 private fun ResultSet.uuid(column: String): UUID = UUID.fromString(getString(column))
 

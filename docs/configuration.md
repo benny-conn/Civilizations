@@ -23,6 +23,30 @@ currently no `/reload` integration or partial live-reload behavior.
 Phase names are case-insensitive when loaded, but the shipped file uses uppercase names
 to match the durable season statuses. Duplicate or unknown phase names are rejected.
 
+## Planned repair and economy keys
+
+The economy ledger and repair-job slices will add validated settings for the following
+settled Season One policy. These keys are documented here as planned behavior and are not
+accepted by the current build yet.
+
+| Setting | Planned default | Validation and meaning |
+| --- | --- | --- |
+| Initial civilization balance | `0` | Non-negative integral credits assigned through an idempotent opening ledger entry. |
+| Restore-original unit price | `1` | Non-negative integral credits for each eligible `RESTORE_ORIGINAL_BLOCK` report entry. |
+| Remove-placement unit price | `1` | Non-negative integral credits for each eligible `REMOVE_PLACED_BLOCK` report entry. |
+| Victor share | `25%` | Percentage from `0%` through `100%` of an ordinary repair payment transferred to the victor. |
+| Allow debt | `false` | When false, an ordinary repair cannot charge beyond the civilization's available balance. |
+| Ordinary initiator roles | leader only | Valid civilization roles allowed to request a paid repair. Admin authorization remains separate. |
+
+The implementation slice will choose and document the final YAML paths, parse them into
+an immutable application-owned rules value, and snapshot the effective values into each
+durable repair job. Changes will require a restart and will apply only to future jobs.
+
+There will be no `admin-waives-cost` setting. A privileged admin repair command will name
+the target civilization and execute the same repair operation with an audited
+admin-sponsored funding context. It charges no civilization account and therefore pays
+no victor share.
+
 ## Configuration boundary
 
 YAML is an input adapter, not gameplay state. Infrastructure translates keys into plain

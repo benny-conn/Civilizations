@@ -24,8 +24,20 @@ data class SimpleBlockSnapshot(
         }
     }
 
+    /**
+     * Air-like originals make later non-air states attacker placements that
+     * reconstruction removes instead of charging as an ordinary restoration.
+     */
+    val isAirLike: Boolean
+        get() = blockData in AIR_BLOCK_DATA
+
     private companion object {
         const val MAX_BLOCK_DATA_LENGTH = 32_768
+        val AIR_BLOCK_DATA = setOf(
+            "minecraft:air",
+            "minecraft:cave_air",
+            "minecraft:void_air",
+        )
     }
 }
 

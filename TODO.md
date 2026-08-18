@@ -25,9 +25,9 @@ There are no remaining architecture-rework slices. Everything below is net-new g
 
 ## MVP delivery sequence
 
-- [ ] A1: add immutable damage reports and a deterministic final-state/cost basis.
+- [x] A1: add immutable damage reports and a deterministic final-state/cost basis.
 - [ ] B1: connect the cancel → journal → revalidate → apply Paper mutation path for simple battle block changes.
-- [ ] A2: add the idempotent economy ledger and civilization accounts after repair economics are decided.
+- [ ] A2: add the idempotent economy ledger, civilization accounts, and validated YAML for the settled configurable repair economics.
 - [ ] A3: add persisted repair jobs, deterministic partial selection, and restart-safe cursors.
 - [ ] B2/B3: connect hostile-entry/admin battle operations and the bounded Paper repair runner.
 
@@ -56,12 +56,12 @@ The project compiles and starts on Paper 26.2. The architecture is covered by do
 | Protection | Central policy plus thin Paper listeners for blocks, containers, entities, PVP, fire, explosions, fluids, pistons, and automation boundaries | Live peacetime protection; conflict eligibility and journaling exist, but no destructive war capability is connected before the two-phase Paper adapter |
 | Diplomacy | Durable war declarations and lifecycle | Live admin/service core; alliances, enemies, treaties, and player-facing declarations are net-new features |
 | Battles | Durable war relationship plus timed hostile-entry battle, roster snapshot, terminal result, and expiry recovery | Core is restart-safe; no Paper entry trigger or destructive capability is live before journaling |
-| Damage | Immutable per-battle/3D-coordinate rows preserve the first simple block state, actor, cause, claim, and time | Durable/restart-safe core; Paper mutation interception, block entities, final-state reports, and repair status remain |
+| Damage | Immutable per-battle/3D-coordinate rows preserve the first simple block state, actor, cause, claim, and time; sealed resolution reports freeze final states, eligibility, and neutral repair-cost categories | Durable/restart-safe reporting core; Paper mutation interception, block entities, and repair status remain |
 | Reconstruction | None | Must be implemented as persisted repair jobs and a bounded Paper runner |
-| Economy | None | An authoritative idempotent ledger is planned; there is no Vault/Foundation fallback |
+| Economy | None | Configurable repair rules are settled; the authoritative idempotent ledger and typed YAML settings remain to implement, with no Vault/Foundation fallback |
 | Permissions | Central leader/member/outsider/admin protection policy | Live for claims; richer ranks/plots are intentionally absent from the MVP |
 | Player utilities | None beyond focused administration | Homes, player claim UX, chat, signs, warps, and menus are net-new only if product-prioritized |
-| Persistence | Versioned relational SQLite with prepared statements, transactions, constraints, WAL, and startup integrity checks | Live for seasons/civilizations/memberships/claims/wars/battles/participants/block changes; repair, ledger, and backup tooling remain |
+| Persistence | Versioned relational SQLite with prepared statements, transactions, constraints, WAL, and startup integrity checks | Live for seasons/civilizations/memberships/claims/wars/battles/participants/block changes/damage reports; repair jobs, ledger, and backup tooling remain |
 | Seasons/scarcity | Durable active-season selection and `SETUP/PEACE/WAR/FINALE/ARCHIVED` phase controls | Phase gate is live; reset and scarcity systems are not implemented |
 | Assassination/occupation/annexation | None | Not implemented |
 
@@ -87,7 +87,7 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 - [ ] **[P0][S] Define who can declare and start wars.** The architecture currently accepts leader declaration during `WAR`, prevents duplicate open wars for the same pair, supports multiple political fronts, permits only one live battle per civilization, and models hostile claim entry as the battle trigger. Decide whether Season One adds admin approval or a preparation countdown before exposing commands/listeners.
 - [x] **[P0][S] Define the battle land scope.** There is no separate battlefield object: during an active battle, each side's eligible area is the ordinary claimed land of the opposing civilization. The exact destruction policy remains inert until it is coupled to the damage journal.
 - [ ] **[P0][S] Define the first victory calculation.** Keep it legible: time limit plus a small set of metrics such as blocks damaged, attacker/defender deaths, surrender, or an admin-set result. Avoid power formulas until the playtest produces evidence for them.
-- [ ] **[P0][S] Define repair economics.** Specify cost per eligible block, what fraction becomes victor spoils, whether the balance may go into debt, who may initiate repair, and whether admins can waive costs.
+- [x] **[P0][S] Define repair economics.** Starting civilization balance, restore-original/remove-placement unit prices, victor share, debt policy, and ordinary initiator roles are validated YAML settings with defaults of `0`, `1`, `1`, `25%`, `false`, and leader-only. Effective values are snapshotted into each durable repair job. An admin repair is not a configurable waiver: the admin command targets a civilization and invokes the same application operation as an audited, payment-free admin-sponsored repair, which produces no victor proceeds.
 - [ ] **[P0][S] Protect inventory-bearing blocks during MVP wars.** Chests, shulkers, furnaces, and other containers should not be destructible until inventory snapshot/loot/duplication rules exist. Preserve signs/banners and other important block-entity data if they are allowed to break.
 - [ ] **[P0][S] Define behavior in unresolved damaged areas.** Recommended MVP rule: lock affected coordinates against normal building until repaired or explicitly abandoned, preventing reconstruction from overwriting new work.
 - [ ] **[P1][S] Decide whether raid lives remain in MVP.** Recommendation: use normal death plus inventory drops in the first vertical slice and defer finite lives/respawn delays until the war/repair loop is trustworthy.
@@ -164,7 +164,7 @@ The former `Region`, plot, visualization, all-civilization scan, and raid-ratio 
 - [x] **[P1][M] Separate declaration from battle activation.** Diplomacy flags do not substitute for a war record; declaration, war activation, and hostile-entry battle start are separate operations.
 - [ ] **[P1][M] Add preparation and clear boundary feedback.** Warn both rosters, show exact start/end time, prevent damage before activation, and make eligible opposing land visible.
 - [ ] **[P1][M] Define participation robustly.** Membership, alliances, joining/leaving the zone, disconnects, deaths, and spectators must have explicit behavior; do not infer all participation from whichever claim-enter event happens to fire.
-- [ ] **[P1][M] End wars outside player loops.** Runtime startup/refresh advances expired battles to `RESOLVING` with zero players online and removes active eligibility. A1–A3 still must calculate/persist damage reports, ledger effects, and repair eligibility exactly once.
+- [ ] **[P1][M] End wars outside player loops.** Runtime startup/refresh advances expired battles to `RESOLVING` with zero players online and removes active eligibility. A1 now seals damage reports exactly once; A2–A3 still must persist ledger effects and repair eligibility before resolution is fully orchestrated.
 - [ ] **[P1][M] Add admin recovery commands.** Inspect state and participants, start, pause, resume, force-resolve, cancel/rollback, and clear a stuck war with an audit reason.
 - [ ] **[P1][M] Add war restart tests at every transition.** Restart in declaration, preparation, active combat, resolution, and repairable states and assert the same eventual result.
 - [ ] **[P1][S] Make balance/power rewards idempotent ledger entries.** A restarted resolution must not pay twice.
@@ -183,7 +183,7 @@ The former in-memory raid, ratio, countdown, lives, and civilization-level damag
 - [ ] **[P1][M] Capture before mutating.** Persist or durably queue the original record before allowing destructive world changes so a crash cannot destroy a block without a recovery record.
 - [ ] **[P1][M] Make TNT physics visual and bounded.** The authoritative mutation remains in the journal; falling blocks must not place permanent untracked blocks, damage unrelated claims, duplicate drops, or load uncontrolled chunks.
 - [ ] **[P1][M] Handle cascading changes.** Explosions, attached blocks, gravity, fluids, and fire can alter blocks outside the initial list; either intercept and journal them or suppress them during MVP wars.
-- [ ] **[P1][M] Produce a stable damage report at resolution.** Count eligible blocks by category/cost, exclude no-op/restored-during-war entries, and save the immutable price/reparations basis.
+- [x] **[P1][M] Produce a stable damage report at resolution.** Resolving battles accept one complete set of framework-neutral final observations, exclude restored/no-op entries, classify eligible coordinates as restore-original or remove-placement repair units, and seal the immutable basis with idempotent conflict detection. Monetary rates remain a Season One repair-economics decision.
 
 ### Repair engine
 
@@ -191,7 +191,7 @@ The former in-memory raid, ratio, countdown, lives, and civilization-level damag
 - [ ] **[P1][M] Calculate exact partial repair deterministically.** Select the requested percentage of eligible changes, charge only that selection, and report skipped/conflicted blocks separately.
 - [ ] **[P1][M] Restore in a safe visible order with per-tick budgets.** Prefer bottom-up/dependency-aware batches, keep chunks bounded, avoid suffocating players, and expose speed as blocks per tick/second accurately.
 - [ ] **[P1][M] Define current-world conflict behavior.** Recommended MVP behavior is to lock damaged coordinates; otherwise only overwrite when the current state matches the journaled damaged state and require admin review for conflicts.
-- [ ] **[P1][M] Make payment and victor proceeds transactional and idempotent.** A repair may not charge twice or pay twice after a crash. Support an admin-free repair path for recovery/testing.
+- [ ] **[P1][M] Make payment and victor proceeds transactional and idempotent.** A repair may not charge twice or pay twice after a crash. Admin commands execute the same repair operation for an explicit target civilization under an audited admin-sponsored context; that path charges no account and creates no victor proceeds.
 - [ ] **[P1][M] Pause/resume cleanly on shutdown, unloaded worlds, or errors.** Do not silently discard handled or unhandled locations.
 - [ ] **[P1][M] Add repair tests.** Cover 1%, 50%, 100%, zero funds, repeated damage, attacker placements, preexisting air, protected containers, conflict skips, restart at every cursor, and double-resolution/payment attempts.
 

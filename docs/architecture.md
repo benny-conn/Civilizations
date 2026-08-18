@@ -53,6 +53,24 @@ best-effort reload path: malformed values fail startup with their YAML path, and
 require a restart until an explicit atomic reload operation is designed. The current key
 reference is [configuration.md](configuration.md).
 
+Season One repair economics follow this same boundary. YAML controls the initial
+civilization balance, the prices for restore-original and remove-placement repair units,
+the victor share, whether balances may enter debt, and which ordinary civilization roles
+may initiate repair. The shipped defaults are `0`, `1`, `1`, `25%`, `false`, and
+leader-only. A repair job snapshots the effective economic rules when it is created so a
+later restart or configuration edit cannot change its price or proceeds.
+
+Admin repair is a command authorization path, not an economic setting. Admin commands
+name the civilization on whose behalf they act and invoke the same application operation
+with explicit admin actor/audit context. An admin-sponsored repair charges no
+civilization account and creates no victor proceeds; it must not bypass repair lifecycle,
+world-conflict, idempotency, or persistence invariants.
+
+More generally, when player and admin workflows perform the same civilization operation,
+the admin adapter should select an explicit target civilization and reuse the application
+service rather than directly editing durable state. Any admin-only override must be a
+typed, auditable input with deliberately bounded effects.
+
 ## Claim model
 
 The first migrated subsystem is the claim geometry and spatial index under `domain.claim` and `application.claim`.
@@ -73,7 +91,7 @@ The persistence boundary lives under `application.persistence`; JDBC is an imple
 
 - `CivilizationsRepository` exposes scoped read contexts and atomic write transactions. Application code does not receive JDBC connections or SQL types.
 - Schema changes are ordered, named, and recorded in `schema_migrations`. Startup refuses unknown or renamed migrations instead of guessing.
-- The schema models seasons, civilizations, memberships, claims, wars, timed battles, battle-participant snapshots, and immutable block-change journal rows as separate relational records.
+- The schema models seasons, civilizations, memberships, claims, wars, timed battles, battle-participant snapshots, immutable block-change journal rows, and sealed per-battle damage reports as separate relational records.
 - Civilization display names are normalized before storage and unique within a season.
 - Composite foreign keys prevent a membership or claim from referencing a civilization in a different season.
 - The membership primary key permits one civilization per player per season while retaining membership history across seasons.
@@ -121,6 +139,10 @@ A `War` is the durable political relationship between two civilizations. A `Batt
 - The service validates an active, unexpired battle, global `WAR` phase, snapshotted participant, claim party, and exact X/Z containment. SQL triggers independently enforce the same durable boundary.
 - A prepared result is a single-use handoff, not durable permission. The future Paper adapter must cancel the original event, prepare the journal off-thread, return to the server thread, confirm the block still matches the observed state and battle authorization, then apply exactly one mutation. A mismatch aborts rather than overwriting newer world state.
 - `SimpleBlockSnapshot` deliberately excludes block-entity payloads. Containers and other unsupported block entities remain protected until inventory, text/NBT, loot, and duplication semantics are explicitly modeled.
+
+`DamageReportService` owns the resolution-time readout of that journal. It accepts a complete set of final `SimpleBlockSnapshot` observations only while a battle is `RESOLVING`; it never reads Paper state itself. Each journal row is frozen as already restored or repair-eligible. Eligible rows are categorized as restoring an original block or removing a block placed over an air-like original, producing stable one-coordinate repair units without choosing monetary rates.
+
+Schema migration 5 stores one sealed report per battle plus its final-state entries. Entries are staged and the summary row atomically seals the complete set; SQL triggers verify exact journal coverage, category/count consistency, battle state, and immutability. An identical retry returns the stored report, while changed observations fail as an explicit conflict. Repository reads page the joined report and journal rows in stable journal order so later repair work can resume without loading an unbounded report.
 
 ## Live runtime
 
