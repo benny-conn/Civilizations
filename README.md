@@ -4,9 +4,9 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The plugin is undergoing an incremental architecture rework. See [TODO.md](TODO.md) for the prioritized roadmap and [docs/architecture.md](docs/architecture.md) for the dependency and persistence boundaries followed by new code.
 
-The V2 core is now the live runtime. It includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, and a durable war/timed-battle lifecycle.
+The V2 core is now the live runtime. It includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, a durable war/timed-battle lifecycle, and a first-write-wins battle damage journal.
 
-Legacy commands, scheduled tasks, and JSON-blob datastores are temporarily quarantined rather than running beside V2 as a second source of truth. V2 Paper listeners now protect claims. Active battles publish an immutable eligibility read model, but there is intentionally no live war override until the damage-journal slice can record every authorized mutation safely.
+Legacy commands, scheduled tasks, and JSON-blob datastores are temporarily quarantined rather than running beside V2 as a second source of truth. V2 Paper listeners now protect claims. Active battles publish an immutable eligibility read model and the application can durably prepare simple block mutations, but there is intentionally no live war override until a Paper adapter can cancel an event, commit its journal record off-thread, revalidate the world state, and only then apply the mutation on the server thread.
 
 ## Current platform
 
@@ -32,7 +32,7 @@ The deployable plugin is written to `build/libs/Civilizations-0.0.16-BETA.jar`.
 
 Run the plugin on Paper 26.2 with Java 25. Copy the built JAR into the server's `plugins` directory and restart the server. V2 packages its selected SQLite driver and stores its authoritative data in `plugins/Civilizations/civilizations-v2.db` by default.
 
-The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, claimed-versus-wilderness explosion behavior, and an in-place schema 2 to 3 migration followed by another restart. War/battle persistence and timer recovery are covered against real SQLite and runtime restarts. Protection decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
+The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, claimed-versus-wilderness explosion behavior, and incremental schema migrations followed by clean restarts. War/battle persistence, timer recovery, and damage-journal durability are covered against real SQLite and runtime restarts. Protection decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
 
 ## V2 administration
 

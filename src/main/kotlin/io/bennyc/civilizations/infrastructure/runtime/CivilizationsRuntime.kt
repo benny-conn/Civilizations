@@ -5,6 +5,7 @@ import io.bennyc.civilizations.application.civilization.CivilizationService
 import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.claim.ClaimService
 import io.bennyc.civilizations.application.claim.ClaimSpatialIndex
+import io.bennyc.civilizations.application.damage.DamageJournalService
 import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
 import io.bennyc.civilizations.application.protection.ProtectionService
@@ -66,6 +67,7 @@ class CivilizationsRuntime private constructor(
         civilizations = CivilizationService(repository, idGenerator, clock),
         claims = ClaimService(repository, idGenerator, claimRules),
         wars = WarService(repository, idGenerator, clock),
+        damageJournal = DamageJournalService(repository, idGenerator, clock),
     )
 
     @Volatile
@@ -246,6 +248,7 @@ class CivilizationsRuntime private constructor(
         val civilizationsById = loaded.civilizations.associateBy(Civilization::id)
         val claimsById = loaded.claims.associateBy(Claim::id)
         val warsById = loaded.wars.associateBy(War::id)
+        val openBattleParticipations = mutableMapOf<CivilizationId, Battle>()
 
         val openWarPairs = mutableMapOf<Set<CivilizationId>, War>()
         for (war in loaded.wars) {
@@ -316,6 +319,17 @@ class CivilizationsRuntime private constructor(
             if (battle.status == BattleStatus.ACTIVE ||
                 battle.status == BattleStatus.RESOLVING
             ) {
+                listOf(
+                    battle.attackingCivilizationId,
+                    battle.defendingCivilizationId,
+                ).forEach { civilizationId ->
+                    openBattleParticipations.put(civilizationId, battle)?.let { existing ->
+                        throw RuntimeIntegrityException(
+                            "Civilization $civilizationId participates in open battles " +
+                                "${existing.id} and ${battle.id}",
+                        )
+                    }
+                }
                 if (war.status != WarStatus.ACTIVE) {
                     throw RuntimeIntegrityException(
                         "Open battle ${battle.id} belongs to ${war.status} war ${war.id}",
@@ -438,6 +452,7 @@ class RuntimeMutationScope internal constructor(
     val civilizations: CivilizationService,
     val claims: ClaimService,
     val wars: WarService,
+    val damageJournal: DamageJournalService,
 ) {
     fun activeSeasonId(): SeasonId? = repository.read { findActiveSeasonId() }
 

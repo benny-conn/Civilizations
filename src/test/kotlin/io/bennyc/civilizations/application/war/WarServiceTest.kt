@@ -123,6 +123,43 @@ class WarServiceTest {
     }
 
     @Test
+    fun `multiple wars may stay open but a civilization fights one battle at a time`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database)
+            val northSouthWar = fixture.activeWar()
+            val firstBattle = fixture.wars.startBattleFromEntry(
+                northSouthWar.id,
+                playerId(2),
+                fixture.southClaim.id,
+            ).appliedValue().battle
+            val westNorthWar = fixture.wars.declare(
+                fixture.declaration(
+                    declaringCivilizationId = fixture.westId,
+                    targetCivilizationId = fixture.northId,
+                    declaredBy = 5,
+                ),
+            ).appliedValue().let { fixture.wars.activate(it.id).appliedValue() }
+
+            assertIs<CivilizationAlreadyInOpenBattle>(
+                fixture.wars.startBattleFromEntry(
+                    westNorthWar.id,
+                    playerId(5),
+                    fixture.northClaim.id,
+                ).rejection(),
+            )
+
+            fixture.wars.cancelBattle(firstBattle.id).appliedValue()
+            val secondBattle = fixture.wars.startBattleFromEntry(
+                westNorthWar.id,
+                playerId(5),
+                fixture.northClaim.id,
+            ).appliedValue().battle
+            assertEquals(fixture.westId, secondBattle.attackingCivilizationId)
+            assertEquals(fixture.northId, secondBattle.defendingCivilizationId)
+        }
+    }
+
+    @Test
     fun `expired battles recover deterministically and terminal transitions persist`() {
         SqliteTestDatabase().use { database ->
             val fixture = fixture(database, battleDurationSeconds = 60)

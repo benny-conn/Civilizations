@@ -50,7 +50,7 @@ The V2 persistence boundary lives under `application.persistence`; JDBC is an im
 
 - `CivilizationsRepository` exposes scoped read contexts and atomic write transactions. Application code does not receive JDBC connections or SQL types.
 - Schema changes are ordered, named, and recorded in `schema_migrations`. Startup refuses unknown or renamed migrations instead of guessing.
-- The schema models seasons, civilizations, memberships, claims, wars, timed battles, and battle-participant snapshots as separate relational records.
+- The schema models seasons, civilizations, memberships, claims, wars, timed battles, battle-participant snapshots, and immutable block-change journal rows as separate relational records.
 - Civilization display names are normalized before storage and unique within a season.
 - Composite foreign keys prevent a membership or claim from referencing a civilization in a different season.
 - The membership primary key permits one civilization per player per season while retaining membership history across seasons.
@@ -64,7 +64,7 @@ SQLite is the first implementation and uses foreign keys, WAL mode, and a bounde
 
 ## Application services
 
-The V2 mutation boundary is under `application.season`, `application.civilization`, `application.claim`, and `application.war`.
+The V2 mutation boundary is under `application.season`, `application.civilization`, `application.claim`, `application.war`, and `application.damage`.
 
 - Services return `ApplicationResult.Applied`, `Unchanged`, or `Rejected`. Expected rule failures are immutable values that an adapter can translate into chat or console messages; infrastructure faults still throw and roll back.
 - `SeasonService` owns phase transitions. `WAR` is a durable global gate rather than a scattered configuration boolean, and an admin may transition `WAR` back to `PEACE` to stop war without ending the season.
@@ -80,12 +80,24 @@ Application services are synchronous because the repository port represents bloc
 
 A `War` is the durable political relationship between two civilizations. A `Battle` is one timed engagement within that war. This avoids treating every war as a single transient raid and leaves room for multiple engagements, reparations, surrender, or later occupation rules without changing identity.
 
-- Open wars are unique per civilization pair, but a civilization may participate in multiple wars. Avoiding a multi-front war is a gameplay/political policy, not a storage limitation.
+- Open wars are unique per civilization pair, and a civilization may participate in multiple political wars. The current safety invariant permits only one `ACTIVE`/`RESOLVING` battle per civilization, preventing overlapping journals from claiming incompatible original states for the same land.
 - The current rules snapshot records `HOSTILE_CLAIM_ENTRY`, `OPPOSING_CIVILIZATION_CLAIMS`, and the battle duration. When a battle is eventually connected to movement, the entering side becomes attacker and the entered claim's owner becomes defender.
 - “Battlefield” is not a separate region type. All claim lookup continues through the normal chunk index; the active read model maps each civilization to the opposing civilization's ordinary claim IDs.
 - Both civilization rosters are snapshotted as battle participants when the battle starts. Later membership changes cannot rewrite the historical roster.
 - Absolute timestamps, not decrementing task counters, drive expiry. Startup and every runtime refresh idempotently move expired `ACTIVE` battles to `RESOLVING`, which immediately removes their eligibility from live memory.
-- The eligibility read model is intentionally inert. No Paper movement listener starts battles and no protection request receives a destructive capability until Slice 7 can durably journal the original block state before allowing a mutation.
+- The eligibility read model is intentionally inert. No Paper movement listener starts battles and no protection request receives a destructive capability until the two-phase mutation adapter is implemented.
+
+## Damage journal
+
+`DamageJournalService` is the durable boundary that must run before a future Paper adapter mutates battle land. It accepts framework-free stable IDs, a 3D block coordinate, the state observed on the server thread, actor, claim, and cause.
+
+- Journal identity is battle plus world/X/Y/Z. The first preparation atomically inserts the original state; later breaks, explosions, or placements at that coordinate return the existing row and can never overwrite the baseline.
+- Both enemy and owner mutations in either side's land are journalable. This prevents defenders rebuilding during a battle from silently escaping the same pre-battle restoration history.
+- Attacker placement is represented by journaling the replaced state—often `minecraft:air`—before placement. Restoring air later removes the attacker-created block.
+- Rows retain season, battle, claim, first actor/cause/time, and canonical simple block data. They are immutable in SQL and can be read in bounded cursor pages without loading a city's damage into live runtime memory.
+- The service validates an active, unexpired battle, global `WAR` phase, snapshotted participant, claim party, and exact X/Z containment. SQL triggers independently enforce the same durable boundary.
+- A prepared result is a single-use handoff, not durable permission. The future Paper adapter must cancel the original event, prepare the journal off-thread, return to the server thread, confirm the block still matches the observed state and battle authorization, then apply exactly one mutation. A mismatch aborts rather than overwriting newer world state.
+- `SimpleBlockSnapshot` deliberately excludes block-entity payloads. Containers and other unsupported block entities remain protected until inventory, text/NBT, loot, and duplication semantics are explicitly modeled.
 
 ## Live runtime cutover
 
@@ -107,7 +119,7 @@ Legacy commands, listeners, tasks, placeholders, and datastores are deliberately
 
 - Unclaimed coordinates retain vanilla behavior. Members and leaders may mutate their civilization's claims in `SETUP`, `PEACE`, and `WAR`; outsiders may not. `FINALE` and `ARCHIVED` freeze claimed land except for explicit admin bypass.
 - PVP in claimed land always requires a conflict capability. Merely putting the season in `WAR` does not authorize anybody to attack or destroy blocks.
-- A conflict capability is bound to its actor, kind, allowed actions, eligible claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The runtime publishes persisted battle eligibility but does not convert it into capabilities, so claimed destruction remains closed until the damage journal lands.
+- A conflict capability is bound to its actor, kind, allowed actions, eligible claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The runtime publishes persisted battle eligibility and owns the journal service but does not convert eligibility into capabilities, so claimed destruction remains closed until the two-phase Paper adapter lands.
 - Inventory-bearing blocks cannot appear in an MVP conflict capability. Block-break translation classifies them as container actions so a generic break grant cannot bypass that invariant.
 - Explosions remove only claimed blocks from the event's block list. Autonomous fire and entity block changes are denied on claimed targets. Fluids, pistons, hopper transfers, and inventory pickup may move within one ownership area but not between civilizations or across wilderness boundaries.
 - While runtime state is loading or failed, mutation listeners fail closed. Once a ready runtime has no active season, events retain vanilla behavior.
@@ -124,4 +136,4 @@ The current event matrix is:
 | Boundaries | fluid flow, piston head/moved blocks, inventory transfer | Every source/destination pair must have the same owner, including wilderness as no owner |
 | Movement | ordinary movement and teleport | Intentionally unrestricted for MVP; land ownership is not a border-entry rule |
 
-Later war integration must persist or durably queue a first-write-wins block journal before it hands a conflict capability to any destructive Paper path. The visual TNT effect may never become the authoritative mutation.
+Later war integration must use the journal-before-mutation contract before it hands a conflict capability to any destructive Paper path. The visual TNT effect may never become the authoritative mutation.

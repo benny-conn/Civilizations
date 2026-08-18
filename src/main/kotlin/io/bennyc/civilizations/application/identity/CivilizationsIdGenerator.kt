@@ -1,6 +1,7 @@
 package io.bennyc.civilizations.application.identity
 
 import io.bennyc.civilizations.domain.claim.ClaimId
+import io.bennyc.civilizations.domain.damage.BlockChangeId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.war.BattleId
@@ -16,4 +17,6 @@ interface CivilizationsIdGenerator {
     fun newWarId(): WarId
 
     fun newBattleId(): BattleId
+
+    fun newBlockChangeId(): BlockChangeId
 }

@@ -13,6 +13,12 @@ import io.bennyc.civilizations.domain.claim.Claim
 import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.claim.WorldId
+import io.bennyc.civilizations.domain.damage.BattleBlockChange
+import io.bennyc.civilizations.domain.damage.BlockChangeId
+import io.bennyc.civilizations.domain.damage.BlockChangeCursor
+import io.bennyc.civilizations.domain.damage.BlockMutationCause
+import io.bennyc.civilizations.domain.damage.BlockPosition3D
+import io.bennyc.civilizations.domain.damage.SimpleBlockSnapshot
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
@@ -194,6 +200,22 @@ private open class JdbcReadContext(
         map = ResultSet::toBattle,
     )
 
+    override fun listOpenBattlesForCivilization(
+        civilizationId: CivilizationId,
+    ): List<Battle> = queryMany(
+        sql = """
+            $BATTLE_SELECT
+            WHERE status IN ('ACTIVE', 'RESOLVING')
+              AND (attacking_civilization_id = ? OR defending_civilization_id = ?)
+            ORDER BY started_at_ms, id
+        """.trimIndent(),
+        bind = {
+            setString(1, civilizationId.toString())
+            setString(2, civilizationId.toString())
+        },
+        map = ResultSet::toBattle,
+    )
+
     override fun listBattleParticipants(battleId: BattleId): List<BattleParticipant> = queryMany(
         sql = """
             $BATTLE_PARTICIPANT_SELECT
@@ -203,6 +225,77 @@ private open class JdbcReadContext(
         bind = { setString(1, battleId.toString()) },
         map = ResultSet::toBattleParticipant,
     )
+
+    override fun findBlockChange(
+        battleId: BattleId,
+        position: BlockPosition3D,
+    ): BattleBlockChange? = queryOne(
+        sql = """
+            $BLOCK_CHANGE_SELECT
+            WHERE battle_id = ? AND world_id = ?
+              AND block_x = ? AND block_y = ? AND block_z = ?
+        """.trimIndent(),
+        bind = {
+            setString(1, battleId.toString())
+            setString(2, position.worldId.value)
+            setInt(3, position.x)
+            setInt(4, position.y)
+            setInt(5, position.z)
+        },
+        map = ResultSet::toBattleBlockChange,
+    )
+
+    override fun countBlockChanges(battleId: BattleId): Long = requireNotNull(
+        queryOne(
+            sql = "SELECT COUNT(*) AS change_count FROM battle_block_changes WHERE battle_id = ?",
+            bind = { setString(1, battleId.toString()) },
+            map = { getLong("change_count") },
+        ),
+    )
+
+    override fun listBlockChanges(
+        battleId: BattleId,
+        after: BlockChangeCursor?,
+        limit: Int,
+    ): List<BattleBlockChange> {
+        require(limit in 1..MAX_BLOCK_CHANGE_PAGE_SIZE) {
+            "Block change page size must be between 1 and $MAX_BLOCK_CHANGE_PAGE_SIZE"
+        }
+        return if (after == null) {
+            queryMany(
+                sql = """
+                    $BLOCK_CHANGE_SELECT
+                    WHERE battle_id = ?
+                    ORDER BY recorded_at_ms, id
+                    LIMIT ?
+                """.trimIndent(),
+                bind = {
+                    setString(1, battleId.toString())
+                    setInt(2, limit)
+                },
+                map = ResultSet::toBattleBlockChange,
+            )
+        } else {
+            queryMany(
+                sql = """
+                    $BLOCK_CHANGE_SELECT
+                    WHERE battle_id = ? AND (
+                        recorded_at_ms > ? OR (recorded_at_ms = ? AND id > ?)
+                    )
+                    ORDER BY recorded_at_ms, id
+                    LIMIT ?
+                """.trimIndent(),
+                bind = {
+                    setString(1, battleId.toString())
+                    setLong(2, after.recordedAt.toEpochMilli())
+                    setLong(3, after.recordedAt.toEpochMilli())
+                    setString(4, after.id.toString())
+                    setInt(5, limit)
+                },
+                map = ResultSet::toBattleBlockChange,
+            )
+        }
+    }
 
     protected fun executeUpdate(
         sql: String,
@@ -244,6 +337,8 @@ private open class JdbcReadContext(
     }
 
     private companion object {
+        const val MAX_BLOCK_CHANGE_PAGE_SIZE = 1_000
+
         const val CIVILIZATION_SELECT = """
             SELECT id, season_id, name, normalized_name, status, created_at_ms, updated_at_ms
             FROM civilizations
@@ -273,6 +368,12 @@ private open class JdbcReadContext(
         const val BATTLE_PARTICIPANT_SELECT = """
             SELECT season_id, battle_id, player_id, civilization_id, side, joined_at_ms
             FROM battle_participants
+        """
+        const val BLOCK_CHANGE_SELECT = """
+            SELECT id, season_id, battle_id, claim_id, world_id,
+                   block_x, block_y, block_z, original_block_data,
+                   first_mutation_cause, first_actor_id, recorded_at_ms
+            FROM battle_block_changes
         """
     }
 }
@@ -541,6 +642,31 @@ private class JdbcWriteContext(
         }
     }
 
+    override fun insertBlockChangeIfAbsent(blockChange: BattleBlockChange): Boolean =
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_block_changes(
+                    id, season_id, battle_id, claim_id, world_id,
+                    block_x, block_y, block_z, original_block_data,
+                    first_mutation_cause, first_actor_id, recorded_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(battle_id, world_id, block_x, block_y, block_z) DO NOTHING
+            """.trimIndent(),
+        ) {
+            setString(1, blockChange.id.toString())
+            setString(2, blockChange.seasonId.toString())
+            setString(3, blockChange.battleId.toString())
+            setString(4, blockChange.claimId.toString())
+            setString(5, blockChange.position.worldId.value)
+            setInt(6, blockChange.position.x)
+            setInt(7, blockChange.position.y)
+            setInt(8, blockChange.position.z)
+            setString(9, blockChange.originalState.blockData)
+            setString(10, blockChange.firstMutationCause.name)
+            setString(11, blockChange.firstActorId.toString())
+            setLong(12, blockChange.recordedAt.toEpochMilli())
+        } == 1
+
     private fun requireUpdated(updated: Int, description: String) {
         if (updated != 1) {
             throw PersistenceRecordNotFoundException("$description does not exist")
@@ -645,6 +771,23 @@ private fun ResultSet.toBattleParticipant(): BattleParticipant = BattleParticipa
     civilizationId = CivilizationId(uuid("civilization_id")),
     side = BattleSide.valueOf(getString("side")),
     joinedAt = instant("joined_at_ms"),
+)
+
+private fun ResultSet.toBattleBlockChange(): BattleBlockChange = BattleBlockChange(
+    id = BlockChangeId(uuid("id")),
+    seasonId = SeasonId(uuid("season_id")),
+    battleId = BattleId(uuid("battle_id")),
+    claimId = ClaimId(uuid("claim_id")),
+    position = BlockPosition3D(
+        worldId = WorldId(getString("world_id")),
+        x = getInt("block_x"),
+        y = getInt("block_y"),
+        z = getInt("block_z"),
+    ),
+    originalState = SimpleBlockSnapshot(getString("original_block_data")),
+    firstMutationCause = BlockMutationCause.valueOf(getString("first_mutation_cause")),
+    firstActorId = PlayerId(uuid("first_actor_id")),
+    recordedAt = instant("recorded_at_ms"),
 )
 
 private fun ResultSet.uuid(column: String): UUID = UUID.fromString(getString(column))

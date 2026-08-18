@@ -3,6 +3,7 @@ package io.bennyc.civilizations.application.support
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.domain.claim.ClaimId
+import io.bennyc.civilizations.domain.damage.BlockChangeId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.war.BattleId
@@ -16,6 +17,7 @@ internal class SequentialIdGenerator : CivilizationsIdGenerator {
     private var claim = 200L
     private var war = 300L
     private var battle = 400L
+    private var blockChange = 500L
 
     override fun newSeasonId(): SeasonId = SeasonId(UUID(0, ++season))
 
@@ -26,6 +28,8 @@ internal class SequentialIdGenerator : CivilizationsIdGenerator {
     override fun newWarId(): WarId = WarId(UUID(0, ++war))
 
     override fun newBattleId(): BattleId = BattleId(UUID(0, ++battle))
+
+    override fun newBlockChangeId(): BlockChangeId = BlockChangeId(UUID(0, ++blockChange))
 }
 
 internal fun playerId(value: Long) = io.bennyc.civilizations.domain.identity.PlayerId(UUID(1, value))

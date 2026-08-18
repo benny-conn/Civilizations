@@ -208,6 +208,13 @@ class WarService(
                 ),
             )
         }
+        listOf(entrant.civilizationId, defendingCivilizationId).forEach { civilizationId ->
+            listOpenBattlesForCivilization(civilizationId).firstOrNull()?.let { existing ->
+                return@transaction ApplicationResult.Rejected(
+                    CivilizationAlreadyInOpenBattle(civilizationId, existing.id),
+                )
+            }
+        }
 
         val now = clock.instant()
         val battle = Battle(
@@ -530,6 +537,14 @@ data class EntryIsNotOpponentLand(
 data class BattleRosterEmpty(val civilizationId: CivilizationId) : ApplicationFailure {
     override val description: String =
         "Civilization $civilizationId has no roster to snapshot for battle"
+}
+
+data class CivilizationAlreadyInOpenBattle(
+    val civilizationId: CivilizationId,
+    val battleId: BattleId,
+) : ApplicationFailure {
+    override val description: String =
+        "Civilization $civilizationId already participates in open battle $battleId"
 }
 
 data class BattleNotFound(val battleId: BattleId) : ApplicationFailure {

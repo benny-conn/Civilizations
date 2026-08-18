@@ -5,6 +5,9 @@ import io.bennyc.civilizations.domain.civilization.CivilizationName
 import io.bennyc.civilizations.domain.civilization.Membership
 import io.bennyc.civilizations.domain.claim.Claim
 import io.bennyc.civilizations.domain.claim.ClaimId
+import io.bennyc.civilizations.domain.damage.BattleBlockChange
+import io.bennyc.civilizations.domain.damage.BlockPosition3D
+import io.bennyc.civilizations.domain.damage.BlockChangeCursor
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
@@ -62,7 +65,19 @@ interface CivilizationsReadContext {
 
     fun listBattlesForSeason(seasonId: SeasonId): List<Battle>
 
+    fun listOpenBattlesForCivilization(civilizationId: CivilizationId): List<Battle>
+
     fun listBattleParticipants(battleId: BattleId): List<BattleParticipant>
+
+    fun findBlockChange(battleId: BattleId, position: BlockPosition3D): BattleBlockChange?
+
+    fun countBlockChanges(battleId: BattleId): Long
+
+    fun listBlockChanges(
+        battleId: BattleId,
+        after: BlockChangeCursor?,
+        limit: Int,
+    ): List<BattleBlockChange>
 }
 
 interface CivilizationsWriteContext : CivilizationsReadContext {
@@ -95,6 +110,9 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
     fun updateBattle(battle: Battle)
 
     fun insertBattleParticipant(participant: BattleParticipant)
+
+    /** Returns false only when this battle/coordinate was already journaled. */
+    fun insertBlockChangeIfAbsent(blockChange: BattleBlockChange): Boolean
 }
 
 class PersistenceRecordNotFoundException(message: String) : IllegalStateException(message)

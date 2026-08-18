@@ -4,6 +4,7 @@ import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.civilization.ProvisionCivilization
 import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.claim.PlaceClaim
+import io.bennyc.civilizations.application.damage.PrepareBlockMutation
 import io.bennyc.civilizations.application.protection.PlayerProtectionAction
 import io.bennyc.civilizations.application.protection.PlayerProtectionRequest
 import io.bennyc.civilizations.application.protection.ProtectionDecision
@@ -16,6 +17,9 @@ import io.bennyc.civilizations.domain.civilization.CivilizationStatus
 import io.bennyc.civilizations.domain.claim.BlockPosition2D
 import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.WorldId
+import io.bennyc.civilizations.domain.damage.BlockMutationCause
+import io.bennyc.civilizations.domain.damage.BlockPosition3D
+import io.bennyc.civilizations.domain.damage.SimpleBlockSnapshot
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.Season
@@ -51,7 +55,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(3, started.migration.currentVersion)
+            assertEquals(4, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -221,6 +225,19 @@ class CivilizationsRuntimeTest {
                     ),
                 ),
             )
+            val journaled = runtime.submitAwait {
+                damageJournal.prepare(
+                    PrepareBlockMutation(
+                        battleId = battle.id,
+                        claimId = southClaim.id,
+                        position = BlockPosition3D(world, 40, 72, 8),
+                        observedState = SimpleBlockSnapshot("minecraft:stone"),
+                        actorId = playerId(2),
+                        cause = BlockMutationCause.PLAYER_BREAK,
+                    ),
+                )
+            }.awaitCompleted()
+            assertIs<ApplicationResult.Applied<*>>(journaled.result)
             runtime.close()
 
             val restarted = database.runtime(clock = mutableClock)
@@ -233,6 +250,19 @@ class CivilizationsRuntimeTest {
                 (restarted.state as CivilizationsRuntimeState.Ready)
                     .activeSeason?.activeBattleEligibility?.size,
             )
+            val repeated = restarted.submitAwait {
+                damageJournal.prepare(
+                    PrepareBlockMutation(
+                        battleId = battle.id,
+                        claimId = southClaim.id,
+                        position = BlockPosition3D(world, 40, 72, 8),
+                        observedState = SimpleBlockSnapshot("minecraft:air"),
+                        actorId = playerId(2),
+                        cause = BlockMutationCause.PLAYER_PLACE,
+                    ),
+                )
+            }.awaitCompleted()
+            assertIs<ApplicationResult.Unchanged<*>>(repeated.result)
             restarted.close()
 
             mutableClock.advanceSeconds(60)

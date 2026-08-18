@@ -339,5 +339,137 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        SchemaMigration(
+            version = 4,
+            name = "first_write_wins_battle_damage_journal",
+            statements = listOf(
+                """
+                CREATE TABLE battle_block_changes (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT NOT NULL,
+                    claim_id TEXT NOT NULL,
+                    world_id TEXT NOT NULL,
+                    block_x INTEGER NOT NULL,
+                    block_y INTEGER NOT NULL,
+                    block_z INTEGER NOT NULL,
+                    original_block_data TEXT NOT NULL,
+                    first_mutation_cause TEXT NOT NULL CHECK (
+                        first_mutation_cause IN (
+                            'PLAYER_BREAK', 'PLAYER_PLACE', 'EXPLOSION', 'FIRE',
+                            'FLUID', 'PISTON', 'ENTITY_CHANGE'
+                        )
+                    ),
+                    first_actor_id TEXT NOT NULL,
+                    recorded_at_ms INTEGER NOT NULL CHECK (recorded_at_ms >= 0),
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(claim_id) = 36),
+                    CHECK (length(trim(world_id)) > 0),
+                    CHECK (length(original_block_data) BETWEEN 1 AND 32768),
+                    CHECK (length(first_actor_id) = 36),
+                    UNIQUE (battle_id, world_id, block_x, block_y, block_z),
+                    FOREIGN KEY (season_id, battle_id)
+                        REFERENCES battles(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX battle_block_changes_by_battle
+                ON battle_block_changes(battle_id, recorded_at_ms, id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_block_changes_validate_insert
+                BEFORE INSERT ON battle_block_changes
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM battles battle
+                    JOIN seasons season ON season.id = NEW.season_id
+                    JOIN claims claim ON claim.id = NEW.claim_id
+                    JOIN battle_participants participant
+                      ON participant.battle_id = NEW.battle_id
+                     AND participant.player_id = NEW.first_actor_id
+                    WHERE battle.id = NEW.battle_id
+                      AND battle.season_id = NEW.season_id
+                      AND battle.status = 'ACTIVE'
+                      AND NEW.recorded_at_ms >= battle.started_at_ms
+                      AND NEW.recorded_at_ms < battle.ends_at_ms
+                      AND season.status = 'WAR'
+                      AND claim.season_id = NEW.season_id
+                      AND claim.civilization_id IN (
+                          battle.attacking_civilization_id,
+                          battle.defending_civilization_id
+                      )
+                      AND claim.world_id = NEW.world_id
+                      AND NEW.block_x BETWEEN claim.min_x AND claim.max_x
+                      AND NEW.block_z BETWEEN claim.min_z AND claim.max_z
+                      AND participant.civilization_id IN (
+                          battle.attacking_civilization_id,
+                          battle.defending_civilization_id
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'block change is not valid for the active battle');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_block_changes_are_immutable
+                BEFORE UPDATE ON battle_block_changes
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle block changes are immutable');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_block_changes_cannot_be_deleted
+                BEFORE DELETE ON battle_block_changes
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle block changes cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battles_one_open_per_civilization_insert
+                BEFORE INSERT ON battles
+                WHEN NEW.status IN ('ACTIVE', 'RESOLVING') AND EXISTS (
+                    SELECT 1 FROM battles existing
+                    WHERE existing.season_id = NEW.season_id
+                      AND existing.status IN ('ACTIVE', 'RESOLVING')
+                      AND (
+                          existing.attacking_civilization_id IN (
+                              NEW.attacking_civilization_id, NEW.defending_civilization_id
+                          ) OR
+                          existing.defending_civilization_id IN (
+                              NEW.attacking_civilization_id, NEW.defending_civilization_id
+                          )
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'civilization already participates in an open battle');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battles_one_open_per_civilization_update
+                BEFORE UPDATE OF status, attacking_civilization_id, defending_civilization_id
+                ON battles
+                WHEN NEW.status IN ('ACTIVE', 'RESOLVING') AND EXISTS (
+                    SELECT 1 FROM battles existing
+                    WHERE existing.season_id = NEW.season_id
+                      AND existing.id <> NEW.id
+                      AND existing.status IN ('ACTIVE', 'RESOLVING')
+                      AND (
+                          existing.attacking_civilization_id IN (
+                              NEW.attacking_civilization_id, NEW.defending_civilization_id
+                          ) OR
+                          existing.defending_civilization_id IN (
+                              NEW.attacking_civilization_id, NEW.defending_civilization_id
+                          )
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'civilization already participates in an open battle');
+                END
+                """.trimIndent(),
+            ),
+        ),
     )
 }
