@@ -4,7 +4,7 @@ import io.bennyc.civilizations.application.claim.ClaimRules
 import org.bukkit.configuration.file.FileConfiguration
 import java.nio.file.Path
 
-data class V2PluginConfiguration(
+data class CivilizationsConfiguration(
     val databasePath: Path,
     val claimRules: ClaimRules,
 ) {
@@ -12,7 +12,7 @@ data class V2PluginConfiguration(
         fun load(
             dataFolder: Path,
             config: FileConfiguration,
-        ): V2PluginConfiguration {
+        ): CivilizationsConfiguration {
             val normalizedDataFolder = dataFolder.toAbsolutePath().normalize()
             val configuredFile = config.getString("v2.database-file")
                 ?: error("Missing v2.database-file")
@@ -22,7 +22,7 @@ data class V2PluginConfiguration(
                 "v2.database-file must be a file directly inside the plugin data folder"
             }
 
-            return V2PluginConfiguration(
+            return CivilizationsConfiguration(
                 databasePath = databasePath,
                 claimRules = ClaimRules(
                     maxArea = config.getLong("v2.claims.max-area"),

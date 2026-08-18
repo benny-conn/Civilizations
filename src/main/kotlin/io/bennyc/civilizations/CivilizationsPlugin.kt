@@ -1,21 +1,21 @@
 package io.bennyc.civilizations
 
-import io.bennyc.civilizations.infrastructure.paper.V2AdminCommand
-import io.bennyc.civilizations.infrastructure.paper.V2PluginConfiguration
+import io.bennyc.civilizations.infrastructure.paper.CivilizationsAdminCommand
+import io.bennyc.civilizations.infrastructure.paper.CivilizationsConfiguration
 import io.bennyc.civilizations.infrastructure.paper.protection.PaperProtectionListener
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeStartOutcome
 import org.bukkit.Bukkit
-import org.mineacademy.fo.plugin.SimplePlugin
+import org.bukkit.plugin.java.JavaPlugin
 import java.util.concurrent.Executor
 import java.util.logging.Level
 
-class CivilizationsPlugin : SimplePlugin() {
-    private lateinit var v2Runtime: CivilizationsRuntime
+class CivilizationsPlugin : JavaPlugin() {
+    private lateinit var runtime: CivilizationsRuntime
 
-    override fun onPluginStart() {
+    override fun onEnable() {
         saveDefaultConfig()
-        val runtimeConfiguration = V2PluginConfiguration.load(dataFolder.toPath(), config)
+        val runtimeConfiguration = CivilizationsConfiguration.load(dataFolder.toPath(), config)
         val serverThread = Executor { action ->
             if (Bukkit.isPrimaryThread()) {
                 action.run()
@@ -24,12 +24,12 @@ class CivilizationsPlugin : SimplePlugin() {
             }
         }
 
-        v2Runtime = CivilizationsRuntime.sqlite(
+        runtime = CivilizationsRuntime.sqlite(
             databasePath = runtimeConfiguration.databasePath,
             claimRules = runtimeConfiguration.claimRules,
             serverThread = serverThread,
             fatalFailureHandler = { failure ->
-                logger.log(Level.SEVERE, "Civilizations V2 failed closed", failure)
+                logger.log(Level.SEVERE, "Civilizations failed closed", failure)
                 if (isEnabled) {
                     server.pluginManager.disablePlugin(this)
                 }
@@ -38,20 +38,20 @@ class CivilizationsPlugin : SimplePlugin() {
 
         registerCommand(
             "civadmin",
-            "Administer Civilizations V2",
+            "Administer Civilizations",
             listOf("civilizationsadmin"),
-            V2AdminCommand(v2Runtime),
+            CivilizationsAdminCommand(runtime),
         )
-        server.pluginManager.registerEvents(PaperProtectionListener(v2Runtime), this)
-        v2Runtime.start { outcome ->
+        server.pluginManager.registerEvents(PaperProtectionListener(runtime), this)
+        runtime.start { outcome ->
             when (outcome) {
                 is RuntimeStartOutcome.Ready -> {
                     val active = outcome.state.activeSeason
                     logger.info(
                         if (active == null) {
-                            "Civilizations V2 is ready; create or select an active season with /civadmin"
+                            "Civilizations is ready; create or select an active season with /civadmin"
                         } else {
-                            "Civilizations V2 loaded '${active.season.name}' " +
+                            "Civilizations loaded '${active.season.name}' " +
                                 "with ${active.civilizations.size} civilizations and " +
                                 "${active.claimIndex.size} claims"
                         },
@@ -60,18 +60,11 @@ class CivilizationsPlugin : SimplePlugin() {
                 is RuntimeStartOutcome.Failed -> Unit
             }
         }
-
-        logger.warning(
-            "Legacy commands, tasks, and datastores remain quarantined; " +
-                "V2 protection listeners are active",
-        )
     }
 
-    override fun onPluginStop() {
-        if (::v2Runtime.isInitialized) {
-            v2Runtime.close()
+    override fun onDisable() {
+        if (::runtime.isInitialized) {
+            runtime.close()
         }
     }
-
-    override fun getFoundedYear(): Int = 2021
 }

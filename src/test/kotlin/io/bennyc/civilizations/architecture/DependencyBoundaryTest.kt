@@ -3,8 +3,10 @@ package io.bennyc.civilizations.architecture
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.extension
+import kotlin.io.path.readText
 import kotlin.io.path.readLines
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class DependencyBoundaryTest {
@@ -31,6 +33,31 @@ class DependencyBoundaryTest {
         )
     }
 
+    @Test
+    fun `production code and build are free of retired frameworks`() {
+        val productionRoot = Path.of("src/main")
+        val sourceViolations = buildList {
+            Files.walk(productionRoot).use { paths ->
+                paths.filter {
+                    Files.isRegularFile(it) && (it.extension == "kt" || it.extension == "java")
+                }.forEach { source ->
+                    source.readLines()
+                        .filter { line -> retiredImports.any(line::startsWith) }
+                        .forEach { line -> add("$source: $line") }
+                }
+            }
+        }
+        assertTrue(
+            sourceViolations.isEmpty(),
+            "Retired framework imports remain:\n${sourceViolations.joinToString("\n")}",
+        )
+
+        val build = Path.of("build.gradle.kts").readText()
+        retiredBuildMarkers.forEach { marker ->
+            assertFalse(marker in build, "Retired build marker remains: $marker")
+        }
+    }
+
     private companion object {
         val forbiddenImports = listOf(
             "import io.bennyc.civilizations.command.",
@@ -45,6 +72,17 @@ class DependencyBoundaryTest {
             "import net.milkbowl.vault.",
             "import org.bukkit.",
             "import org.mineacademy.",
+        )
+        val retiredImports = listOf(
+            "import kotlinx.coroutines.",
+            "import net.milkbowl.vault.",
+            "import org.mineacademy.",
+        )
+        val retiredBuildMarkers = listOf(
+            "Foundation",
+            "jitpack.io",
+            "kotlinx-coroutines",
+            "org.mineacademy",
         )
     }
 }

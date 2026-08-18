@@ -5,7 +5,6 @@ api-version: '26.2'
 author: Tolmikarc
 description: Civilization, territory, economy, and warfare gameplay for Paper.
 website: https://github.com/benny-conn/Civilizations
-softdepend: [Vault]
 permissions:
   civilizations.admin:
     description: Administer the Civilizations V2 runtime.

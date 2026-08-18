@@ -23,7 +23,7 @@ import org.bukkit.command.CommandSender
 import java.util.Locale
 import java.util.UUID
 
-class V2AdminCommand(
+class CivilizationsAdminCommand(
     private val runtime: CivilizationsRuntime,
 ) : BasicCommand {
     override fun execute(

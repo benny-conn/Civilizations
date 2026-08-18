@@ -9,8 +9,6 @@ group = "io.bennyc"
 version = "0.0.16-BETA"
 
 val paperVersion = providers.gradleProperty("paperVersion").get()
-val foundationVersion = "6.10.1"
-val coroutinesVersion = "1.11.0"
 val sqliteJdbcVersion = "3.53.2.1"
 val pluginMainClass = "io.bennyc.civilizations.CivilizationsPlugin"
 
@@ -19,23 +17,12 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/") {
         name = "papermc"
     }
-    maven("https://jitpack.io") {
-        name = "jitpack"
-    }
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperVersion")
 
-    // Foundation declares every supported plugin hook as a transitive dependency.
-    // Those integrations are supplied by a server when installed and must not be
-    // resolved or bundled into Civilizations.
-    implementation("com.github.kangarko:Foundation:$foundationVersion") {
-        isTransitive = false
-    }
-
     implementation(kotlin("stdlib"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
 
     // V2 owns its database driver instead of depending on Paper internals.
     implementation("org.xerial:sqlite-jdbc:$sqliteJdbcVersion")
@@ -49,11 +36,6 @@ java {
 
 kotlin {
     jvmToolchain(25)
-
-    // Preserve the existing mixed Java/Kotlin source layout for this upgrade.
-    sourceSets.main {
-        kotlin.srcDir("src/main/java")
-    }
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -78,9 +60,7 @@ tasks.named<ShadowJar>("shadowJar") {
     archiveClassifier = ""
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 
-    relocate("org.mineacademy.fo", "io.bennyc.civilizations.lib.foundation")
     relocate("kotlin", "io.bennyc.civilizations.lib.kotlin")
-    relocate("kotlinx", "io.bennyc.civilizations.lib.kotlinx")
 
     mergeServiceFiles()
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
