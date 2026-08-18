@@ -14,9 +14,10 @@ Audit date: 2026-08-18
 
 - [x] Slice 1: add a Foundation-free claim domain, correct rectangle geometry, world/chunk spatial index, and randomized parity tests. This is merged but not yet connected to legacy listeners.
 - [x] Slice 2: add season/civilization/membership domain records, a repository port, versioned relational schema, transactional SQLite implementation, database constraints, and integration tests. This remains isolated from live plugin startup until the cutover slice.
-- [ ] Slice 3: add application services for season setup, landless civilization provisioning, membership assignment/leadership transfer, and claim placement; wire admin commands to V2 without Foundation business logic.
-- [ ] Slice 4: load the active season and spatial index during plugin startup, route Paper protection events through a centralized policy, then retire legacy claim reads.
-- [ ] Slice 5+: add the persisted war/damage/repair lifecycle, migrate remaining commands/configuration/UI adapters, and remove Foundation when no surviving imports remain.
+- [x] Slice 3: add command-ready application services for season setup and war gating, landless civilization provisioning, membership assignment/leadership transfer, and validated claim placement. The services return structured outcomes and are covered against the real SQLite adapter.
+- [ ] Slice 4: open/migrate V2 storage at startup, select an active season, serialize mutations across background persistence and server-thread index updates, then expose focused Paper admin commands as thin adapters.
+- [ ] Slice 5: route Paper protection events through a centralized policy backed by the active claim index, then retire legacy claim reads.
+- [ ] Slice 6+: add the persisted war/damage/repair lifecycle, migrate remaining commands/configuration/UI adapters, and remove Foundation when no surviving imports remain.
 
 ## Recommended direction
 

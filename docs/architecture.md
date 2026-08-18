@@ -61,3 +61,18 @@ The V2 persistence boundary lives under `application.persistence`; JDBC is an im
 SQLite is the first implementation and uses foreign keys, WAL mode, and a bounded busy timeout. Integration tests bring their own SQLite JDBC driver; Paper supplies the runtime driver used by the existing server. Driver packaging can be revisited when V2 storage is wired into plugin startup.
 
 The V2 repository is not opened by the live plugin yet. This keeps the persistence slice independently mergeable and prevents two stores from competing for authority. A later cutover will create/migrate the V2 database during startup, load one season into memory, and retire the legacy JSON-blob datastore.
+
+## Application services
+
+The V2 mutation boundary is under `application.season`, `application.civilization`, and `application.claim`.
+
+- Services return `ApplicationResult.Applied`, `Unchanged`, or `Rejected`. Expected rule failures are immutable values that an adapter can translate into chat or console messages; infrastructure faults still throw and roll back.
+- `SeasonService` owns phase transitions. `WAR` is a durable global gate rather than a scattered configuration boolean, and an admin may transition `WAR` back to `PEACE` to stop war without ending the season.
+- `CivilizationService` supports empty drafts as well as atomic, idempotent provisioning from offline player UUIDs. Activation requires one leader and a roster but deliberately does not require a home or claim.
+- A player may belong to at most one civilization per season. Reassignment is explicit, and a leader must transfer leadership before moving.
+- Roster and claim mutations are open in `SETUP` and `PEACE` and closed in `WAR`, `FINALE`, and `ARCHIVED`. This is an initial safe MVP policy, not a promise that future season rules cannot make it configurable.
+- `ClaimService` validates status, area/count limits, exact overlap, and same-civilization edge connectivity before inserting a claim. Corner contact is not connectivity.
+
+Application services are synchronous because the repository port represents blocking durable work. The future Paper mutation adapter must invoke them on plugin-owned background execution, serialize mutation requests, and install an accepted claim into the live `ClaimSpatialIndex` on the server thread before reporting success. Event-time protection reads only the live index and never waits for SQL.
+
+The live Foundation commands still target legacy state. They must not be pointed at these services until plugin startup establishes a single V2 repository and active-season authority; doing so earlier would create split-brain gameplay state.

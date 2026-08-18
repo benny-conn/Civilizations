@@ -4,6 +4,8 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The plugin is undergoing an incremental architecture rework. See [TODO.md](TODO.md) for the prioritized roadmap and [docs/architecture.md](docs/architecture.md) for the dependency and persistence boundaries followed by new code.
 
+The new V2 core currently includes pure claim geometry and indexing, versioned relational persistence, and application services for seasons, preselected landless civilization rosters, leadership, and claim placement. It is deliberately not live yet: the next cutover slice will make V2 storage authoritative at startup and add focused Paper admin adapters.
+
 ## Current platform
 
 - Minecraft/Paper 26.2, compiled against Paper build 112
