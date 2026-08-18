@@ -30,7 +30,26 @@ class SeasonServiceTest {
             assertIs<SeasonNameAlreadyExists>(service.create("season one").rejection())
             database.repository.read {
                 assertEquals(listOf(season), listSeasons())
+                assertEquals(season.id, findActiveSeasonId())
             }
+        }
+    }
+
+    @Test
+    fun `selects another active season and archiving clears it`() {
+        SqliteTestDatabase().use { database ->
+            database.migrator.migrate()
+            val service = SeasonService(database.repository, SequentialIdGenerator(), clock)
+            val first = service.create("Season One").appliedValue()
+            val second = service.create("Season Two").appliedValue()
+
+            assertEquals(second, service.selectActive(second.id).appliedValue())
+            database.repository.read { assertEquals(second.id, findActiveSeasonId()) }
+            service.transition(second.id, SeasonStatus.ARCHIVED).appliedValue()
+            database.repository.read { assertEquals(null, findActiveSeasonId()) }
+
+            service.transition(first.id, SeasonStatus.ARCHIVED).appliedValue()
+            assertIs<ArchivedSeasonCannotBeActive>(service.selectActive(first.id).rejection())
         }
     }
 

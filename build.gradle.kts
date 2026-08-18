@@ -37,8 +37,10 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
 
+    // V2 owns its database driver instead of depending on Paper internals.
+    implementation("org.xerial:sqlite-jdbc:$sqliteJdbcVersion")
+
     testImplementation(kotlin("test"))
-    testRuntimeOnly("org.xerial:sqlite-jdbc:$sqliteJdbcVersion")
 }
 
 java {

@@ -37,9 +37,26 @@ class SeasonService(
                 ApplicationResult.Rejected(SeasonNameAlreadyExists(existing.id, existing.name))
             } else {
                 insertSeason(season)
+                if (findActiveSeasonId() == null) {
+                    setActiveSeasonId(season.id)
+                }
                 ApplicationResult.Applied(season)
             }
         }
+    }
+
+    fun selectActive(seasonId: SeasonId): ApplicationResult<Season> = repository.transaction {
+        val season = findSeason(seasonId)
+            ?: return@transaction ApplicationResult.Rejected(SeasonNotFound(seasonId))
+        if (season.status == SeasonStatus.ARCHIVED) {
+            return@transaction ApplicationResult.Rejected(ArchivedSeasonCannotBeActive(seasonId))
+        }
+        if (findActiveSeasonId() == seasonId) {
+            return@transaction ApplicationResult.Unchanged(season)
+        }
+
+        setActiveSeasonId(seasonId)
+        ApplicationResult.Applied(season)
     }
 
     /**
@@ -63,6 +80,9 @@ class SeasonService(
 
         val updated = current.copy(status = target, updatedAt = clock.instant())
         updateSeason(updated)
+        if (target == SeasonStatus.ARCHIVED && findActiveSeasonId() == seasonId) {
+            setActiveSeasonId(null)
+        }
         ApplicationResult.Applied(updated)
     }
 
@@ -105,4 +125,10 @@ data class InvalidSeasonTransition(
 ) : ApplicationFailure {
     override val description: String =
         "Season $seasonId cannot transition from $current to $requested"
+}
+
+data class ArchivedSeasonCannotBeActive(
+    val seasonId: SeasonId,
+) : ApplicationFailure {
+    override val description: String = "Archived season $seasonId cannot become active"
 }

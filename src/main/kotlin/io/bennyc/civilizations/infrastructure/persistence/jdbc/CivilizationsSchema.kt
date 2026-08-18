@@ -92,5 +92,21 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        SchemaMigration(
+            version = 2,
+            name = "active_season_runtime_state",
+            statements = listOf(
+                """
+                CREATE TABLE runtime_state (
+                    singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
+                    active_season_id TEXT,
+                    FOREIGN KEY (active_season_id)
+                        REFERENCES seasons(id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                "INSERT INTO runtime_state(singleton_id, active_season_id) VALUES (1, NULL)",
+            ),
+        ),
     )
 }

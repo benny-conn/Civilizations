@@ -13,10 +13,10 @@ class SchemaMigratorTest {
             val second = database.migrator.migrate()
 
             assertEquals(0, first.previousVersion)
-            assertEquals(1, first.currentVersion)
-            assertEquals(listOf(1), first.appliedVersions)
-            assertEquals(1, second.previousVersion)
-            assertEquals(1, second.currentVersion)
+            assertEquals(2, first.currentVersion)
+            assertEquals(listOf(1, 2), first.appliedVersions)
+            assertEquals(2, second.previousVersion)
+            assertEquals(2, second.currentVersion)
             assertTrue(second.appliedVersions.isEmpty())
 
             database.connectionFactory.open().use { connection ->
@@ -25,7 +25,8 @@ class SchemaMigratorTest {
                     SELECT name
                     FROM sqlite_master
                     WHERE type = 'table' AND name IN (
-                        'schema_migrations', 'seasons', 'civilizations', 'memberships', 'claims'
+                        'schema_migrations', 'seasons', 'civilizations', 'memberships', 'claims',
+                        'runtime_state'
                     )
                     """.trimIndent(),
                 ).use { statement ->
@@ -42,6 +43,7 @@ class SchemaMigratorTest {
                                 "civilizations",
                                 "memberships",
                                 "claims",
+                                "runtime_state",
                             ),
                             tables,
                         )

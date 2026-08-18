@@ -23,6 +23,8 @@ interface CivilizationsRepository {
 }
 
 interface CivilizationsReadContext {
+    fun findActiveSeasonId(): SeasonId?
+
     fun findSeason(id: SeasonId): Season?
 
     fun listSeasons(): List<Season>
@@ -45,6 +47,8 @@ interface CivilizationsReadContext {
 }
 
 interface CivilizationsWriteContext : CivilizationsReadContext {
+    fun setActiveSeasonId(seasonId: SeasonId?)
+
     fun insertSeason(season: Season)
 
     fun updateSeason(season: Season)

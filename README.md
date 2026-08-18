@@ -4,7 +4,9 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The plugin is undergoing an incremental architecture rework. See [TODO.md](TODO.md) for the prioritized roadmap and [docs/architecture.md](docs/architecture.md) for the dependency and persistence boundaries followed by new code.
 
-The new V2 core currently includes pure claim geometry and indexing, versioned relational persistence, and application services for seasons, preselected landless civilization rosters, leadership, and claim placement. It is deliberately not live yet: the next cutover slice will make V2 storage authoritative at startup and add focused Paper admin adapters.
+The V2 core is now the live runtime. It includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, and validated claim placement.
+
+Legacy commands, listeners, scheduled tasks, and JSON-blob datastores are temporarily quarantined rather than running beside V2 as a second source of truth. Until the next protection slice lands, this build is an administration/testing milestone rather than a playable server plugin.
 
 ## Current platform
 
@@ -14,7 +16,7 @@ The new V2 core currently includes pure claim geometry and indexing, versioned r
 - Gradle 9.5 via the checked-in wrapper
 - MineAcademy Foundation 6.10.1
 
-Foundation is retained as a transitional dependency because commands, menus, configuration, serialization, conversations, and economy hooks currently depend on it throughout the plugin. It is shaded and isolated inside the plugin JAR, and its optional integration dependencies are not bundled.
+Foundation is retained temporarily as the plugin lifecycle/settings host and because legacy source still imports it. The live V2 admin command uses Paper's command API directly, and no V2 domain, application, persistence, or runtime code depends on Foundation.
 
 ## Build
 
@@ -28,9 +30,21 @@ The deployable plugin is written to `build/libs/Civilizations-0.0.16-BETA.jar`.
 
 ## Run
 
-Run the plugin on Paper 26.2 with Java 25. Copy the built JAR into the server's `plugins` directory and restart the server. Vault is optional at startup but required for economy-backed features.
+Run the plugin on Paper 26.2 with Java 25. Copy the built JAR into the server's `plugins` directory and restart the server. V2 packages its selected SQLite driver and stores its authoritative data in `plugins/Civilizations/civilizations-v2.db` by default.
 
-The current build has been smoke-tested through a complete Paper 26.2 build 112 startup and clean shutdown using the default SQLite configuration.
+The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, and restart/index recovery.
+
+## V2 administration
+
+The native `/civadmin` command requires `civilizations.admin`, which defaults to operators. Run `/civadmin` for help. The focused cutover commands currently support:
+
+- runtime/active-season status;
+- season creation, selection, and phase changes;
+- landless drafts and idempotent offline-UUID provisioning;
+- membership assignment, leadership transfer, and activation;
+- civilization listing and rectangular admin claim creation.
+
+Claim size/count/connectivity rules and the V2 database filename are in `config.yml`. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
 
 ## Local test server
 

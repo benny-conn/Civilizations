@@ -15,7 +15,7 @@ Audit date: 2026-08-18
 - [x] Slice 1: add a Foundation-free claim domain, correct rectangle geometry, world/chunk spatial index, and randomized parity tests. This is merged but not yet connected to legacy listeners.
 - [x] Slice 2: add season/civilization/membership domain records, a repository port, versioned relational schema, transactional SQLite implementation, database constraints, and integration tests. This remains isolated from live plugin startup until the cutover slice.
 - [x] Slice 3: add command-ready application services for season setup and war gating, landless civilization provisioning, membership assignment/leadership transfer, and validated claim placement. The services return structured outcomes and are covered against the real SQLite adapter.
-- [ ] Slice 4: open/migrate V2 storage at startup, select an active season, serialize mutations across background persistence and server-thread index updates, then expose focused Paper admin commands as thin adapters.
+- [x] Slice 4: open/migrate V2 storage at startup, persist/select an active season, serialize mutations on a plugin-owned storage executor, publish copy-on-write server-thread state/indexes, quarantine legacy runtime entry points, and expose focused native Paper admin commands.
 - [ ] Slice 5: route Paper protection events through a centralized policy backed by the active claim index, then retire legacy claim reads.
 - [ ] Slice 6+: add the persisted war/damage/repair lifecycle, migrate remaining commands/configuration/UI adapters, and remove Foundation when no surviving imports remain.
 
@@ -95,10 +95,10 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 - [ ] **[P0][L] Make multi-record mutations transactional.** Membership moves, war start/end, balance transfers, claim changes, and repair progress must not leave half-applied state.
 - [ ] **[P0][M] Remove inactivity-based automatic deletion.** `Database.Delete_After: 30` conflicts with persistent history and can delete referenced players/civilizations. Archive explicitly through the season lifecycle instead.
 - [ ] **[P0][M] Add idempotent startup recovery.** Rebuild indexes, validate invariants, resume active timers/repairs from persisted timestamps and cursors, and quarantine invalid records with actionable logs.
-- [ ] **[P0][M] Add orderly shutdown.** Stop accepting mutations, persist dirty state, await bounded database work, cancel only this plugin's tasks, and then close connections.
-- [ ] **[P0][M] Establish a thread-ownership rule.** Bukkit/Paper world and entity APIs run on the server thread; database work runs off-thread; immutable results return to the server thread before changing live game state.
+- [x] **[P0][M] Add orderly shutdown.** V2 stops accepting mutations, drains its single storage executor with a bounded wait, and owns no anonymous/global scheduler cancellation.
+- [x] **[P0][M] Establish a thread-ownership rule.** Bukkit/Paper world and entity APIs run on the server thread; database work runs off-thread; refreshed state returns to the server thread before becoming visible.
 - [ ] **[P0][S] Replace the unstructured `CoroutineScope(Dispatchers.Default)` calls with a plugin-owned structured scope/executor.** Cancel and join it on shutdown and surface failures.
-- [ ] **[P0][S] Choose the initial database target.** SQLite with WAL and serialized writes is adequate for a single small server and local development; PostgreSQL can be added before production if operational needs justify it. Avoid maintaining untested SQLite and MySQL paths by default.
+- [x] **[P0][S] Choose the initial database target.** V2 uses packaged SQLite with WAL, foreign keys, a busy timeout, and serialized writes. The legacy MySQL/SQLite datastore is quarantined rather than extended.
 - [ ] **[P0][M] Add backup/export tooling before destructive season or migration operations.** Include dry-run, manifest, database backup, and recovery instructions.
 
 ### Current persistence defects to cover with regression tests
@@ -117,12 +117,12 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 
 ### Provisioning and membership
 
-- [ ] **[P1][M] Add an admin command to create a draft civilization without land, members, or a home.** Names should be normalized and IDs must not depend on names.
-- [ ] **[P1][M] Add offline-safe membership commands using UUID/profile resolution.** Admins must be able to assign accepted players before their first server login.
+- [x] **[P1][M] Add an admin command to create a draft civilization without land, members, or a home.** Names are normalized and IDs do not depend on names.
+- [x] **[P1][M] Add offline-safe membership commands using UUID/profile resolution.** The first adapter accepts explicit player UUIDs, so accepted players can be provisioned before their first login.
 - [ ] **[P1][M] Add bulk, idempotent season provisioning.** A reviewed YAML/JSON roster manifest or import command should create civilizations, assign members, set leaders, report conflicts, and be safe to rerun.
 - [ ] **[P1][S] Add configuration for self-service creation and joining.** Season One can disable `/civ create`, open joining, invites, and leaving while retaining admin roster control.
-- [ ] **[P1][M] Make moving a player atomic.** Remove the old membership and rank, add the new membership, update both civilizations, and reject/resolve leader conflicts in one transaction.
-- [ ] **[P1][M] Define leader vacancy behavior.** Drafts may have no leader; active civilizations may not. Provide admin repair and a deterministic succession operation for later assassination support.
+- [x] **[P1][M] Make moving a player atomic.** Membership is one relational row per player/season; explicit moves update it transactionally and leaders must transfer first.
+- [x] **[P1][M] Define leader vacancy behavior.** Drafts may have no leader, active civilizations must have exactly one, and the admin adapter exposes deterministic leadership transfer.
 - [ ] **[P1][S] Keep homes optional and fail clearly when absent.** Do not invent a home until a claim exists and a leader/admin sets one.
 - [ ] **[P1][S] Add roster inspection and validation commands.** Show UUID, last known name, role, leader, online state, and any invariant violations.
 

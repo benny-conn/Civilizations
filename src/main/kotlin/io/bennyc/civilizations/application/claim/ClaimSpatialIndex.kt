@@ -10,10 +10,12 @@ import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
 
 /**
- * A derived, thread-confined index for hot claim queries.
+ * A derived index for hot claim queries.
  *
- * Authoritative claims live in persistence. This index is rebuilt at startup
- * and then mutated on the Paper server thread alongside accepted claim changes.
+ * Authoritative claims live in persistence. The live runtime builds replacement
+ * indexes off-thread and safely publishes them as read-only snapshots. Mutation
+ * methods remain useful while constructing/testing an index, but published
+ * instances must not be modified.
  */
 class ClaimSpatialIndex(
     val seasonId: SeasonId,

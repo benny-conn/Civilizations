@@ -1,0 +1,9 @@
+# Civilizations V2 runtime configuration.
+v2:
+  database-file: civilizations-v2.db
+  claims:
+    # Inclusive X/Z block area of one rectangular claim.
+    max-area: 65536
+    max-count: 32
+    # Additional rectangles must share a non-zero block edge with existing land.
+    require-edge-connection: true

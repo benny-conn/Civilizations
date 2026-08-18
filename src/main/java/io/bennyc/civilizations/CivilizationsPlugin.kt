@@ -1,150 +1,74 @@
-/*
- * Copyright (c) 2021-2021 Tolmikarc All Rights Reserved
- */
-
 package io.bennyc.civilizations
 
-import io.bennyc.civilizations.command.CivilizationsCommandGroup
-import io.bennyc.civilizations.command.MapCommand
-import io.bennyc.civilizations.command.admin.AdminCommandGroup
-import io.bennyc.civilizations.db.CivDatastore
-import io.bennyc.civilizations.db.PlayerDatastore
-import io.bennyc.civilizations.listener.*
-import io.bennyc.civilizations.manager.PlayerManager
-import io.bennyc.civilizations.settings.Settings
-import io.bennyc.civilizations.task.CooldownTask
-import io.bennyc.civilizations.task.MobRemovalTask
-import io.bennyc.civilizations.task.UpkeepTaxesTask
+import io.bennyc.civilizations.infrastructure.paper.V2AdminCommand
+import io.bennyc.civilizations.infrastructure.paper.V2PluginConfiguration
+import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
+import io.bennyc.civilizations.infrastructure.runtime.RuntimeStartOutcome
 import org.bukkit.Bukkit
-import org.bukkit.Location
-import org.bukkit.entity.Player
-import org.mineacademy.fo.Common
-import org.mineacademy.fo.SerializeUtil
-import org.mineacademy.fo.model.HookManager
 import org.mineacademy.fo.plugin.SimplePlugin
-import java.io.File
+import java.util.concurrent.Executor
+import java.util.logging.Level
 
 class CivilizationsPlugin : SimplePlugin() {
-
+    private lateinit var v2Runtime: CivilizationsRuntime
 
     override fun onPluginStart() {
-        loadDatabase()
-        registerAllCommands()
-        registerAllEvents()
-        registerAllPlaceholders()
-        registerAllTasks()
-        Common.log("Civilizations by Tolmikarc up and running!")
-        SerializeUtil.addSerializer(Location::class.java) { t: Location -> SerializeUtil.serializeLoc(t) }
+        saveDefaultConfig()
+        val runtimeConfiguration = V2PluginConfiguration.load(dataFolder.toPath(), config)
+        val serverThread = Executor { action ->
+            if (Bukkit.isPrimaryThread()) {
+                action.run()
+            } else if (isEnabled) {
+                server.scheduler.runTask(this, action)
+            }
+        }
+
+        v2Runtime = CivilizationsRuntime.sqlite(
+            databasePath = runtimeConfiguration.databasePath,
+            claimRules = runtimeConfiguration.claimRules,
+            serverThread = serverThread,
+            fatalFailureHandler = { failure ->
+                logger.log(Level.SEVERE, "Civilizations V2 failed closed", failure)
+                if (isEnabled) {
+                    server.pluginManager.disablePlugin(this)
+                }
+            },
+        )
+
+        registerCommand(
+            "civadmin",
+            "Administer Civilizations V2",
+            listOf("civilizationsadmin"),
+            V2AdminCommand(v2Runtime),
+        )
+        v2Runtime.start { outcome ->
+            when (outcome) {
+                is RuntimeStartOutcome.Ready -> {
+                    val active = outcome.state.activeSeason
+                    logger.info(
+                        if (active == null) {
+                            "Civilizations V2 is ready; create or select an active season with /civadmin"
+                        } else {
+                            "Civilizations V2 loaded '${active.season.name}' " +
+                                "with ${active.civilizations.size} civilizations and " +
+                                "${active.claimIndex.size} claims"
+                        },
+                    )
+                }
+                is RuntimeStartOutcome.Failed -> Unit
+            }
+        }
+
+        logger.warning(
+            "Legacy commands, listeners, tasks, and datastores are quarantined during the V2 cutover",
+        )
     }
 
     override fun onPluginStop() {
-        removeMapRenderers()
-        for (task in Bukkit.getScheduler().pendingTasks) {
-            task.cancel()
-        }
-        Common.log("Saving Data and Closing Datastore Connections")
-
-        CivDatastore.close()
-        PlayerDatastore.close()
-
-    }
-
-
-    override fun getFoundedYear(): Int {
-        return 2021
-    }
-
-    private fun registerAllTasks() {
-        Common.runTimerAsync(20, CooldownTask())
-        Common.runTimerAsync(20 * 60 * 60, UpkeepTaxesTask())
-        Common.runTimer(20 * 10, MobRemovalTask())
-    }
-
-    private fun registerAllPlaceholders() {
-        HookManager.addPlaceholder("civilization") { player: Player ->
-            val cache = PlayerManager.fromBukkitPlayer(player)
-            if (cache.civilization != null)
-                cache.civilization!!.name
-            else
-                ""
+        if (::v2Runtime.isInitialized) {
+            v2Runtime.close()
         }
     }
 
-
-    private fun registerAllCommands() {
-        registerCommands(
-            CivilizationsCommandGroup()
-        )
-        registerCommands(
-            AdminCommandGroup()
-        )
-    }
-
-    private fun registerAllEvents() {
-        registerEvents(PlayerListener())
-        registerEvents(EntityListener())
-        registerEvents(WorldListener())
-        registerEvents(CivListener())
-        registerEvents(SignListener())
-    }
-
-    private fun loadDatabase() {
-
-        when {
-            Settings.DB_TYPE.equals("sqlite", ignoreCase = true) -> {
-                val playerFile = File(dataFolder, "players.db")
-                playerFile.createNewFile()
-                val civFile = File(dataFolder, "civilizations.db")
-                civFile.createNewFile()
-
-                PlayerDatastore.connect(
-                    "jdbc:sqlite:${playerFile.absolutePath}",
-                    "",
-                    "",
-                    "civ_players"
-                )
-                CivDatastore.connect(
-                    "jdbc:sqlite:${civFile.absolutePath}",
-                    "",
-                    "",
-                    "civ_civs"
-                )
-            }
-
-            Settings.DB_TYPE.equals("mysql", ignoreCase = true) -> {
-                PlayerDatastore.connect(
-                    Settings.DB_HOST,
-                    Settings.DB_PORT,
-                    Settings.DB_NAME,
-                    Settings.DB_USER,
-                    Settings.DB_PASS,
-                    "civ_players"
-                )
-                CivDatastore.connect(
-                    Settings.DB_HOST,
-                    Settings.DB_PORT,
-                    Settings.DB_NAME,
-                    Settings.DB_USER,
-                    Settings.DB_PASS,
-                    "civ_civs"
-                )
-            }
-
-            else -> {
-                Common.error(Throwable("NoDataSource"), "No datasource for saving and loading, disabling plugin.")
-                Bukkit.getPluginManager().disablePlugin(this)
-            }
-        }
-        Common.runLaterAsync(0) {
-            PlayerDatastore.loadAll()
-        }
-    }
-
-
-    private fun removeMapRenderers() {
-        for (map in MapCommand.drawnMaps) {
-            map.renderers.clear()
-        }
-    }
-
+    override fun getFoundedYear(): Int = 2021
 }

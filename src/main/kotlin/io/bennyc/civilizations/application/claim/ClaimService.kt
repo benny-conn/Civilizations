@@ -17,8 +17,9 @@ import io.bennyc.civilizations.domain.season.SeasonStatus
 /**
  * Validates and persists infrequent claim mutations against authoritative data.
  * This service performs blocking persistence and must run on plugin-owned
- * background execution. A Paper adapter installs an applied claim into the live
- * [ClaimSpatialIndex] on the server thread before exposing success to players.
+ * background execution. After an operation, the runtime rebuilds a replacement
+ * [ClaimSpatialIndex] and publishes that snapshot on the server thread before
+ * exposing success to players.
  */
 class ClaimService(
     private val repository: CivilizationsRepository,

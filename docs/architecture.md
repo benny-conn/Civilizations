@@ -58,9 +58,9 @@ The V2 persistence boundary lives under `application.persistence`; JDBC is an im
 - Claim rectangles remain immutable rows. Exact duplicate rectangles are rejected in SQL; geometric overlap and connected-settlement policy remain application concerns handled before insertion.
 - All values use prepared statements, and multi-record changes commit or roll back as a unit.
 
-SQLite is the first implementation and uses foreign keys, WAL mode, and a bounded busy timeout. Integration tests bring their own SQLite JDBC driver; Paper supplies the runtime driver used by the existing server. Driver packaging can be revisited when V2 storage is wired into plugin startup.
+SQLite is the first implementation and uses foreign keys, WAL mode, and a bounded busy timeout. The selected SQLite JDBC driver is packaged in the plugin so production behavior does not depend on server implementation details.
 
-The V2 repository is not opened by the live plugin yet. This keeps the persistence slice independently mergeable and prevents two stores from competing for authority. A later cutover will create/migrate the V2 database during startup, load one season into memory, and retire the legacy JSON-blob datastore.
+`runtime_state` durably identifies zero or one active season. The live plugin opens and migrates the V2 database during startup, validates the selected season, and rebuilds its indexes. The legacy JSON-blob datastore is not opened.
 
 ## Application services
 
@@ -73,6 +73,18 @@ The V2 mutation boundary is under `application.season`, `application.civilizatio
 - Roster and claim mutations are open in `SETUP` and `PEACE` and closed in `WAR`, `FINALE`, and `ARCHIVED`. This is an initial safe MVP policy, not a promise that future season rules cannot make it configurable.
 - `ClaimService` validates status, area/count limits, exact overlap, and same-civilization edge connectivity before inserting a claim. Corner contact is not connectivity.
 
-Application services are synchronous because the repository port represents blocking durable work. The future Paper mutation adapter must invoke them on plugin-owned background execution, serialize mutation requests, and install an accepted claim into the live `ClaimSpatialIndex` on the server thread before reporting success. Event-time protection reads only the live index and never waits for SQL.
+Application services are synchronous because the repository port represents blocking durable work. The Paper mutation adapter invokes them on one plugin-owned storage executor, preserving submission order. After every operation it reloads authoritative active-season data and constructs a replacement spatial index off-thread; the replacement snapshot is installed on the Paper thread before success is reported. Event-time protection reads only the published index and never waits for SQL.
 
-The live Foundation commands still target legacy state. They must not be pointed at these services until plugin startup establishes a single V2 repository and active-season authority; doing so earlier would create split-brain gameplay state.
+## Live runtime cutover
+
+`CivilizationsRuntime` is the owner of V2 runtime state and structured background work.
+
+- Startup migrations and reads run on the storage executor. The plugin remains in a visible `Starting` state until a `Ready` snapshot is published on the server thread.
+- Runtime snapshots contain the active season, civilizations, memberships, and a read-only-by-convention claim index. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
+- Startup verifies that an active season is not archived, every active civilization has exactly one leader, every claim has an active owner, and no persisted claims overlap. Invalid durable state fails closed with actionable IDs instead of partially enabling gameplay.
+- Mutations submitted before readiness are rejected. Infrastructure failures move the runtime to `Failed` and disable the plugin rather than falling back to legacy data.
+- Shutdown stops new work and gives the storage executor a bounded drain period. Civilizations no longer cancels scheduler tasks owned by other plugins.
+
+The live `/civadmin` adapter uses Paper's `BasicCommand` API, explicit UUIDs for offline roster operations, Adventure messages, and an operator-default permission. It parses and translates only; business decisions remain in application services.
+
+Legacy commands, listeners, tasks, placeholders, and datastores are deliberately not registered during the cutover. Keeping their source temporarily is cheaper than porting unfinished features, while disabling their entry points prevents split-brain state. The next slice will introduce V2 protection listeners against the published claim index.

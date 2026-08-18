@@ -49,6 +49,13 @@ class JdbcCivilizationsRepository(
 private open class JdbcReadContext(
     protected val connection: Connection,
 ) : CivilizationsReadContext {
+    override fun findActiveSeasonId(): SeasonId? = queryOne(
+        sql = "SELECT active_season_id FROM runtime_state WHERE singleton_id = 1",
+        map = {
+            getString("active_season_id")?.let { SeasonId(UUID.fromString(it)) }
+        },
+    )
+
     override fun findSeason(id: SeasonId): Season? = queryOne(
         sql = """
             SELECT id, name, status, created_at_ms, updated_at_ms
@@ -186,6 +193,15 @@ private open class JdbcReadContext(
 private class JdbcWriteContext(
     connection: Connection,
 ) : JdbcReadContext(connection), CivilizationsWriteContext {
+    override fun setActiveSeasonId(seasonId: SeasonId?) {
+        val updated = executeUpdate(
+            sql = "UPDATE runtime_state SET active_season_id = ? WHERE singleton_id = 1",
+        ) {
+            setString(1, seasonId?.toString())
+        }
+        requireUpdated(updated, "Runtime state")
+    }
+
     override fun insertSeason(season: Season) {
         executeUpdate(
             sql = """
