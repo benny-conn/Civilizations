@@ -1,6 +1,7 @@
 package io.bennyc.civilizations.application.protection
 
 import io.bennyc.civilizations.application.claim.ClaimSpatialIndex
+import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.domain.civilization.Membership
 import io.bennyc.civilizations.domain.civilization.MembershipRole
 import io.bennyc.civilizations.domain.claim.BlockPosition2D
@@ -57,6 +58,19 @@ class ProtectionServiceTest {
         war.decidePlayerAction(
             request(memberA, PlayerProtectionAction.PVP, insideA, targetPlayerId = memberB),
         ).assertDenied(ProtectionReason.PVP_REQUIRES_CONFLICT)
+    }
+
+    @Test
+    fun `configured member land gate can freeze owner actions during war`() {
+        val war = service(
+            SeasonStatus.WAR,
+            GameplayPhaseRules(
+                memberLandActionsAllowedIn = setOf(SeasonStatus.SETUP, SeasonStatus.PEACE),
+            ),
+        )
+
+        war.decidePlayerAction(request(memberA, PlayerProtectionAction.BLOCK_BREAK, insideA))
+            .assertDenied(ProtectionReason.SEASON_FROZEN)
     }
 
     @Test
@@ -242,10 +256,14 @@ class ProtectionServiceTest {
         }
     }
 
-    private fun service(status: SeasonStatus = SeasonStatus.PEACE) = ProtectionService(
+    private fun service(
+        status: SeasonStatus = SeasonStatus.PEACE,
+        phaseRules: GameplayPhaseRules = GameplayPhaseRules(),
+    ) = ProtectionService(
         seasonStatus = status,
         claimIndex = ClaimSpatialIndex(seasonId, listOf(claimA, claimB)),
         memberships = listOf(membership(memberA, civA), membership(memberB, civB)),
+        phaseRules = phaseRules,
     )
 
     private fun request(

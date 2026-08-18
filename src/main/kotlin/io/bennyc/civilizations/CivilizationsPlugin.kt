@@ -27,6 +27,7 @@ class CivilizationsPlugin : JavaPlugin() {
         runtime = CivilizationsRuntime.sqlite(
             databasePath = runtimeConfiguration.databasePath,
             claimRules = runtimeConfiguration.claimRules,
+            phaseRules = runtimeConfiguration.phaseRules,
             serverThread = serverThread,
             fatalFailureHandler = { failure ->
                 logger.log(Level.SEVERE, "Civilizations failed closed", failure)

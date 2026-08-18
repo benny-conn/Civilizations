@@ -30,6 +30,29 @@ Foundation, Vault, legacy serializers, global managers, and unstructured corouti
 - The database is durable state; purpose-built in-memory indexes serve hot event queries.
 - Long-running work such as war resolution and reconstruction is represented as persisted jobs rather than anonymous scheduler tasks.
 
+## Configuration and rule ownership
+
+Paper loads YAML and translates it at the infrastructure boundary into validated,
+immutable values owned by the application layer. Bukkit configuration types and YAML
+paths never enter domain or application code. Services consume typed rules, which keeps
+the same behavior directly testable without a running server.
+
+Configuration is appropriate for settled balancing and policy choices such as claim
+limits and phase gates. Application constructors enforce a safe envelope around those
+choices: configuration may make behavior more restrictive, but cannot enable lifecycle
+combinations that invalidate snapshots, archived state, or durable authorization.
+
+SQL remains authoritative for identities, lifecycle state, balances, journals, and
+jobs. If a configurable value determines the meaning of a long-lived operation, the
+effective value is copied into that operation's durable rules snapshot when it starts.
+Changing YAML later therefore affects future operations rather than reinterpreting an
+existing war, battle, charge, or repair.
+
+The live configuration is installed once during plugin startup. There is no partial or
+best-effort reload path: malformed values fail startup with their YAML path, and edits
+require a restart until an explicit atomic reload operation is designed. The current key
+reference is [configuration.md](configuration.md).
+
 ## Claim model
 
 The first migrated subsystem is the claim geometry and spatial index under `domain.claim` and `application.claim`.
@@ -70,7 +93,7 @@ The mutation boundary is under `application.season`, `application.civilization`,
 - `SeasonService` owns phase transitions. `WAR` is a durable global gate rather than a scattered configuration boolean, and an admin may transition `WAR` back to `PEACE` to stop war without ending the season.
 - `CivilizationService` supports empty drafts as well as atomic, idempotent provisioning from offline player UUIDs. Activation requires one leader and a roster but deliberately does not require a home or claim.
 - A player may belong to at most one civilization per season. Reassignment is explicit, and a leader must transfer leadership before moving.
-- Roster and claim mutations are open in `SETUP` and `PEACE` and closed in `WAR`, `FINALE`, and `ARCHIVED`. This is an initial safe MVP policy, not a promise that future season rules cannot make it configurable.
+- Roster and claim mutations default to open in `SETUP` and `PEACE`. YAML may narrow either gate, but application validation prevents enabling them in `WAR`, `FINALE`, or `ARCHIVED` because those combinations are not yet safe.
 - `ClaimService` validates status, area/count limits, exact overlap, and same-civilization edge connectivity before inserting a claim. Corner contact is not connectivity.
 - `WarService` separates a durable relationship (`War`) from each timed engagement (`Battle`). Declaration, activation, hostile-entry battle start, expiry/resolution, and terminal transitions are explicit transactional operations.
 
@@ -117,7 +140,7 @@ The former commands, listeners, tasks, placeholders, menus, global managers, ser
 
 `ProtectionService` is an application-owned, pure policy over the active season's membership map and chunk spatial index. A Paper listener supplies a stable world key, integer X/Z target, actor, action, and explicit admin bypass. The policy returns a reasoned allow/deny value and never calls Paper, Foundation, or persistence.
 
-- Unclaimed coordinates retain vanilla behavior. Members and leaders may mutate their civilization's claims in `SETUP`, `PEACE`, and `WAR`; outsiders may not. `FINALE` and `ARCHIVED` freeze claimed land except for explicit admin bypass.
+- Unclaimed coordinates retain vanilla behavior. Members and leaders may mutate their civilization's claims in the configured safe subset of `SETUP`, `PEACE`, and `WAR`; outsiders may not. `FINALE` and `ARCHIVED` always freeze claimed land except for explicit admin bypass.
 - PVP in claimed land always requires a conflict capability. Merely putting the season in `WAR` does not authorize anybody to attack or destroy blocks.
 - A conflict capability is bound to its actor, kind, allowed actions, eligible claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The runtime publishes persisted battle eligibility and owns the journal service but does not convert eligibility into capabilities, so claimed destruction remains closed until the two-phase Paper adapter lands.
 - Inventory-bearing blocks cannot appear in an MVP conflict capability. Block-break translation classifies them as container actions so a generic break grant cannot bypass that invariant.

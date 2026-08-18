@@ -28,6 +28,7 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:$sqliteJdbcVersion")
 
     testImplementation(kotlin("test"))
+    testImplementation("io.papermc.paper:paper-api:$paperVersion")
 }
 
 java {

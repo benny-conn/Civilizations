@@ -1,6 +1,7 @@
 package io.bennyc.civilizations.application.civilization
 
 import io.bennyc.civilizations.application.season.SeasonService
+import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.application.support.SequentialIdGenerator
 import io.bennyc.civilizations.application.support.appliedValue
 import io.bennyc.civilizations.application.support.playerId
@@ -138,6 +139,30 @@ class CivilizationServiceTest {
             ).appliedValue().civilization
             seasonService.transition(season.id, SeasonStatus.PEACE).appliedValue()
             seasonService.transition(season.id, SeasonStatus.WAR).appliedValue()
+
+            assertIs<RosterChangesClosed>(
+                service.assignMember(civilization.id, playerId(2)).rejection(),
+            )
+        }
+    }
+
+    @Test
+    fun `configured setup-only roster gate closes changes in peace`() {
+        SqliteTestDatabase().use { database ->
+            database.migrator.migrate()
+            val ids = SequentialIdGenerator()
+            val seasonService = SeasonService(database.repository, ids, clock)
+            val season = seasonService.create("Season One").appliedValue()
+            val service = CivilizationService(
+                database.repository,
+                ids,
+                clock,
+                GameplayPhaseRules(rosterChangesAllowedIn = setOf(SeasonStatus.SETUP)),
+            )
+            val civilization = service.provision(
+                ProvisionCivilization(season.id, "North", playerId(1)),
+            ).appliedValue().civilization
+            seasonService.transition(season.id, SeasonStatus.PEACE).appliedValue()
 
             assertIs<RosterChangesClosed>(
                 service.assignMember(civilization.id, playerId(2)).rejection(),

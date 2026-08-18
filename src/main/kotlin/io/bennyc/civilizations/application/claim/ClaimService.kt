@@ -5,6 +5,7 @@ import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.civilization.CivilizationNotFound
 import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
+import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.application.season.SeasonNotFound
 import io.bennyc.civilizations.domain.civilization.CivilizationStatus
 import io.bennyc.civilizations.domain.claim.Claim
@@ -25,6 +26,7 @@ class ClaimService(
     private val repository: CivilizationsRepository,
     private val idGenerator: CivilizationsIdGenerator,
     private val rules: ClaimRules,
+    private val phaseRules: GameplayPhaseRules = GameplayPhaseRules(),
 ) {
     fun place(request: PlaceClaim): ApplicationResult<Claim> = repository.transaction {
         val civilization = findCivilization(request.civilizationId)
@@ -40,7 +42,7 @@ class ClaimService(
                 ClaimCivilizationNotActive(civilization.id, civilization.status),
             )
         }
-        if (season.status !in claimableSeasonStatuses) {
+        if (season.status !in phaseRules.claimCreationAllowedIn) {
             return@transaction ApplicationResult.Rejected(
                 ClaimingClosed(season.id, season.status),
             )
@@ -89,10 +91,6 @@ class ClaimService(
         )
         insertClaim(claim)
         ApplicationResult.Applied(claim)
-    }
-
-    private companion object {
-        val claimableSeasonStatuses = setOf(SeasonStatus.SETUP, SeasonStatus.PEACE)
     }
 }
 

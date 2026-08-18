@@ -1,6 +1,7 @@
 package io.bennyc.civilizations.application.protection
 
 import io.bennyc.civilizations.application.claim.ClaimSpatialIndex
+import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.domain.civilization.Membership
 import io.bennyc.civilizations.domain.claim.BlockPosition2D
 import io.bennyc.civilizations.domain.claim.Claim
@@ -121,6 +122,7 @@ class ProtectionService(
     private val seasonStatus: SeasonStatus,
     private val claimIndex: ClaimSpatialIndex,
     memberships: Iterable<Membership>,
+    private val phaseRules: GameplayPhaseRules = GameplayPhaseRules(),
 ) {
     private val civilizationByPlayer = buildMap {
         for (membership in memberships) {
@@ -147,7 +149,11 @@ class ProtectionService(
             return ProtectionDecision.Denied(ProtectionReason.PVP_REQUIRES_CONFLICT, claim)
         }
         if (civilizationByPlayer[request.actorId] == claim.civilizationId) {
-            return ProtectionDecision.Allowed(ProtectionReason.OWNER_MEMBER, claim)
+            return if (seasonStatus in phaseRules.memberLandActionsAllowedIn) {
+                ProtectionDecision.Allowed(ProtectionReason.OWNER_MEMBER, claim)
+            } else {
+                ProtectionDecision.Denied(ProtectionReason.SEASON_FROZEN, claim)
+            }
         }
         return ProtectionDecision.Denied(ProtectionReason.OUTSIDER, claim)
     }

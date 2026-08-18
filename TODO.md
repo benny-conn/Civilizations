@@ -207,7 +207,7 @@ The unsafe legacy repair command/task and falling-block helper were deleted. The
 - [ ] **[P1][M] Add structured audit logs.** Record admin actions, civilization/membership changes, claim changes, war transitions, damage counts, money transfers, repair progress, and recovery decisions with IDs.
 - [ ] **[P1][M] Add timings/metrics around spatial queries, event-policy decisions, explosion recording, database queues, and repair batches.** Avoid logging every block at normal verbosity.
 - [ ] **[P1][S] Add a CI workflow for clean build and tests on every push to `main`.** Keep the full Paper gameplay suite optional/nightly if it is too slow for every commit.
-- [ ] **[P1][S] Add configuration validation and a generated reference.** Fail startup clearly on unsafe or nonsensical settings instead of silently calculating zero/invalid ratios.
+- [ ] **[P1][S] Generate the configuration reference from declared settings metadata.** Current storage, claim, and phase-gate keys have typed, path-specific startup validation and a maintained reference; future pricing/economy settings must receive the same validation before this item is complete.
 - [ ] **[P1][S] Enable economy-backed gameplay only after the built-in ledger exists and its configuration validates.** Any future external economy bridge must be optional and must not replace the authoritative ledger.
 - [ ] **[P1][S] Add a pre-playtest backup/restore drill.** Verify both database and world restoration, not merely backup creation.
 
