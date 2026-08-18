@@ -1,6 +1,6 @@
 # Civilizations architecture
 
-Civilizations is being migrated incrementally from a Foundation-centered plugin into a domain-centered Paper plugin. Each migration slice should remain independently buildable and mergeable.
+Civilizations is a domain-centered Paper plugin. The architecture migration and removal of the former Foundation-centered implementation are complete; future changes extend the boundaries documented here rather than running a second model beside them.
 
 ## Dependency direction
 
@@ -20,7 +20,7 @@ Persistence, Paper world access, economy, configuration, and messaging implement
 
 The domain and application layers must not import Bukkit/Paper, Foundation, Vault, JDBC, configuration, command, or menu types. They should be testable with the ordinary JVM test task.
 
-Foundation remains a temporary adapter for the legacy command, menu, settings, and localization code. New architectural code must not depend on it.
+Foundation, Vault, legacy serializers, global managers, and unstructured coroutine helpers are not part of the build. Paper and database implementations remain adapters around application-owned contracts.
 
 ## Runtime ownership
 
@@ -42,11 +42,11 @@ The first migrated subsystem is the claim geometry and spatial index under `doma
 - Arbitrarily shaped territory remains a collection of rectangles. It is not converted into a materialized polygon or block set.
 - The index is derived state and is rebuilt from authoritative claims during startup.
 
-The live runtime loads authoritative claim rows, builds this index, and routes Paper protection events through it. Legacy `Region` and `ClaimUtil` remain only as quarantined dead source until the Foundation-removal slice deletes the legacy graph.
+The live runtime loads authoritative claim rows, builds this index, and routes Paper protection events through it. The former `Region`, `ClaimUtil`, and full-height materialization implementation have been deleted.
 
 ## Relational persistence
 
-The V2 persistence boundary lives under `application.persistence`; JDBC is an implementation detail under `infrastructure.persistence.jdbc`.
+The persistence boundary lives under `application.persistence`; JDBC is an implementation detail under `infrastructure.persistence.jdbc`.
 
 - `CivilizationsRepository` exposes scoped read contexts and atomic write transactions. Application code does not receive JDBC connections or SQL types.
 - Schema changes are ordered, named, and recorded in `schema_migrations`. Startup refuses unknown or renamed migrations instead of guessing.
@@ -60,11 +60,11 @@ The V2 persistence boundary lives under `application.persistence`; JDBC is an im
 
 SQLite is the first implementation and uses foreign keys, WAL mode, and a bounded busy timeout. The selected SQLite JDBC driver is packaged in the plugin so production behavior does not depend on server implementation details.
 
-`runtime_state` durably identifies zero or one active season. The live plugin opens and migrates the V2 database during startup, validates the selected season, and rebuilds its indexes. The legacy JSON-blob datastore is not opened.
+`runtime_state` durably identifies zero or one active season. The live plugin opens and migrates the relational database during startup, validates the selected season, and rebuilds its indexes. The legacy JSON-blob datastore and mutable serialized graph have been deleted.
 
 ## Application services
 
-The V2 mutation boundary is under `application.season`, `application.civilization`, `application.claim`, `application.war`, and `application.damage`.
+The mutation boundary is under `application.season`, `application.civilization`, `application.claim`, `application.war`, and `application.damage`.
 
 - Services return `ApplicationResult.Applied`, `Unchanged`, or `Rejected`. Expected rule failures are immutable values that an adapter can translate into chat or console messages; infrastructure faults still throw and roll back.
 - `SeasonService` owns phase transitions. `WAR` is a durable global gate rather than a scattered configuration boolean, and an admin may transition `WAR` back to `PEACE` to stop war without ending the season.
@@ -99,19 +99,19 @@ A `War` is the durable political relationship between two civilizations. A `Batt
 - A prepared result is a single-use handoff, not durable permission. The future Paper adapter must cancel the original event, prepare the journal off-thread, return to the server thread, confirm the block still matches the observed state and battle authorization, then apply exactly one mutation. A mismatch aborts rather than overwriting newer world state.
 - `SimpleBlockSnapshot` deliberately excludes block-entity payloads. Containers and other unsupported block entities remain protected until inventory, text/NBT, loot, and duplication semantics are explicitly modeled.
 
-## Live runtime cutover
+## Live runtime
 
-`CivilizationsRuntime` is the owner of V2 runtime state and structured background work.
+`CivilizationsRuntime` is the owner of runtime state and structured background work.
 
 - Startup migrations and reads run on the storage executor. The plugin remains in a visible `Starting` state until a `Ready` snapshot is published on the server thread.
 - Runtime snapshots contain the active season, civilizations, memberships, wars, battles, participant snapshots, a read-only-by-convention claim index, derived active-battle eligibility, and a protection policy built over those values. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
 - Startup verifies that an active season is not archived, every active civilization has exactly one leader, every claim has an active owner, no persisted claims overlap, open wars reference active parties, and open battles/participants match their war and trigger claim. Invalid durable state fails closed with actionable IDs instead of partially enabling gameplay.
-- Mutations submitted before readiness are rejected. Infrastructure failures move the runtime to `Failed` and disable the plugin rather than falling back to legacy data.
+- Mutations submitted before readiness are rejected. Infrastructure failures move the runtime to `Failed` and disable the plugin rather than falling back to another store.
 - Shutdown stops new work and gives the storage executor a bounded drain period. Civilizations no longer cancels scheduler tasks owned by other plugins.
 
 The live `/civadmin` adapter uses Paper's `BasicCommand` API, explicit UUIDs for offline roster operations, Adventure messages, and an operator-default permission. It parses and translates only; business decisions remain in application services.
 
-Legacy commands, listeners, tasks, placeholders, and datastores are deliberately not registered during the cutover. Keeping their source temporarily is cheaper than porting unfinished features, while disabling their entry points prevents split-brain state.
+The former commands, listeners, tasks, placeholders, menus, global managers, serializers, compatibility adapters, and datastores were deleted after the cutover. Git history preserves them for reference without allowing a second source of truth to compile or ship.
 
 ## Protection policy and Paper coverage
 
@@ -140,6 +140,12 @@ Later war integration must use the journal-before-mutation contract before it ha
 
 ## Delivery and worktree sequencing
 
-The remaining architecture is split into a durable-core lane and a Paper-runtime lane. Schema/repository migrations are ordered and must not be developed concurrently with another schema slice. Paper plugin/runtime/listener lifecycle changes are likewise serialized. A branch in each lane may proceed concurrently when both use an application-owned port already present on `main`.
+The architecture rework has no remaining slice. Net-new MVP work is split into a durable-feature lane and a Paper-integration lane. Schema/repository migrations are ordered and must not be developed concurrently with another schema slice. Paper plugin/runtime/listener lifecycle changes are likewise serialized. A branch in each lane may proceed concurrently when both use an application-owned port already present on `main`.
 
-[worktree-roadmap.md](worktree-roadmap.md) is the executable merge queue. In summary, damage reporting precedes the ledger, the ledger precedes repair jobs, and repair jobs precede the Paper repair runner. The simple-block Paper war adapter may proceed now against the existing first-write-wins journal, but it must not broaden support to containers, block entities, or cascading physics. Foundation removal is last so it can delete unused legacy adapters instead of porting them speculatively.
+[worktree-roadmap.md](worktree-roadmap.md) is the executable feature merge queue. In summary, damage reporting precedes the ledger, the ledger precedes repair jobs, and repair jobs precede the Paper repair runner. The simple-block Paper war adapter may proceed now against the existing first-write-wins journal, but it must not broaden support to containers, block entities, or cascading physics.
+
+## Retired architecture
+
+The 2026 architecture cleanup permanently removed the Foundation lifecycle, command framework, settings/localization framework, menus/conversations, Vault hooks, JitPack repository, coroutine helper, global managers, Towny/Factions adapters, mutable legacy civilization/claim/raid graph, JSON-blob datastore, and all legacy tasks/listeners/commands. `CivilizationsPlugin` is a native `JavaPlugin`; `/civadmin` is a native Paper `BasicCommand`; configuration uses Bukkit's configuration API at the Paper boundary; user-facing components use Adventure.
+
+An architecture regression test scans all production sources and the build file for retired framework imports/dependencies. Reusing an old behavior means designing it against the current domain/services and persistence ports, not copying the deleted implementation back into production.

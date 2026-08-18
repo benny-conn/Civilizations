@@ -2,11 +2,11 @@
 
 Civilizations is an in-progress Paper plugin for civilization, territory, economy, and warfare gameplay.
 
-The plugin is undergoing an incremental architecture rework. See [TODO.md](TODO.md) for the prioritized product roadmap, [docs/architecture.md](docs/architecture.md) for dependency and persistence boundaries, and [docs/worktree-roadmap.md](docs/worktree-roadmap.md) for the dependency-aware multi-worktree merge queue.
+The architecture rework is complete. See [TODO.md](TODO.md) for the prioritized product roadmap, [docs/architecture.md](docs/architecture.md) for the stable dependency and persistence boundaries, and [docs/worktree-roadmap.md](docs/worktree-roadmap.md) for the dependency-aware multi-worktree queue for net-new MVP work.
 
-The V2 core is now the live runtime. It includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, a durable war/timed-battle lifecycle, and a first-write-wins battle damage journal.
+The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, a durable war/timed-battle lifecycle, and a first-write-wins battle damage journal.
 
-Legacy commands, scheduled tasks, and JSON-blob datastores are temporarily quarantined rather than running beside V2 as a second source of truth. V2 Paper listeners now protect claims. Active battles publish an immutable eligibility read model and the application can durably prepare simple block mutations, but there is intentionally no live war override until a Paper adapter can cancel an event, commit its journal record off-thread, revalidate the world state, and only then apply the mutation on the server thread.
+The incomplete pre-rework commands, mutable model graph, menus, scheduled tasks, adapters, and JSON-blob datastores have been deleted. Paper listeners protect claims through the application policy. Active battles publish an immutable eligibility read model and the application can durably prepare simple block mutations, but there is intentionally no live war override until a Paper adapter can cancel an event, commit its journal record off-thread, revalidate the world state, and only then apply the mutation on the server thread.
 
 ## Current platform
 
@@ -14,9 +14,8 @@ Legacy commands, scheduled tasks, and JSON-blob datastores are temporarily quara
 - Java 25
 - Kotlin 2.4.10
 - Gradle 9.5 via the checked-in wrapper
-- MineAcademy Foundation 6.10.1
 
-Foundation is retained temporarily as the plugin lifecycle/settings host and because legacy source still imports it. The live V2 admin command uses Paper's command API directly, and no V2 domain, application, persistence, or runtime code depends on Foundation.
+The runtime has only Kotlin stdlib and the packaged SQLite JDBC driver as implementation dependencies. Plugin lifecycle, commands, configuration, messages, and events use Paper/Adventure directly; Foundation, Vault, JitPack, and the legacy coroutine helper are absent from the build.
 
 ## Build
 
@@ -38,13 +37,13 @@ Before assigning parallel tasks, use the lanes and merge order in [docs/worktree
 
 ## Run
 
-Run the plugin on Paper 26.2 with Java 25. Copy the built JAR into the server's `plugins` directory and restart the server. V2 packages its selected SQLite driver and stores its authoritative data in `plugins/Civilizations/civilizations-v2.db` by default.
+Run the plugin on Paper 26.2 with Java 25. Copy the built JAR into the server's `plugins` directory and restart the server. Civilizations packages its selected SQLite driver and stores its authoritative data in `plugins/Civilizations/civilizations-v2.db` by default.
 
 The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, claimed-versus-wilderness explosion behavior, and incremental schema migrations followed by clean restarts. War/battle persistence, timer recovery, and damage-journal durability are covered against real SQLite and runtime restarts. Protection decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
 
-## V2 administration
+## Administration
 
-The native `/civadmin` command requires `civilizations.admin`, which defaults to operators. Run `/civadmin` for help. The focused cutover commands currently support:
+The native Paper `/civadmin` command requires `civilizations.admin`, which defaults to operators. Run `/civadmin` for help. The current commands support:
 
 - runtime/active-season status, including open-war and active-battle counts;
 - season creation, selection, and phase changes;
@@ -52,7 +51,7 @@ The native `/civadmin` command requires `civilizations.admin`, which defaults to
 - membership assignment, leadership transfer, and activation;
 - civilization listing and rectangular admin claim creation.
 
-Claim size/count/connectivity rules and the V2 database filename are in `config.yml`. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
+Claim size/count/connectivity rules and the database filename are in `config.yml`. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
 
 Operators have the explicit `civilizations.admin.bypass` permission. Ordinary members may mutate their own claims; outsiders cannot build, break, use containers/switches, move fluids or pistons across a border, damage protected entities, or PVP inside claimed land. Movement and teleportation are not restricted by land ownership.
 
@@ -80,6 +79,6 @@ SERVER_MIN_MEMORY=2G SERVER_MAX_MEMORY=4G ./scripts/run-test-server.sh
 
 Paper is checksum-pinned through `gradle.properties`. Running the setup script creates `server/eula.txt` with acceptance of the [Minecraft EULA](https://aka.ms/MinecraftEULA).
 
-## Follow-up modernization
+## Architecture status
 
-The platform migration is complete, but several gameplay systems still use compatibility APIs supplied by Foundation, including legacy chat formatting and Bukkit conversations. Removing Foundation should be a dedicated follow-up migration so each subsystem can be replaced and gameplay-tested rather than stubbed.
+The modernization and architecture cleanup are complete. There is one live domain/application model, one relational store, one runtime owner, one protection policy, and thin native Paper adapters. Removed unfinished systems remain available in Git history if a future feature needs product ideas, but their architecture should not be restored. Remaining roadmap items are net-new gameplay and operational work on these boundaries.

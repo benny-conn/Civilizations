@@ -10,7 +10,7 @@ Audit date: 2026-08-18
 - Size: `XS` (hours), `S` (roughly a day), `M` (several days), `L` (roughly a week or more), `XL` (a multi-milestone system).
 - “MVP” means the smallest complete loop: create/provision civilizations, claim and protect land, fight one declared war, preserve the pre-war state, resolve the war, charge/award money, and visibly reconstruct the damage.
 
-## Architecture rework progress
+## Architecture rework — complete
 
 - [x] Slice 1: add a Foundation-free claim domain, correct rectangle geometry, world/chunk spatial index, and randomized parity tests. The index now serves live protection events.
 - [x] Slice 2: add season/civilization/membership domain records, a repository port, versioned relational schema, transactional SQLite implementation, database constraints, and integration tests. This is now the live authoritative store.
@@ -19,43 +19,48 @@ Audit date: 2026-08-18
 - [x] Slice 5: route Paper protection events through a centralized policy backed by the active claim index, use exact affected coordinates and cross-boundary checks, and keep all legacy claim reads off the live path.
 - [x] Slice 6: add distinct persisted war and timed-battle state machines, hostile-entry/participant snapshots, deterministic expiry recovery, and an immutable conflict-eligibility read model. Destructive capabilities remain disconnected until Slice 7 can journal mutations first.
 - [x] Slice 7: establish the framework-free, first-write-wins damage journal, immutable SQL records, bounded restart-safe paging, and a journal-before-world-mutation application contract. Multiple wars remain possible, but a civilization may participate in only one live battle until overlapping damage has explicit attribution.
-- [ ] Slice 8A: add immutable damage reports and a deterministic final-state/cost basis (`A1` in the [worktree roadmap](docs/worktree-roadmap.md)).
-- [ ] Slice 8B: connect the cancel → journal → revalidate → apply Paper mutation path for simple battle block changes (`B1`).
-- [ ] Slice 8C: add the idempotent economy ledger and civilization accounts after repair economics are decided (`A2`).
-- [ ] Slice 8D: add persisted repair jobs, deterministic partial selection, and restart-safe cursors (`A3`).
-- [ ] Slice 8E: connect hostile-entry/admin battle operations and the bounded Paper repair runner (`B2`/`B3`).
-- [ ] Slice 9: remove Foundation and quarantined legacy code once live war and repair integrations identify the adapters worth retaining (`F1`).
+- [x] Slice 8: replace the remaining Foundation lifecycle/command hook with native Paper, delete the entire quarantined legacy source/resources, remove Foundation/Vault/JitPack/coroutines from the build, add a regression guard, and verify a clean build and Paper restart.
 
-Parallel agents should use [docs/worktree-roadmap.md](docs/worktree-roadmap.md). It defines the two serialized code lanes, the work that can begin immediately, dependencies, suggested branches, and merge order.
+There are no remaining architecture-rework slices. Everything below is net-new gameplay, product, testing, or operations work on the completed architecture.
+
+## MVP delivery sequence
+
+- [ ] A1: add immutable damage reports and a deterministic final-state/cost basis.
+- [ ] B1: connect the cancel → journal → revalidate → apply Paper mutation path for simple battle block changes.
+- [ ] A2: add the idempotent economy ledger and civilization accounts after repair economics are decided.
+- [ ] A3: add persisted repair jobs, deterministic partial selection, and restart-safe cursors.
+- [ ] B2/B3: connect hostile-entry/admin battle operations and the bounded Paper repair runner.
+
+Parallel agents should use [docs/worktree-roadmap.md](docs/worktree-roadmap.md). It defines the two serialized feature lanes, work that can begin immediately, dependencies, suggested branches, and merge order.
 
 ## Recommended direction
 
 - [x] **[P0][S] Adopt the vertical slice below as the first playable target.** Architecture slices and acceptance criteria now prioritize warfare and reconstruction over legacy Towny-style breadth.
-- [x] **[P0][S] Treat legacy gameplay data as disposable unless a real dataset is identified.** V2 uses a fresh versioned relational database; no speculative legacy migration is on the MVP path.
+- [x] **[P0][S] Treat pre-rework gameplay data as disposable unless a real dataset is identified.** The live system uses a versioned relational database; no speculative object-graph migration is on the MVP path.
 - [x] **[P0][S] Keep Paper as the server platform and Kotlin as the implementation language.** The modernized build and local fixture target Paper directly.
-- [x] **[P0][S] Keep Foundation temporarily, but do not build new core domain or persistence code on Foundation types.** It remains only for quarantined legacy source/lifecycle while all V2 layers enforce this boundary.
-- [x] **[P0][S] Make landless civilizations an explicit supported state.** V2 drafts may be empty; activation requires a leader and roster but no home or claim.
-- [x] **[P0][S] Separate diplomacy from warfare.** “Enemy” status is not an active war. V2 now gives wars and their timed battles durable identities, parties, rules, roster snapshots, timestamps, and results; damage/repair records follow in Slice 7.
-- [x] **[P0][S] Prefer a copy-on-write pre-war journal over eagerly copying every block in a city.** V2 atomically inserts the original state for a battle/3D coordinate and returns the existing immutable row on every later mutation, without scanning untouched land.
-- [x] **[P0][S] Make all game-phase gates centralized and durable.** V2 persists `SETUP/PEACE/WAR/FINALE/ARCHIVED`; services and protection policy consume that single state.
+- [x] **[P0][S] Remove Foundation and the retired implementation.** Lifecycle and commands are native Paper; legacy source/resources and obsolete dependencies are deleted rather than stubbed or ported.
+- [x] **[P0][S] Make landless civilizations an explicit supported state.** Drafts may be empty; activation requires a leader and roster but no home or claim.
+- [x] **[P0][S] Separate diplomacy from warfare.** “Enemy” status is not an active war. Wars and timed battles have durable identities, parties, rules, roster snapshots, timestamps, and results.
+- [x] **[P0][S] Prefer a copy-on-write pre-war journal over eagerly copying every block in a city.** The journal atomically inserts the original state for a battle/3D coordinate and returns the existing immutable row on later mutation attempts without scanning untouched land.
+- [x] **[P0][S] Make all game-phase gates centralized and durable.** Civilizations persists `SETUP/PEACE/WAR/FINALE/ARCHIVED`; services and protection policy consume that single state.
 
 ## What exists today
 
-The project compiles and starts on Paper 26.2. The V2 architecture is covered by domain, policy, SQLite, and runtime-restart tests; real event behavior still requires the ignored Paper fixture because mocked tests cannot prove world mutation semantics.
+The project compiles and starts on Paper 26.2. The architecture is covered by domain, policy, SQLite, dependency-boundary, and runtime-restart tests; real event behavior still requires the ignored Paper fixture because mocked tests cannot prove world mutation semantics.
 
 | Area | Present implementation | Readiness |
 | --- | --- | --- |
-| Civilizations | V2 ID-based records with draft/active/dissolved states and landless provisioning | Live admin path; player-facing creation, homes, descriptions, and economy remain to design/port |
+| Civilizations | ID-based records with draft/active/dissolved states and landless provisioning | Live admin path; player-facing creation, homes, descriptions, and economy remain to design |
 | Membership | Relational one-civilization-per-season membership, offline UUID provisioning, leader transfer | Live admin path; invites/self-service and richer roster inspection are not yet exposed |
 | Land | Immutable inclusive rectangles, exact geometry, chunk spatial index, relational rows | Live admin claim/protection path; player selection, unclaim, settlements/colonies, and costs remain |
-| Protection | Central policy plus thin V2 listeners for blocks, containers, entities, PVP, fire, explosions, fluids, pistons, and automation boundaries | Live peacetime protection; conflict eligibility and journaling exist, but no destructive war capability is connected before the two-phase Paper adapter |
-| Diplomacy | Allies, enemies, outlaws; mutual enemy status implies “warring” | Prototype; no durable declaration or treaty lifecycle |
-| Battles | V2 durable war relationship plus timed hostile-entry battle, roster snapshot, terminal result, and expiry recovery; legacy raid/TNT prototype remains quarantined | Architecture core is restart-safe; no Paper entry trigger or destructive capability is live before journaling |
-| Damage | V2 immutable per-battle/3D-coordinate rows preserve the first simple block state, actor, cause, claim, and time; legacy `Location` map is quarantined | Durable/restart-safe architecture core; Paper mutation interception, block entities, final-state reports, and repair status remain |
-| Reconstruction | Paid, chunked, bottom-up block replacement | Proof of concept; partial percentages, costing, containers, conflicts, and restart recovery are broken or undefined |
-| Economy | Vault/Foundation balance hooks, civilization bank, deposits, withdrawals, taxes, upkeep | Partial; persistence and task behavior are unsafe |
-| Permissions | Default/outsider/ally/enemy ranks plus custom ranks and plots | Partial; configuration loading has a group-assignment bug and the policy is spread across listeners |
-| Utilities | Home, warps, colony teleports, flight, chat, signs, menus, info/list/top | Broad but not playtest-critical; several features should be quarantined until the core loop is stable |
+| Protection | Central policy plus thin Paper listeners for blocks, containers, entities, PVP, fire, explosions, fluids, pistons, and automation boundaries | Live peacetime protection; conflict eligibility and journaling exist, but no destructive war capability is connected before the two-phase Paper adapter |
+| Diplomacy | Durable war declarations and lifecycle | Live admin/service core; alliances, enemies, treaties, and player-facing declarations are net-new features |
+| Battles | Durable war relationship plus timed hostile-entry battle, roster snapshot, terminal result, and expiry recovery | Core is restart-safe; no Paper entry trigger or destructive capability is live before journaling |
+| Damage | Immutable per-battle/3D-coordinate rows preserve the first simple block state, actor, cause, claim, and time | Durable/restart-safe core; Paper mutation interception, block entities, final-state reports, and repair status remain |
+| Reconstruction | None | Must be implemented as persisted repair jobs and a bounded Paper runner |
+| Economy | None | An authoritative idempotent ledger is planned; there is no Vault/Foundation fallback |
+| Permissions | Central leader/member/outsider/admin protection policy | Live for claims; richer ranks/plots are intentionally absent from the MVP |
+| Player utilities | None beyond focused administration | Homes, player claim UX, chat, signs, warps, and menus are net-new only if product-prioritized |
 | Persistence | Versioned relational SQLite with prepared statements, transactions, constraints, WAL, and startup integrity checks | Live for seasons/civilizations/memberships/claims/wars/battles/participants/block changes; repair, ledger, and backup tooling remain |
 | Seasons/scarcity | Durable active-season selection and `SETUP/PEACE/WAR/FINALE/ARCHIVED` phase controls | Phase gate is live; reset and scarcity systems are not implemented |
 | Assassination/occupation/annexation | None | Not implemented |
@@ -91,36 +96,26 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 
 ### Domain model
 
-- [ ] **[P0][L] Replace the cyclic mutable object graph with ID-based domain records and services.** At minimum model `Season`, `Civilization`, `Membership`, `Claim`, `War`, `WarParticipant`, `BlockChange`, and `LedgerEntry` separately.
-- [ ] **[P0][M] Add explicit lifecycle states.** Suggested examples: civilization `DRAFT/ACTIVE/DISSOLVED`; war `DECLARED/PREPARING/ACTIVE/RESOLVING/REPAIRABLE/REPAIRING/CLOSED/CANCELLED`; season `SETUP/PEACE/WAR/FINALE/ARCHIVED`.
-- [x] **[P0][M] Enforce V2 invariants in one service layer.** Membership, leadership, normalized names, claim ownership, and duplicate-open-war constraints are centralized and backed by SQL constraints where possible.
-- [x] **[P0][M] Stop live commands and listeners from directly mutating model collections.** V2 adapters route mutations through services and publish a replacement runtime snapshot/index after durable success.
+- [x] **[P0][L] Replace the cyclic mutable object graph with ID-based domain records and services.** Implemented concepts are separate records; `LedgerEntry` and repair records will be added as net-new feature models rather than fields on a graph.
+- [x] **[P0][M] Add explicit lifecycle states to implemented aggregates.** Civilization, war, battle, and season transitions are explicit; repair lifecycle arrives with the net-new repair-job feature.
+- [x] **[P0][M] Enforce invariants in one service layer.** Membership, leadership, normalized names, claim ownership, and duplicate-open-war constraints are centralized and backed by SQL constraints where possible.
+- [x] **[P0][M] Stop live commands and listeners from directly mutating model collections.** Paper adapters route mutations through services and publish a replacement runtime snapshot/index after durable success.
 - [x] **[P0][S] Use stable world identifiers and integer block coordinates.** Claims and damage rows use stable world keys and inclusive integer coordinates rather than Bukkit `Location` domain keys.
 
 ### Persistence and recovery
 
-- [ ] **[P0][XL] Create a versioned relational schema and migration runner.** Suggested tables: schema versions, seasons, civilizations, memberships, claims, wars, participants, block changes/repair status, and economy ledger entries.
-- [x] **[P0][M] Replace constructed SQL with prepared statements.** All live V2 repository access is prepared and scoped; the legacy datastore is not opened.
-- [ ] **[P0][L] Make multi-record mutations transactional.** Implemented for current V2 membership, claim, war, battle, and journal operations; ledger transfers and repair progress remain.
-- [x] **[P0][M] Remove inactivity-based automatic deletion from the live system.** V2 archives through lifecycle state and never opens the legacy auto-deleting datastore.
-- [ ] **[P0][M] Add idempotent startup recovery.** Rebuild indexes, validate invariants, resume active timers/repairs from persisted timestamps and cursors, and quarantine invalid records with actionable logs.
-- [x] **[P0][M] Add orderly shutdown.** V2 stops accepting mutations, drains its single storage executor with a bounded wait, and owns no anonymous/global scheduler cancellation.
+- [x] **[P0][XL] Create a versioned relational schema and migration runner.** Current aggregates have normalized tables and ordered migrations; ledger and repair slices will extend the same mechanism.
+- [x] **[P0][M] Replace constructed SQL with prepared statements.** All repository access is prepared and scoped; the retired datastore is deleted.
+- [x] **[P0][L] Make multi-record mutations transactional.** Current membership, claim, war, battle, and journal operations are transactional; future ledger/repair features must use the same transaction boundary.
+- [x] **[P0][M] Remove inactivity-based automatic deletion from the live system.** Civilizations archives through lifecycle state; the auto-deleting datastore is deleted.
+- [x] **[P0][M] Add idempotent startup recovery for implemented state.** Startup migrates, validates, rebuilds indexes, and advances expired battles; persisted repair recovery belongs to the repair-job feature.
+- [x] **[P0][M] Add orderly shutdown.** The runtime stops accepting mutations, drains its single storage executor with a bounded wait, and owns no anonymous/global scheduler cancellation.
 - [x] **[P0][M] Establish a thread-ownership rule.** Bukkit/Paper world and entity APIs run on the server thread; database work runs off-thread; refreshed state returns to the server thread before becoming visible.
-- [x] **[P0][S] Replace live unstructured background work with a plugin-owned executor.** V2 serializes storage work, surfaces failure, stops submissions, and drains on shutdown; legacy coroutine entry points are not registered.
-- [x] **[P0][S] Choose the initial database target.** V2 uses packaged SQLite with WAL, foreign keys, a busy timeout, and serialized writes. The legacy MySQL/SQLite datastore is quarantined rather than extended.
+- [x] **[P0][S] Replace unstructured background work with a plugin-owned executor.** The runtime serializes storage work, surfaces failure, stops submissions, and drains on shutdown; the legacy coroutine implementation is deleted.
+- [x] **[P0][S] Choose the initial database target.** Civilizations uses packaged SQLite with WAL, foreign keys, a busy timeout, and serialized writes. The former MySQL/SQLite datastore was deleted.
 - [ ] **[P0][M] Add backup/export tooling before destructive season or migration operations.** Include dry-run, manifest, database backup, and recovery instructions.
 
-### Current persistence defects to cover with regression tests
-
-- [ ] **[P0][S] Player power is stored in the table but never read/assigned during load.**
-- [ ] **[P0][S] Saving a player with no civilization omits the column instead of writing `NULL`, so a departed player can rejoin the old civilization after restart.**
-- [ ] **[P0][S] `Claims` writes `Total_Blocks` and reads `Total_blocks`; area totals do not reliably round-trip.**
-- [ ] **[P0][S] Civilization taxes are not serialized.**
-- [ ] **[P0][S] Active raids, timers, participants, lives, and cooldowns are not serialized.**
-- [ ] **[P0][S] A civilization with zero citizens is deleted during load, and leader fallback calls `citizens.iterator().next()`.** This blocks safe draft/empty provisioning.
-- [ ] **[P0][S] Async saves can race mutable collections, complete out of order, or still be running when the datastore is closed.**
-- [ ] **[P0][S] The current connection/result-set ownership and reconnect path need replacement, not incremental patching.**
-- [ ] **[P0][S] Money/power underflow calculations zero the balance/count before calculating the amount to remove, producing incorrect power.**
+The former JSON/SQL hybrid datastore and all of its known persistence defects were removed with the retired object graph. New persistence regressions belong beside the relational repository feature that introduces them.
 
 ## Milestone 2 — civilizations, rosters, and land
 
@@ -137,13 +132,13 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 
 ### Claim representation and spatial index
 
-- [x] **[P0][L] Replace live `Region` use with an immutable 2D rectangle value.** V2 normalizes inclusive integer bounds, uses `Long` area, and has no hardcoded Y range.
+- [x] **[P0][L] Replace live `Region` use with an immutable 2D rectangle value.** Current geometry normalizes inclusive integer bounds, uses `Long` area, and has no hardcoded Y range.
 - [x] **[P0][L] Add a world/chunk spatial index.** Point lookup checks only chunk candidates and exact containment, independent of total claim count.
 - [x] **[P0][M] Keep the authoritative claim repository separate from the derived index.** Startup and every successful mutation rebuild and atomically publish derived runtime state; a dedicated admin rebuild command remains optional operations work.
-- [x] **[P0][M] Use exact rectangle intersection for overlap checks.** V2 candidate filtering and interval intersection cover cross-shaped overlaps.
+- [x] **[P0][M] Use exact rectangle intersection for overlap checks.** Candidate filtering and interval intersection cover cross-shaped overlaps.
 - [x] **[P0][M] Use analytic adjacency rather than materializing a bounding box.** Edge-only adjacency uses interval math and excludes corner contact.
 - [ ] **[P1][M] Represent connected settlements explicitly.** On add, attach the claim to a settlement/claim group; on remove, run a small adjacency-graph traversal and reject or intentionally split disconnected land according to the rules.
-- [x] **[P1][S] Bound claim size/chunk coverage and reject coordinate/area overflow.** V2 validates configurable area/count limits and checked geometry before index insertion.
+- [x] **[P1][S] Bound claim size/chunk coverage and reject coordinate/area overflow.** Claim services validate configurable area/count limits and checked geometry before index insertion.
 - [ ] **[P1][M] Make claim creation one atomic operation.** Validate world, selection, overlap, adjacency, limits, cost, player authority, and current phase; then debit, insert, index, and publish the result.
 - [ ] **[P1][S] Decide claim mutation rules during war and repair.** Recommended: freeze affected settlements from claim/unclaim until the war and damage ledger close.
 - [x] **[P1][M] Add geometry/property tests.** Deterministic and randomized parity tests cover normalized/inclusive geometry, negative coordinates, overlap, adjacency, and index add/remove/rebuild behavior.
@@ -152,53 +147,30 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 ### Protection policy
 
 - [x] **[P0][L] Centralize protection in one `ProtectionService`.** Inputs include actor, action, exact target, season phase, conflict capability, and admin bypass and return a reasoned allow/deny value.
-- [x] **[P0][M] Make event listeners thin adapters.** V2 listeners translate Paper events into policy actions and apply the decision without claim scans, database reads, or business rules.
+- [x] **[P0][M] Make event listeners thin adapters.** Paper listeners translate events into policy actions and apply the decision without claim scans, database reads, or business rules.
 - [x] **[P0][M] Define and test an event coverage matrix.** `docs/architecture.md` records the live coverage and intentional movement/teleport pass-through; pure tests cover the policy matrix and boundary cases.
 - [x] **[P0][M] Use the affected block/entity location, not the player's feet, for authorization.** Block, entity, projectile target, and inventory endpoints use exact stable-world X/Z coordinates.
 - [x] **[P0][M] Make war permissions an explicit override in the same policy.** Capabilities are actor/action/phase/eligible-claim/PVP-target scoped. The runtime publishes battle eligibility and exposes journaling, but deliberately supplies no destructive capability until the two-phase Paper adapter is available.
 - [x] **[P1][M] Simplify MVP roles to leader/member/outsider/admin unless playtesting proves custom ranks are necessary.** Protection treats leader/member as owners, all others as outsiders, and uses an explicit operator-default bypass.
 - [x] **[P1][S] Default outsiders/enemies to no build, break, switch, or container access.** The centralized live policy is default-deny on claimed land.
 
-### Current claim/protection defects to cover or remove
-
-- [x] **[P0][S] Every live point query uses the world/chunk claim index; legacy all-civilization scans are quarantined.**
-- [ ] **[P0][S] `Region.isWithin` uses `Double.toInt()`, which truncates toward zero and is wrong for negative fractional coordinates.**
-- [ ] **[P0][S] Area math omits inclusive rows/columns and gives a one-block-wide rectangle zero area.**
-- [ ] **[P0][S] Claim overlap checks only endpoints/containment and miss crossing rectangles with no corner inside the other.**
-- [ ] **[P0][S] Connectivity and visualization materialize 3D bounding boxes; `Region.blocks` can materialize the entire full-height volume.**
-- [ ] **[P0][S] Entity counting loads every chunk touched by a claim and is used in raid ratio logic.**
-- [ ] **[P0][S] The global `getPlotFromLocation` overload discards found plots and always returns `null`.**
-- [x] **[P0][S] Live interaction protection uses the clicked block, affected entity, or inventory endpoint rather than `player.location`.**
-- [ ] **[P0][S] A raider allowed to attack can place arbitrary blocks, while only TNT was intended; placed blocks are not added to damage recovery.**
-- [x] **[P0][S] Piston handling checks the head and every moved block from source to destination, including movement out of a claim.**
-- [x] **[P0][S] Hanging-entity protection safely resolves players, projectiles, and non-player/environmental removal.**
-- [ ] **[P0][S] Unclaiming can orphan homes, plots, colonies, damage records, and disconnected claims.**
-- [ ] **[P0][S] Distance helpers do not handle empty sets or different worlds safely.**
-- [x] **[P0][S] The live policy no longer loads legacy permission groups; membership and explicit conflict/admin capabilities determine access.**
+The former `Region`, plot, visualization, all-civilization scan, and raid-ratio implementations were deleted. Current claim geometry, indexing, and protection behavior are covered by property/policy tests; new unclaim, settlement, and war-placement behavior remains explicitly listed as feature work above.
 
 ## Milestone 3 — durable war lifecycle
 
 - [x] **[P1][M] Add the persisted global gameplay phase and admin controls.** `SETUP/PEACE/WAR/FINALE/ARCHIVED` and emergency `WAR -> PEACE` are durable and exposed through `/civadmin`; scheduling, broadcasts, and audit logs remain follow-ups.
 - [x] **[P1][XL] Implement persisted war and battle state machines.** A durable war moves through `DECLARED/ACTIVE/CLOSED/CANCELLED`; each timed battle moves through `ACTIVE/RESOLVING/CLOSED/CANCELLED`. Central transitions are timestamp-based and idempotent.
 - [x] **[P1][M] Store war parties, declarer, trigger claim/player, rules snapshot, participant snapshot, start/end/resolution timestamps, and terminal result.** Eligible land is derived from the ordinary opposing claims rather than stored as a separate battlefield.
-- [x] **[P1][M] Separate declaration from battle activation.** Diplomacy flags no longer substitute for a V2 war record; declaration, war activation, and hostile-entry battle start are separate operations.
+- [x] **[P1][M] Separate declaration from battle activation.** Diplomacy flags do not substitute for a war record; declaration, war activation, and hostile-entry battle start are separate operations.
 - [ ] **[P1][M] Add preparation and clear boundary feedback.** Warn both rosters, show exact start/end time, prevent damage before activation, and make eligible opposing land visible.
 - [ ] **[P1][M] Define participation robustly.** Membership, alliances, joining/leaving the zone, disconnects, deaths, and spectators must have explicit behavior; do not infer all participation from whichever claim-enter event happens to fire.
-- [ ] **[P1][M] End wars outside player loops.** Runtime startup/refresh now advances expired battles to `RESOLVING` with zero players online and removes active eligibility. Slice 8 still must calculate/persist damage reports, ledger effects, and repair eligibility exactly once.
+- [ ] **[P1][M] End wars outside player loops.** Runtime startup/refresh advances expired battles to `RESOLVING` with zero players online and removes active eligibility. A1–A3 still must calculate/persist damage reports, ledger effects, and repair eligibility exactly once.
 - [ ] **[P1][M] Add admin recovery commands.** Inspect state and participants, start, pause, resume, force-resolve, cancel/rollback, and clear a stuck war with an audit reason.
 - [ ] **[P1][M] Add war restart tests at every transition.** Restart in declaration, preparation, active combat, resolution, and repairable states and assert the same eventual result.
 - [ ] **[P1][S] Make balance/power rewards idempotent ledger entries.** A restarted resolution must not pay twice.
-- [ ] **[P1][S] Quarantine old war settings until implemented.** `Raid.Buy_In` and `Attacker_Teleport` are loaded but unused; do not expose inert controls.
+- [x] **[P1][S] Retire old war settings.** The unused `Raid.Buy_In`, `Attacker_Teleport`, and their legacy settings framework were deleted; new controls require implemented behavior and validation.
 
-### Current raid defects to cover or remove
-
-- [ ] **[P0][S] `Raid.onEnd` clears the raid and cancels effects inside the online-player loop; with nobody online, the raid never clears.**
-- [ ] **[P0][S] Online/in-raid ratios use integer division.** The configured 3-defender/5-attacker ratio becomes zero and is effectively always valid.
-- [ ] **[P0][S] Player counting returns one when the count is zero, masking empty cases and distorting ratios.**
-- [ ] **[P0][S] The raid command applies an already-converted seconds value as minutes, producing a much longer command cooldown than configured.**
-- [ ] **[P0][S] No deterministic winner, score, damage summary, reparations, or automatic repair eligibility is created at raid end.**
-- [ ] **[P0][S] Damage from all wars is mixed into one civilization-level `Damages` object with no war, attacker, season, or status identity.**
-- [ ] **[P0][S] Raid lives and death rewards are not transactionally persisted; killer-null and balance edge cases need explicit handling.**
+The former in-memory raid, ratio, countdown, lives, and civilization-level damage implementations were deleted. Missing result, report, ledger, and repair behavior is net-new work in the current war/damage model.
 
 ## Milestone 4 — reversible destruction and reconstruction
 
@@ -206,7 +178,7 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 
 - [x] **[P1][XL] Implement a per-battle copy-on-write block-change journal.** Immutable rows are unique by battle/world/X/Y/Z; the first accepted preparation stores the original simple block state and later preparations retain it.
 - [ ] **[P1][L] Track the expected damaged state and change source.** Record break/place/explosion/fire/fluid/physics, actor/civilization when available, timestamps, and repair status for auditing and conflict handling.
-- [x] **[P1][M] Model attacker placements before placement.** The journal accepts air or an existing simple block as the original state, so reconstruction can remove attacker-placed blocks or restore what they replaced. Live Paper placement interception remains in Slice 8.
+- [x] **[P1][M] Model attacker placements before placement.** The journal accepts air or an existing simple block as the original state, so reconstruction can remove attacker-placed blocks or restore what they replaced. Live Paper placement interception remains in B1.
 - [ ] **[P1][M] Preserve full block state for allowed block entities.** Material/block data alone does not preserve sign text, banner data, inventories, lecterns, spawners, or other tile state. Keep containers protected until safe inventory semantics exist.
 - [ ] **[P1][M] Capture before mutating.** Persist or durably queue the original record before allowing destructive world changes so a crash cannot destroy a block without a recovery record.
 - [ ] **[P1][M] Make TNT physics visual and bounded.** The authoritative mutation remains in the journal; falling blocks must not place permanent untracked blocks, damage unrelated claims, duplicate drops, or load uncontrolled chunks.
@@ -223,20 +195,12 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 - [ ] **[P1][M] Pause/resume cleanly on shutdown, unloaded worlds, or errors.** Do not silently discard handled or unhandled locations.
 - [ ] **[P1][M] Add repair tests.** Cover 1%, 50%, 100%, zero funds, repeated damage, attacker placements, preexisting air, protected containers, conflict skips, restart at every cursor, and double-resolution/payment attempts.
 
-### Current damage/repair defects to cover or remove
-
-- [x] **[P0][S] Replace assignment with first-write-wins.** SQL uniqueness plus `ON CONFLICT DO NOTHING` preserves the first V2 snapshot, and update/delete triggers keep journal evidence immutable.
-- [ ] **[P0][S] Only destroyed block-data strings are captured; placed blocks, inventories, block entities, entities, fluids, fire, and other changes are not recoverable.**
-- [ ] **[P0][S] `percentage / 100` uses integer division, so 1–99% currently repairs zero blocks.**
-- [ ] **[P0][S] Repair charges the cost of the full damage list regardless of the requested percentage or skipped blocks.**
-- [ ] **[P0][S] Admin repair parses the civilization name as the percentage argument and is effectively broken.**
-- [ ] **[P0][S] Repairs are in-memory tasks with no durable cursor, locking, conflict policy, or restart recovery.**
-- [ ] **[P0][S] The current falling-block helper can mutate world blocks outside a durable change transaction.**
+The unsafe legacy repair command/task and falling-block helper were deleted. The current first-write-wins journal is the only shipped damage mechanism; repair behavior is introduced only through the persisted engine specified above.
 
 ## Milestone 5 — playtest quality and operations
 
 - [ ] **[P1][L] Add pure unit tests for domain rules and state transitions.** Geometry, memberships, permissions, war eligibility, state transitions, pricing, ledger idempotency, and repair selection should not require a running server.
-- [x] **[P1][L] Add repository integration tests against the selected database.** Real SQLite tests cover ordered migrations, constraints, rollback, restart recovery, and idempotent current V2 operations; ledger/repair cases belong to their slices.
+- [x] **[P1][L] Add repository integration tests against the selected database.** Real SQLite tests cover ordered migrations, constraints, rollback, restart recovery, and idempotent current operations; ledger/repair cases belong to their slices.
 - [ ] **[P1][M] Select a maintained Paper-compatible event test approach.** Use it for basic listener/policy wiring, but keep a real local Paper server suite for behaviors mocks cannot represent.
 - [ ] **[P1][M] Turn the ignored root `server/` into a repeatable gameplay test fixture.** Add documented seed/setup steps, test operators/players, reset scripts that only target the explicit server test directory, and a checklist for the MVP scenario.
 - [ ] **[P1][M] Add scripted smoke/restart checkpoints.** Build/deploy, start, provision, claim, begin war, stop/restart, resolve, repair, restart, and verify database/world state.
@@ -244,45 +208,20 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 - [ ] **[P1][M] Add timings/metrics around spatial queries, event-policy decisions, explosion recording, database queues, and repair batches.** Avoid logging every block at normal verbosity.
 - [ ] **[P1][S] Add a CI workflow for clean build and tests on every push to `main`.** Keep the full Paper gameplay suite optional/nightly if it is too slow for every commit.
 - [ ] **[P1][S] Add configuration validation and a generated reference.** Fail startup clearly on unsafe or nonsensical settings instead of silently calculating zero/invalid ratios.
-- [ ] **[P1][S] Require an economy provider only when economy-backed gameplay is enabled.** Provide a clear startup error or a built-in ledger-backed economy mode rather than failing in a battle/repair command.
+- [ ] **[P1][S] Enable economy-backed gameplay only after the built-in ledger exists and its configuration validates.** Any future external economy bridge must be optional and must not replace the authoritative ledger.
 - [ ] **[P1][S] Add a pre-playtest backup/restore drill.** Verify both database and world restoration, not merely backup creation.
 
-## Existing systems to quarantine during the MVP
+## Retired implementation — complete
 
-These features can remain in the repository temporarily, but should be hidden/disabled until they are routed through the new services and tested. They should not expand the first vertical slice.
+- [x] Delete the mutable legacy civilization/player/claim/raid object graph and global managers.
+- [x] Delete the legacy datastore, serializers, settings/localization framework, commands, menus, conversations, listeners, tasks, and custom events.
+- [x] Delete Towny/Factions adapters, unsafe repair/TNT helpers, upkeep/tax logic, mob-removal logic, and production test commands.
+- [x] Replace the remaining plugin lifecycle and command registration with native Paper APIs.
+- [x] Remove Foundation, Vault hooks, JitPack, and the unstructured coroutine helper/dependency.
+- [x] Ship only the focused `/civadmin` surface with explicit admin and bypass permissions.
+- [x] Add an architecture regression test that rejects retired source imports and build dependencies.
 
-- [x] **[P0][M] Quarantine plots, colonies, custom ranks, fly, warp signs, upkeep/taxes, maps, public homes, and legacy menus.** None of their legacy commands/listeners/tasks are registered by the live V2 runtime.
-- [x] **[P0][S] Remove production exposure of `/civ test`.** The quarantined legacy command tree is not registered.
-- [x] **[P0][S] Disable obsolete Towny/Factions adapter code.** It remains dead source pending final deletion and has no live registration.
-- [x] **[P0][S] Expose only the audited V2 `/civadmin` surface.** Legacy admin subcommands remain quarantined; native commands translate into application services.
-- [x] **[P0][S] Ensure the live admin command is default-deny and uses explicit permissions.** `civilizations.admin` defaults to operators and bypass is a separate permission.
-- [x] **[P0][S] Stop cancelling every Bukkit scheduler task during plugin shutdown.** V2 owns and drains only its storage executor.
-- [x] **[P0][S] Disable the current upkeep/tax task.** It is not registered; a ledger-backed replacement is future work.
-- [x] **[P0][S] Disable the current mob-removal task.** It is not registered; scarcity will be redesigned after the MVP.
-
-### Known command/configuration issues
-
-- [ ] **[P2][S] Fix or replace admin claim.** It treats the civilization argument as the action and normally performs no claim.
-- [ ] **[P2][S] Fix or replace admin leader and admin `set leader`.** They look up the civilization argument as the player and have confirmation/display problems.
-- [ ] **[P2][S] Fix or replace admin permissions.** Its argument counts/indexes do not match its usage.
-- [ ] **[P2][S] Make admin delete detach/save every citizen and clear related state transactionally.**
-- [ ] **[P2][S] Prevent admin add from placing one player in multiple civilization citizen sets.**
-- [ ] **[P2][S] Save all direct mutations consistently.** Leader, home, toggles, permissions, taxes, and other fields currently rely on incidental later saves.
-- [ ] **[P2][S] Either implement or remove `inviteOnly`.** It is toggled and displayed but does not govern a public join path.
-- [ ] **[P2][S] Clarify `public`.** It currently mainly controls public home teleport, not civilization membership or land access.
-- [ ] **[P2][S] Replace deprecated/legacy chat, conversation, menu, and formatting paths as their containing systems are touched.**
-
-## Foundation removal plan
-
-Foundation is widespread enough that stubbing it out now would destroy useful behavior without advancing the game. Remove it incrementally:
-
-- [x] **[P1][M] Keep all new domain, geometry, policy, war, damage, future ledger, and repository modules free of Foundation imports.** This boundary is enforced by package direction and tests/build review.
-- [x] **[P1][L] Replace live `SerializedMap`/`ConfigSerializable` persistence.** V2 owns versioned relational state; legacy serialization remains dead source until Slice 9 deletes it.
-- [ ] **[P2][L] Replace settings/localization with typed validated configuration and Adventure components.**
-- [ ] **[P2][L] Replace Foundation commands with a modern Paper command layer backed by the same application services.** Commands should contain no business logic.
-- [ ] **[P2][M] Use Vault directly behind an `EconomyGateway`, or use the plugin's own ledger if that better fits the server economy.**
-- [ ] **[P2][L] Replace menus/conversations only for features that survive playtesting.** Do not port the unfinished 949-line civilization menu wholesale.
-- [ ] **[P2][S] Remove shaded Foundation and obsolete adapters once no imports remain; then simplify the shadow JAR and dependency exclusions.**
+Plots, colonies, custom ranks, player chat, fly, warps/signs, homes, menus, and similar breadth are no longer half-enabled compatibility features. If playtesting prioritizes one, implement it as net-new behavior through the current domain, application, persistence, and Paper boundaries.
 
 ## After the MVP
 
@@ -339,7 +278,6 @@ Foundation is widespread enough that stubbing it out now would destroy useful be
 - A web application or public server listing
 - Folia, Velocity, or a multi-server network
 - Full custom-rank/plot/colony/menu parity
-- A full Foundation removal
 - Monetization features
 
 The first playtest succeeds if the civilization → claim → declared battle → reversible destruction → paid reconstruction loop is understandable, safe after restarts, and fun enough that players want another round.

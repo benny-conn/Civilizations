@@ -3,17 +3,18 @@
 Read these documents before making architectural or gameplay changes:
 
 - [README.md](README.md) — supported toolchain, build, and local Paper server workflow.
-- [TODO.md](TODO.md) — prioritized product and engineering backlog, MVP boundary, and known legacy defects.
-- [docs/architecture.md](docs/architecture.md) — dependency direction and the architecture-rework rules.
+- [TODO.md](TODO.md) — prioritized product and engineering backlog, MVP boundary, and retired-system decisions.
+- [docs/architecture.md](docs/architecture.md) — stable dependency direction, runtime ownership, and persistence rules.
 - [docs/worktree-roadmap.md](docs/worktree-roadmap.md) — parallel lanes, file ownership, dependencies, and merge order for multi-worktree delivery.
 
 ## Working agreements
 
-- The architecture rework is incremental. Each branch should be independently buildable, testable, and mergeable.
-- One worktree owns one roadmap item. Respect the durable-core and Paper-runtime serialization lanes; do not make overlapping schema migration or runtime-lifecycle changes in parallel.
+- The architecture rework is complete. Net-new work remains incremental; each branch should be independently buildable, testable, and mergeable.
+- One worktree owns one roadmap item. Respect the durable-feature and Paper-integration serialization lanes; do not make overlapping schema migration or runtime-lifecycle changes in parallel.
 - New domain and application code belongs under `src/main/kotlin` and must not import Paper/Bukkit, Foundation, Vault, JDBC, command, menu, or configuration types.
 - Framework and database implementations are adapters around application-owned ports.
-- Do not add new features to the legacy serialized object graph or legacy datastore.
+- The legacy serialized graph, datastore, commands, menus, and tasks were deleted. Do not restore them; use Git history only as product reference and implement accepted behavior through the current architecture.
+- Foundation, Vault, JitPack, and the legacy coroutine helper are retired. Do not reintroduce them without an explicit project-level decision.
 - Paper world/entity access and live-state mutation stay on the server thread. Blocking I/O uses plugin-owned background execution.
 - SQL is durable state; purpose-built memory indexes serve hot gameplay paths. Never query SQL from block/movement event hot paths.
 - Update the roadmap or architecture documentation when a slice establishes or changes a project-wide decision.
