@@ -4,7 +4,6 @@
 
 package io.bennyc.civilizations.command.admin
 
-import io.papermc.lib.PaperLib
 import io.bennyc.civilizations.manager.CivManager
 import io.bennyc.civilizations.settings.Localization
 import org.mineacademy.fo.command.SimpleCommandGroup
@@ -17,7 +16,7 @@ class AWarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp
         checkNotNull(civ, io.bennyc.civilizations.settings.Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", io.bennyc.civilizations.settings.Localization.CIVILIZATION))
         val warp = civ!!.warps[args[0]]
         checkNotNull(warp, io.bennyc.civilizations.settings.Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", "warp"))
-        PaperLib.teleportAsync(player, warp!!).thenAccept {
+        player.teleportAsync(warp!!).thenAccept {
             if (it)
                 tellSuccess(io.bennyc.civilizations.settings.Localization.Notifications.SUCCESS_TELEPORT)
             else

@@ -10,7 +10,7 @@ import org.mineacademy.fo.Common
 import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 import java.util.*
 import java.util.regex.Pattern
 import kotlin.collections.set
@@ -149,7 +149,7 @@ internal class UUIDFetcher(private val names: MutableList<String>) {
         }
 
         private fun createConnection(): HttpURLConnection {
-            val url = URL(io.bennyc.civilizations.adapter.UUIDFetcher.Companion.PROFILE_URL)
+            val url = URI.create(io.bennyc.civilizations.adapter.UUIDFetcher.Companion.PROFILE_URL).toURL()
             val connection: HttpURLConnection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")

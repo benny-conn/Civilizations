@@ -46,7 +46,7 @@ class EntityListener : Listener {
     @EventHandler
     fun onPrime(event: ExplosionPrimeEvent) {
         val entity = event.entity
-        if (entity.type != EntityType.PRIMED_TNT) return
+        if (entity.type != EntityType.TNT) return
         val tnt = entity as TNTPrimed
         if (CompMetadata.hasMetadata(
                 tnt,

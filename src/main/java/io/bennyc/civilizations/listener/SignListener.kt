@@ -3,11 +3,12 @@
  */
 package io.bennyc.civilizations.listener
 
-import io.papermc.lib.PaperLib
 import io.bennyc.civilizations.task.CooldownTask
 import io.bennyc.civilizations.task.CooldownTask.Companion.getCooldownRemaining
 import io.bennyc.civilizations.task.CooldownTask.Companion.hasCooldown
 import io.bennyc.civilizations.util.ClaimUtil
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Tag
 import org.bukkit.block.Sign
 import org.bukkit.event.EventHandler
@@ -15,17 +16,18 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.SignChangeEvent
 import org.bukkit.event.player.PlayerInteractEvent
-import org.mineacademy.fo.Common
 import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.Valid
 import org.mineacademy.fo.model.HookManager
 
 class SignListener : Listener {
 
+    private val plainText = PlainTextComponentSerializer.plainText()
+
     @EventHandler
     fun onSignCreation(event: SignChangeEvent) {
-        val firstLine = event.getLine(0) ?: return
-        val secondLine = event.getLine(1) ?: return
+        val firstLine = plainText.serialize(event.line(0) ?: Component.empty())
+        val secondLine = plainText.serialize(event.line(1) ?: Component.empty())
 
         val player = event.player
         val civPlayer = io.bennyc.civilizations.manager.PlayerManager.fromBukkitPlayer(player)
@@ -49,9 +51,13 @@ class SignListener : Listener {
                 )
                 HookManager.withdraw(player, io.bennyc.civilizations.settings.Settings.WARP_SIGN_COST)
             }
-            event.setLine(0, Common.colorize(io.bennyc.civilizations.constants.Constants.WARP_SIGN_TAG))
-            event.setLine(2, "")
-            event.setLine(3, "")
+            event.line(
+                0,
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand()
+                    .deserialize(io.bennyc.civilizations.constants.Constants.WARP_SIGN_TAG)
+            )
+            event.line(2, Component.empty())
+            event.line(3, Component.empty())
 
             Messenger.success(
                 player,
@@ -65,9 +71,11 @@ class SignListener : Listener {
         val player = event.player
         val civPlayer = io.bennyc.civilizations.manager.PlayerManager.fromBukkitPlayer(player)
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
-        if (!Tag.SIGNS.isTagged(event.clickedBlock!!.type)) return
-        val sign = event.clickedBlock!!.state as Sign
-        if (sign.getLine(0) == Common.colorize(io.bennyc.civilizations.constants.Constants.WARP_SIGN_TAG)) {
+        val clickedBlock = event.clickedBlock ?: return
+        if (!Tag.SIGNS.isTagged(clickedBlock.type)) return
+        val sign = clickedBlock.state as Sign
+        val signSide = sign.getTargetSide(player)
+        if (plainText.serialize(signSide.line(0)).equals("[CivWarp]", ignoreCase = true)) {
             Valid.checkBoolean(
                 !hasCooldown(civPlayer, CooldownTask.CooldownType.TELEPORT),
                 io.bennyc.civilizations.settings.Localization.Warnings.COOLDOWN_WAIT.replace(
@@ -75,11 +83,9 @@ class SignListener : Listener {
                     getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
                 )
             )
-            ClaimUtil.getCivFromLocation(sign.location)?.warps?.get(sign.getLine(1))?.let {
-                PaperLib.teleportAsync(
-                    player,
-                    it
-                ).thenAccept { result -> if (result) Messenger.success(player, "{1}Successfully teleported to warp!") }
+            ClaimUtil.getCivFromLocation(sign.location)?.warps?.get(plainText.serialize(signSide.line(1)))?.let {
+                player.teleportAsync(it)
+                    .thenAccept { result -> if (result) Messenger.success(player, "{1}Successfully teleported to warp!") }
             }
         }
 

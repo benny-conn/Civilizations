@@ -4,7 +4,6 @@
 
 package io.bennyc.civilizations.command
 
-import io.papermc.lib.PaperLib
 import io.bennyc.civilizations.PermissionChecker.isAdmin
 import io.bennyc.civilizations.task.CooldownTask
 import io.bennyc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -21,7 +20,7 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                 io.bennyc.civilizations.manager.CivManager.getByName(args[0])
                     ?.let { civ ->
                         if (isAdmin(civPlayer) && civ.home != null) {
-                            PaperLib.teleportAsync(player, civ.home!!).thenAccept {
+                            player.teleportAsync(civ.home!!).thenAccept {
                                 if (it)
                                     tellSuccess(io.bennyc.civilizations.settings.Localization.Notifications.SUCCESS_TELEPORT)
                                 else
@@ -38,7 +37,7 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                                         getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
                                     )
                                 )
-                                PaperLib.teleportAsync(player, home).thenAccept {
+                                player.teleportAsync(home).thenAccept {
                                     if (it)
                                         tellSuccess(io.bennyc.civilizations.settings.Localization.Notifications.SUCCESS_TELEPORT)
                                     else
@@ -64,7 +63,7 @@ class HomeCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "home|
                         getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
                     )
                 )
-                PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
+                player.teleportAsync(civilization.home!!).thenAccept {
                     if (it)
                         tellSuccess(io.bennyc.civilizations.settings.Localization.Notifications.SUCCESS_TELEPORT)
                     else

@@ -1,2 +1,6 @@
 target/
 Civilizations.iml
+.gradle/
+.kotlin/
+build/
+server/

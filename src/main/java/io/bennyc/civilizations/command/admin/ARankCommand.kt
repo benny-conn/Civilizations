@@ -19,7 +19,7 @@ class ARankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank"
             )
         )
         civ?.apply {
-            when (args[1].toLowerCase()) {
+            when (args[1].lowercase()) {
                 "list" -> {
                     tellInfo(Common.join(civ.permissions.allRankNames, ", "))
                 }

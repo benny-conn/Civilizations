@@ -26,7 +26,13 @@ class CreateCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "new
             io.bennyc.civilizations.manager.CivManager.createCiv(name, it).also { civ ->
                 tellSuccess(
                     io.bennyc.civilizations.settings.Localization.Notifications.CIV_CREATION.replace("{name}", civ.name!!)
-                        .replace("{tool}", io.bennyc.civilizations.settings.Settings.CLAIM_TOOL.name.toLowerCase().capitalize().replace("_", " "))
+                        .replace(
+                            "{tool}",
+                            io.bennyc.civilizations.settings.Settings.CLAIM_TOOL.name
+                                .lowercase()
+                                .replaceFirstChar { character -> character.titlecase() }
+                                .replace("_", " ")
+                        )
                 )
                 Common.callEvent(io.bennyc.civilizations.event.CreateCivEvent(civ, player))
             }

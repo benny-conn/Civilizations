@@ -4,7 +4,6 @@
 
 package io.bennyc.civilizations.command
 
-import io.papermc.lib.PaperLib
 import io.bennyc.civilizations.task.CooldownTask
 import io.bennyc.civilizations.task.CooldownTask.Companion.addCooldownTimer
 import io.bennyc.civilizations.task.CooldownTask.Companion.getCooldownRemaining
@@ -26,7 +25,7 @@ class WarpCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "warp"
                     getCooldownRemaining(this, CooldownTask.CooldownType.TELEPORT).toString()
                 )
             )
-            PaperLib.teleportAsync(player, warp!!).thenAccept {
+            player.teleportAsync(warp!!).thenAccept {
                 if (it)
                     tellSuccess(io.bennyc.civilizations.settings.Localization.Notifications.SUCCESS_TELEPORT)
                 else

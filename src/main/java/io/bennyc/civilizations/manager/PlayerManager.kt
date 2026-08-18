@@ -27,7 +27,7 @@ object PlayerManager : io.bennyc.civilizations.manager.Manager<io.bennyc.civiliz
     }
 
     override fun getByName(name: String): io.bennyc.civilizations.model.CivPlayer? {
-        return io.bennyc.civilizations.manager.PlayerManager.byName[name.toLowerCase()]
+        return io.bennyc.civilizations.manager.PlayerManager.byName[name.lowercase()]
     }
 
     override fun save(saved: io.bennyc.civilizations.model.CivPlayer) {

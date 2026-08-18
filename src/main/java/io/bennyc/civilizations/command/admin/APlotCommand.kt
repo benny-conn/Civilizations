@@ -19,7 +19,7 @@ class APlotCommand(parent: SimpleCommandGroup?) : io.bennyc.civilizations.comman
         checkNotNull(civ, io.bennyc.civilizations.settings.Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", io.bennyc.civilizations.settings.Localization.CIVILIZATION))
         civ?.apply {
             if (args.isNotEmpty())
-                when (args[1].toLowerCase()) {
+                when (args[1].lowercase()) {
                     "visualize" -> visualize(civPlayer, this)
                     "define"    -> definePlot(civPlayer, this)
                     "claim"     -> claimPlot(civPlayer, this)

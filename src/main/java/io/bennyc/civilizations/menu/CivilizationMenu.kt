@@ -8,7 +8,6 @@ import io.bennyc.civilizations.model.Civilization
 import io.bennyc.civilizations.model.Colony
 import io.bennyc.civilizations.permissions.Rank
 import io.bennyc.civilizations.task.CooldownTask
-import io.papermc.lib.PaperLib
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material
@@ -76,7 +75,7 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
 
         override fun convertToItemStack(rank: Rank): ItemStack {
             val color = RandomUtil.nextChatColor()
-            return ItemCreator.ofWool(CompColor.fromChatColor(color)).name("$color${rank.name}")
+            return ItemCreator.ofWool(CompColor.fromName(color.name)).name("$color${rank.name}")
                 .lore("&eClick to edit!").make()
         }
 
@@ -400,7 +399,7 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
                 MenuPagged<Rank>(civilization.permissions.ranks) {
                 override fun convertToItemStack(rank: Rank): ItemStack {
                     val color = RandomUtil.nextChatColor()
-                    return ItemCreator.ofWool(CompColor.fromChatColor(color)).name("$color${rank.name}")
+                    return ItemCreator.ofWool(CompColor.fromName(color.name)).name("$color${rank.name}")
                         .lore("&eClick to edit!")
                         .make()
                 }
@@ -459,7 +458,7 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
                             CooldownTask.getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
                         )
                     )
-                    PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
+                    player.teleportAsync(civilization.home!!).thenAccept {
                         if (it)
                             Messenger.success(
                                 player,
@@ -738,7 +737,7 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
                                     .toString()
                             )
                         )
-                    PaperLib.teleportAsync(player, civilization.home!!).thenAccept {
+                    player.teleportAsync(civilization.home!!).thenAccept {
                         if (it)
                             Messenger.success(
                                 player,
@@ -821,7 +820,7 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
         inner class WarpsMenu : MenuPagged<String>(civilization.warps.keys) {
             override fun convertToItemStack(warp: String?): ItemStack {
                 val color = RandomUtil.nextChatColor()
-                return ItemCreator.ofWool(CompColor.fromChatColor(color)).name("$color$warp").make()
+                return ItemCreator.ofWool(CompColor.fromName(color.name)).name("$color$warp").make()
             }
 
             override fun onPageClick(player: Player, warp: String, p2: ClickType?) {
@@ -835,7 +834,7 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
                             CooldownTask.getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
                         )
                     )
-                PaperLib.teleportAsync(player, location!!).thenAccept {
+                player.teleportAsync(location!!).thenAccept {
                     if (it)
                         Messenger.success(
                             player,
@@ -851,7 +850,7 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
         inner class ColoniesMenu : MenuPagged<Colony>(civilization.claims.colonies) {
             override fun convertToItemStack(colony: Colony): ItemStack {
                 val color = RandomUtil.nextChatColor()
-                return ItemCreator.ofWool(CompColor.fromChatColor(color)).name("${color}ID: ${colony.id}")
+                return ItemCreator.ofWool(CompColor.fromName(color.name)).name("${color}ID: ${colony.id}")
                     .make()
             }
 
@@ -866,7 +865,7 @@ class CivilizationMenu(val civilization: Civilization) : Menu() {
                             CooldownTask.getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
                         )
                     )
-                PaperLib.teleportAsync(player, location).thenAccept {
+                player.teleportAsync(location).thenAccept {
                     if (it)
                         Messenger.success(
                             player,

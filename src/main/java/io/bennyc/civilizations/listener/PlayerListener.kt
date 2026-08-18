@@ -4,6 +4,8 @@
 
 package io.bennyc.civilizations.listener
 
+import io.papermc.paper.chat.ChatRenderer
+import io.papermc.paper.event.player.AsyncChatEvent
 import io.bennyc.civilizations.PermissionChecker.can
 import io.bennyc.civilizations.model.Selection
 import io.bennyc.civilizations.permissions.PermissionType
@@ -14,9 +16,9 @@ import io.bennyc.civilizations.task.CooldownTask.Companion.hasCooldown
 import io.bennyc.civilizations.util.ClaimUtil.getCivFromLocation
 import io.bennyc.civilizations.util.ClaimUtil.getPlotFromLocation
 import org.bukkit.*
-import org.bukkit.entity.EntityType
 import org.bukkit.entity.Monster
 import org.bukkit.entity.Player
+import org.bukkit.entity.TNTPrimed
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -32,6 +34,7 @@ import org.mineacademy.fo.Messenger
 import org.mineacademy.fo.debug.LagCatcher
 import org.mineacademy.fo.model.HookManager
 import org.mineacademy.fo.remain.CompMetadata
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import java.text.DecimalFormat
 
 class PlayerListener : Listener {
@@ -281,7 +284,7 @@ class PlayerListener : Listener {
                             addCooldownTimer(civPlayer, CooldownTask.CooldownType.TNT)
                             block.type = Material.AIR
                             CompMetadata.setMetadata(
-                                block.world.spawnEntity(block.location, EntityType.PRIMED_TNT),
+                                block.world.spawn(block.location, TNTPrimed::class.java),
                                 io.bennyc.civilizations.constants.Constants.WAR_TNT_TAG,
                                 player.uniqueId.toString()
                             )
@@ -467,17 +470,27 @@ class PlayerListener : Listener {
     }
 
     @EventHandler
-    fun onPlayerChat(event: AsyncPlayerChatEvent) {
+    fun onPlayerChat(event: AsyncChatEvent) {
         val civPlayer = io.bennyc.civilizations.manager.PlayerManager.fromBukkitPlayer(event.player)
         val civ = civPlayer.civilization
         civ?.let { theCivilization ->
             if (theCivilization.channel.players.contains(event.player)) {
-                event.format =
-                    "{1}[{2}${theCivilization.name}{1}] {2}${event.player.displayName}{1}:"
-                for (player in Bukkit.getOnlinePlayers()) {
-                    event.recipients.removeIf { !theCivilization.citizens.contains(io.bennyc.civilizations.manager.PlayerManager.fromBukkitPlayer(player)) }
+                event.renderer(ChatRenderer.viewerUnaware { source, _, message ->
+                    LegacyComponentSerializer.legacySection().deserialize(
+                        "${io.bennyc.civilizations.settings.Settings.PRIMARY_COLOR}[" +
+                            "${io.bennyc.civilizations.settings.Settings.SECONDARY_COLOR}${theCivilization.name}" +
+                            "${io.bennyc.civilizations.settings.Settings.PRIMARY_COLOR}] " +
+                            "${io.bennyc.civilizations.settings.Settings.SECONDARY_COLOR}${source.name}" +
+                            "${io.bennyc.civilizations.settings.Settings.PRIMARY_COLOR}: "
+                    ).append(message)
+                })
+                event.viewers().removeIf { audience ->
+                    val viewer = audience as? Player ?: return@removeIf true
+                    !theCivilization.citizens.contains(
+                        io.bennyc.civilizations.manager.PlayerManager.fromBukkitPlayer(viewer)
+                    )
                 }
-                event.recipients.add(event.player)
+                event.viewers().add(event.player)
             }
         }
     }

@@ -23,7 +23,7 @@ class RankCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "rank")
                 Localization.Warnings.CANNOT_MANAGE_CIV
             )
 
-            when (args[0].toLowerCase()) {
+            when (args[0].lowercase()) {
                 "set" -> {
                     if (args.size < 3) returnInvalidArgs()
                     val player = io.bennyc.civilizations.manager.PlayerManager.getByName(args[1])

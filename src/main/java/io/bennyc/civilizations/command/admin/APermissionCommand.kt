@@ -31,7 +31,7 @@ class APermissionCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent,
             if (args.size == 4) {
                 val group = permissions.getGroupByName(args[0])
                 if (group == null) returnInvalidArgs()
-                group?.adjust(PermissionType.valueOf(args[1].toUpperCase()), args[2].toBoolean())
+                group?.adjust(PermissionType.valueOf(args[1].uppercase()), args[2].toBoolean())
                 tellSuccess(io.bennyc.civilizations.settings.Localization.Notifications.SUCCESS_COMMAND)
             } else
                 returnInvalidArgs()

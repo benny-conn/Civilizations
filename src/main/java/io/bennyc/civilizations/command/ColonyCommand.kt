@@ -4,7 +4,6 @@
 
 package io.bennyc.civilizations.command
 
-import io.papermc.lib.PaperLib
 import io.bennyc.civilizations.model.Colony
 import io.bennyc.civilizations.task.CooldownTask
 import io.bennyc.civilizations.task.CooldownTask.Companion.addCooldownTimer
@@ -45,7 +44,7 @@ class ColonyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "col
                         getCooldownRemaining(civPlayer, CooldownTask.CooldownType.TELEPORT).toString()
                     )
                 )
-                PaperLib.teleportAsync(player, location!!).thenAccept {
+                player.teleportAsync(location!!).thenAccept {
                     if (it)
                         tellSuccess(io.bennyc.civilizations.settings.Localization.Notifications.SUCCESS_TELEPORT)
                     else

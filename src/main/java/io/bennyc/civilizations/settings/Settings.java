@@ -13,6 +13,7 @@ import org.mineacademy.fo.settings.SimpleSettings;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 
@@ -124,8 +125,8 @@ public class Settings extends SimpleSettings {
         MAX_TAXES = getDouble("Tax_Cap");
 
         NOTICE_TYPE = getInteger("Notice_Type");
-        CLAIM_PARTICLE = CompParticle.valueOf(getString("Visualizing.Claim").toUpperCase());
-        PLOT_PARTICLE = CompParticle.valueOf(getString("Visualizing.Plot").toUpperCase());
+        CLAIM_PARTICLE = CompParticle.valueOf(getString("Visualizing.Claim").toUpperCase(Locale.ROOT));
+        PLOT_PARTICLE = CompParticle.valueOf(getString("Visualizing.Plot").toUpperCase(Locale.ROOT));
         PARTICLE_FREQUENCY = getInteger("Visualizing.Particle_Frequency");
 
         WARP_SIGN_COST = getDouble("Warp_Sign_Cost");

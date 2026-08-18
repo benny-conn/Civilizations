@@ -15,7 +15,6 @@ import io.bennyc.civilizations.settings.Settings
 import io.bennyc.civilizations.task.CooldownTask
 import io.bennyc.civilizations.task.MobRemovalTask
 import io.bennyc.civilizations.task.UpkeepTaxesTask
-import io.papermc.lib.PaperLib
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.entity.Player
@@ -35,9 +34,6 @@ class CivilizationsPlugin : SimplePlugin() {
         registerAllPlaceholders()
         registerAllTasks()
         Common.log("Civilizations by Tolmikarc up and running!")
-        PaperLib.suggestPaper(this)
-
-
         SerializeUtil.addSerializer(Location::class.java) { t: Location -> SerializeUtil.serializeLoc(t) }
     }
 
@@ -139,7 +135,7 @@ class CivilizationsPlugin : SimplePlugin() {
                 Bukkit.getPluginManager().disablePlugin(this)
             }
         }
-        Common.runLaterAsync {
+        Common.runLaterAsync(0) {
             PlayerDatastore.loadAll()
         }
     }

@@ -37,7 +37,7 @@ class ConfirmMenu(title: String, ci: String, result: () -> Unit) : Menu() {
 
             override fun getItem(): ItemStack {
                 return ItemCreator.of(CompMaterial.EMERALD_BLOCK)
-                    .name("&a" + io.bennyc.civilizations.settings.Localization.CONFIRM.capitalize())
+                    .name("&a" + io.bennyc.civilizations.settings.Localization.CONFIRM.replaceFirstChar { it.titlecase() })
                     .make()
             }
         }
@@ -48,7 +48,7 @@ class ConfirmMenu(title: String, ci: String, result: () -> Unit) : Menu() {
 
             override fun getItem(): ItemStack {
                 return ItemCreator.of(CompMaterial.REDSTONE_BLOCK)
-                    .name(io.bennyc.civilizations.settings.Localization.CANCEL.capitalize())
+                    .name(io.bennyc.civilizations.settings.Localization.CANCEL.replaceFirstChar { it.titlecase() })
                     .make()
             }
         }

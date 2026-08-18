@@ -1,5 +1,8 @@
 name: Civilizations
-version: ${project.version}
-main: ${main.class}
-api-version: 1.19
+version: '${version}'
+main: ${mainClass}
+api-version: '26.2'
 author: Tolmikarc
+description: Civilization, territory, economy, and warfare gameplay for Paper.
+website: https://github.com/benny-conn/Civilizations
+softdepend: [Vault]

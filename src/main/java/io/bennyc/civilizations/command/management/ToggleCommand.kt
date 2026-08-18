@@ -18,7 +18,7 @@ class ToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "togg
         io.bennyc.civilizations.manager.PlayerManager.fromBukkitPlayer(player).let { civPlayer ->
             civPlayer.civilization?.apply {
                 checkBoolean(io.bennyc.civilizations.PermissionChecker.canManageCiv(civPlayer, this), io.bennyc.civilizations.settings.Localization.Warnings.CANNOT_MANAGE_CIV)
-                when (args[0].toLowerCase()) {
+                when (args[0].lowercase()) {
                     "fire" -> {
                         toggleables.fire = !toggleables.fire
                         tellSuccess(

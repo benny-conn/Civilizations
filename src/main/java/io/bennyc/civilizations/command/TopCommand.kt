@@ -37,7 +37,7 @@ class TopCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "top") 
                 }
                 val lowerLimit = (page * 10) - 9
                 val upperLimit = page * 10
-                tellNoPrefix("${io.bennyc.civilizations.settings.Settings.PRIMARY_COLOR}======= ${io.bennyc.civilizations.settings.Settings.SECONDARY_COLOR}Top Civs: ${args[0].capitalize()} ($page) ${io.bennyc.civilizations.settings.Settings.PRIMARY_COLOR}=======")
+                tellNoPrefix("${io.bennyc.civilizations.settings.Settings.PRIMARY_COLOR}======= ${io.bennyc.civilizations.settings.Settings.SECONDARY_COLOR}Top Civs: ${args[0].replaceFirstChar { it.titlecase() }} ($page) ${io.bennyc.civilizations.settings.Settings.PRIMARY_COLOR}=======")
                 when (args[0]) {
                     "power" -> {
                         for (i in lowerLimit..upperLimit) {

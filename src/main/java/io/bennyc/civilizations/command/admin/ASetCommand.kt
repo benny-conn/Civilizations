@@ -15,7 +15,7 @@ class ASetCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "set")
         val civ = io.bennyc.civilizations.manager.CivManager.getByName(args[0])
         checkNotNull(civ, io.bennyc.civilizations.settings.Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", io.bennyc.civilizations.settings.Localization.CIVILIZATION))
         civ?.apply {
-            when (args[1].toLowerCase()) {
+            when (args[1].lowercase()) {
                 "money" -> {
                     checkArgs(3, io.bennyc.civilizations.settings.Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", io.bennyc.civilizations.settings.Localization.NUMBER))
                     checkBoolean(

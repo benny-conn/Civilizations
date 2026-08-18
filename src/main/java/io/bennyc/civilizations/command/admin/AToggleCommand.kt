@@ -16,7 +16,7 @@ class AToggleCommand(parent: SimpleCommandGroup) : SimpleSubCommand(parent, "tog
         val civ = io.bennyc.civilizations.manager.CivManager.getByName(args[0])
         checkNotNull(civ, io.bennyc.civilizations.settings.Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", io.bennyc.civilizations.settings.Localization.CIVILIZATION))
         civ?.apply {
-            when (args[1].toLowerCase()) {
+            when (args[1].lowercase()) {
                 "fire" -> {
                     toggleables.fire = !toggleables.fire
                     tellSuccess(

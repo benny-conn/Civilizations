@@ -8,9 +8,9 @@ import io.bennyc.civilizations.util.ClaimUtil
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.map.MapCanvas
-import org.bukkit.map.MapPalette
 import org.bukkit.map.MapRenderer
 import org.bukkit.map.MapView
+import java.awt.Color
 import kotlin.math.abs
 
 class MapDrawer(val region: Region) : MapRenderer() {
@@ -21,14 +21,14 @@ class MapDrawer(val region: Region) : MapRenderer() {
             for (location in region.blocks.map { it.location })
                 if (ClaimUtil.isLocationInACiv(location)) {
                     val civ = ClaimUtil.getCivFromLocation(location)!!
-                    var color = MapPalette.BLUE
+                    var color = Color.BLUE
                     if (playersCivilization != null) {
                         if (playersCivilization.relationships.enemies.contains(civ))
-                            color = MapPalette.RED
+                            color = Color.RED
                         if (playersCivilization.relationships.allies.contains(civ))
-                            color = MapPalette.LIGHT_GREEN
+                            color = Color.GREEN
                     }
-                    canvas.setPixel(
+                    canvas.setPixelColor(
                         convertLocation(location, region).x.toInt(),
                         convertLocation(location, region).z.toInt(),
                         color

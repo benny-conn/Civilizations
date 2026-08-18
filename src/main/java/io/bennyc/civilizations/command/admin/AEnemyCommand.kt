@@ -22,7 +22,7 @@ class AEnemyCommand(parent: SimpleCommandGroup?) : SimpleSubCommand(parent, "ene
                 io.bennyc.civilizations.settings.Localization.Warnings.INVALID_SPECIFIC_ARGUMENT.replace("{item}", io.bennyc.civilizations.settings.Localization.CIVILIZATION)
             )
             checkBoolean(enemyCiv != this, io.bennyc.civilizations.settings.Localization.Warnings.CANNOT_SPECIFY_SELF)
-            when (args[1].toLowerCase()) {
+            when (args[1].lowercase()) {
                 "add" -> {
                     checkBoolean(
                         !relationships.enemies.contains(enemyCiv),

@@ -17,7 +17,7 @@ class PlotCommand(parent: SimpleCommandGroup?) : io.bennyc.civilizations.command
             checkNotNull(civPlayer.civilization, io.bennyc.civilizations.settings.Localization.Warnings.NO_CIV)
             civPlayer.civilization?.apply {
                 if (args.isNotEmpty())
-                    when (args[0].toLowerCase()) {
+                    when (args[0].lowercase()) {
                         "visualize" -> visualize(civPlayer, this)
                         "define"    -> definePlot(civPlayer, this)
                         "claim"     -> claimPlot(civPlayer, this)
