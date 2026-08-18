@@ -10,6 +10,7 @@ import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
 import io.bennyc.civilizations.application.protection.ProtectionService
 import io.bennyc.civilizations.application.season.SeasonService
+import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.application.war.WarService
 import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.civilization.CivilizationName
@@ -53,6 +54,7 @@ class CivilizationsRuntime private constructor(
     private val repository: CivilizationsRepository,
     private val migrator: SchemaMigrator,
     claimRules: ClaimRules,
+    private val phaseRules: GameplayPhaseRules,
     idGenerator: CivilizationsIdGenerator,
     clock: Clock,
     private val serverThread: Executor,
@@ -64,8 +66,8 @@ class CivilizationsRuntime private constructor(
     private val mutationScope = RuntimeMutationScope(
         repository = repository,
         seasons = SeasonService(repository, idGenerator, clock),
-        civilizations = CivilizationService(repository, idGenerator, clock),
-        claims = ClaimService(repository, idGenerator, claimRules),
+        civilizations = CivilizationService(repository, idGenerator, clock, phaseRules),
+        claims = ClaimService(repository, idGenerator, claimRules, phaseRules),
         wars = WarService(repository, idGenerator, clock),
         damageJournal = DamageJournalService(repository, idGenerator, clock),
     )
@@ -183,6 +185,7 @@ class CivilizationsRuntime private constructor(
                     seasonStatus = loaded.season.status,
                     claimIndex = index,
                     memberships = loaded.memberships.values.flatten(),
+                    phaseRules = phaseRules,
                 )
                 CivilizationsRuntimeState.Ready(
                     activeSeason = ActiveSeasonRuntimeState(
@@ -420,6 +423,7 @@ class CivilizationsRuntime private constructor(
         fun sqlite(
             databasePath: Path,
             claimRules: ClaimRules,
+            phaseRules: GameplayPhaseRules = GameplayPhaseRules(),
             serverThread: Executor,
             fatalFailureHandler: (Throwable) -> Unit = {},
             idGenerator: CivilizationsIdGenerator = UuidCivilizationsIdGenerator(),
@@ -433,6 +437,7 @@ class CivilizationsRuntime private constructor(
                 repository = JdbcCivilizationsRepository(connectionFactory),
                 migrator = SchemaMigrator(connectionFactory, clock = clock),
                 claimRules = claimRules,
+                phaseRules = phaseRules,
                 idGenerator = idGenerator,
                 clock = clock,
                 serverThread = serverThread,

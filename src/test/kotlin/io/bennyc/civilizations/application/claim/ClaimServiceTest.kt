@@ -3,6 +3,7 @@ package io.bennyc.civilizations.application.claim
 import io.bennyc.civilizations.application.civilization.CivilizationService
 import io.bennyc.civilizations.application.civilization.ProvisionCivilization
 import io.bennyc.civilizations.application.season.SeasonService
+import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.application.support.SequentialIdGenerator
 import io.bennyc.civilizations.application.support.appliedValue
 import io.bennyc.civilizations.application.support.playerId
@@ -92,9 +93,29 @@ class ClaimServiceTest {
         }
     }
 
+    @Test
+    fun `configured setup-only claim gate closes claiming in peace`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(
+                database,
+                phaseRules = GameplayPhaseRules(
+                    claimCreationAllowedIn = setOf(SeasonStatus.SETUP),
+                ),
+            )
+            fixture.seasons.transition(fixture.seasonId, SeasonStatus.PEACE).appliedValue()
+
+            assertIs<ClaimingClosed>(
+                fixture.claims.place(
+                    PlaceClaim(fixture.civilizationId, bounds(0, 0, 9, 9)),
+                ).rejection(),
+            )
+        }
+    }
+
     private fun fixture(
         database: SqliteTestDatabase,
         maxClaims: Int = 4,
+        phaseRules: GameplayPhaseRules = GameplayPhaseRules(),
     ): Fixture {
         database.migrator.migrate()
         val ids = SequentialIdGenerator()
@@ -108,6 +129,7 @@ class ClaimServiceTest {
             database.repository,
             ids,
             ClaimRules(maxArea = 100, maxClaimsPerCivilization = maxClaims),
+            phaseRules,
         )
         return Fixture(seasons, claims, season.id, civilization.id)
     }

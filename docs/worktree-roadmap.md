@@ -26,6 +26,7 @@ Branches in different lanes may proceed together when their port contract alread
 | ID | Branch suggestion | Lane | Depends on | Deliverable and boundary | Status |
 | --- | --- | --- | --- | --- | --- |
 | A1 | `feature/damage-reports` | Durable feature | Damage journal | Immutable per-battle damage report and deterministic eligible-change/cost basis. Accept final world observations through application-owned values; do not call Paper from the service. | Ready |
+| B0 | `benny/configurable-phase-rules` | Paper integration | Current `main` | Typed, validated YAML phase gates for roster changes, claim creation, and ordinary member land actions; document the configuration boundary and keep unsafe lifecycle combinations code-enforced. No schema changes or live reload. | In review |
 | B1 | `feature/paper-war-mutations` | Paper integration | Damage journal | First live cancel → journal off-thread → revalidate → apply-on-server-thread path for simple block break/place. Containers and cascading physics stay denied. No schema changes. | Ready |
 | C1 | `operations/ci-build` | Operations | Current `main` | GitHub Actions clean build/test using the wrapper and Java toolchain; no gameplay files. | Ready |
 | C2 | `operations/paper-smoke-fixture` | Operations | B1 | Explicit test-fixture reset/checkpoint scripts and an MVP Paper checklist. Destructive scripts must only target the resolved worktree `server/` directory. | Blocked by B1 |
@@ -36,7 +37,7 @@ Branches in different lanes may proceed together when their port contract alread
 
 ### Work that can start now
 
-The safest three-worktree batch is A1, B1, and C1. They own separate file surfaces. Merge A1 and C1 in either order. Rebase B1 onto the resulting `main`, run the real Paper check, then merge it. After that, keep A2 → A3 sequential in the durable-core lane while B2 and C2 proceed in their separate lanes.
+While B0 is in review, the safe parallel work is A1 and C1 because B0 owns the serialized Paper runtime/configuration surface. Merge B0 before starting or rebasing B1. Then merge A1 and C1 in either order, rebase B1 onto the resulting `main`, run the real Paper check, and merge it. After that, keep A2 → A3 sequential in the durable-core lane while B2 and C2 proceed in their separate lanes.
 
 Do not start A2 until the Season One repair-economics decision is written down. Do not start B3 until repair jobs have a durable cursor. The removed legacy frameworks and object graph are not available as implementation shortcuts.
 

@@ -8,3 +8,18 @@ claims:
   max-count: 32
   # Additional rectangles must share a non-zero block edge with existing land.
   require-edge-connection: true
+gameplay:
+  # Phase gates may disable behavior in any listed phase. Unsafe phases cannot
+  # be added: roster/claim changes during war and all archived-state mutation
+  # remain application invariants rather than configuration switches.
+  phase-gates:
+    roster-changes:
+      - SETUP
+      - PEACE
+    claim-creation:
+      - SETUP
+      - PEACE
+    member-land-actions:
+      - SETUP
+      - PEACE
+      - WAR

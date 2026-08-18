@@ -5,6 +5,7 @@ import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
 import io.bennyc.civilizations.application.persistence.CivilizationsWriteContext
+import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.application.season.SeasonNotFound
 import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.civilization.CivilizationName
@@ -21,6 +22,7 @@ class CivilizationService(
     private val repository: CivilizationsRepository,
     private val idGenerator: CivilizationsIdGenerator,
     private val clock: Clock,
+    private val phaseRules: GameplayPhaseRules = GameplayPhaseRules(),
 ) {
     /** Creates an intentionally landless, leaderless draft. */
     fun createDraft(
@@ -292,7 +294,7 @@ class CivilizationService(
         seasonId: SeasonId,
     ): ApplicationFailure? {
         val season = findSeason(seasonId) ?: return SeasonNotFound(seasonId)
-        return if (season.status in rosterStatuses) {
+        return if (season.status in phaseRules.rosterChangesAllowedIn) {
             null
         } else {
             RosterChangesClosed(seasonId, season.status)
@@ -317,7 +319,6 @@ class CivilizationService(
         ApplicationResult.Rejected(InvalidCivilizationName(rawName))
 
     private companion object {
-        val rosterStatuses = setOf(SeasonStatus.SETUP, SeasonStatus.PEACE)
         val membershipOrder = compareBy<Membership>({ it.role }, { it.joinedAt }, { it.playerId.toString() })
     }
 }

@@ -51,7 +51,7 @@ The native Paper `/civadmin` command requires `civilizations.admin`, which defau
 - membership assignment, leadership transfer, and activation;
 - civilization listing and rectangular admin claim creation.
 
-Claim size/count/connectivity rules and the database filename are in `config.yml`. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
+Claim size/count/connectivity rules, safe gameplay phase gates, and the database filename are in `config.yml`; see [docs/configuration.md](docs/configuration.md) for the key reference and configuration contract. Configuration is validated and installed at startup, so changes currently require a server restart. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
 
 Operators have the explicit `civilizations.admin.bypass` permission. Ordinary members may mutate their own claims; outsiders cannot build, break, use containers/switches, move fluids or pistons across a border, damage protected entities, or PVP inside claimed land. Movement and teleportation are not restricted by land ownership.
 
