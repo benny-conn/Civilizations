@@ -60,11 +60,11 @@ class ProtectionServiceTest {
     }
 
     @Test
-    fun `war capability is actor action battlefield phase and target scoped`() {
+    fun `war capability is actor action eligible-land phase and target scoped`() {
         val authorization = ConflictAuthorization.Active(
             kind = ConflictKind.WAR,
             actorId = memberB,
-            battlefieldClaimIds = setOf(claimA.id),
+            eligibleClaimIds = setOf(claimA.id),
             allowedActions = setOf(
                 PlayerProtectionAction.BLOCK_BREAK,
                 PlayerProtectionAction.PVP,
@@ -131,7 +131,7 @@ class ProtectionServiceTest {
         val authorization = ConflictAuthorization.Active(
             kind = ConflictKind.ASSASSINATION,
             actorId = memberB,
-            battlefieldClaimIds = setOf(claimA.id),
+            eligibleClaimIds = setOf(claimA.id),
             allowedActions = setOf(PlayerProtectionAction.PVP),
             targetPlayerIds = setOf(memberA),
         )
@@ -162,7 +162,7 @@ class ProtectionServiceTest {
             ConflictAuthorization.Active(
                 kind = ConflictKind.WAR,
                 actorId = memberB,
-                battlefieldClaimIds = setOf(claimA.id),
+                eligibleClaimIds = setOf(claimA.id),
                 allowedActions = setOf(PlayerProtectionAction.CONTAINER_ACCESS),
             )
         }
@@ -170,7 +170,7 @@ class ProtectionServiceTest {
             ConflictAuthorization.Active(
                 kind = ConflictKind.ASSASSINATION,
                 actorId = memberB,
-                battlefieldClaimIds = setOf(claimA.id),
+                eligibleClaimIds = setOf(claimA.id),
                 allowedActions = setOf(PlayerProtectionAction.PVP),
             )
         }
@@ -178,7 +178,7 @@ class ProtectionServiceTest {
             ConflictAuthorization.Active(
                 kind = ConflictKind.ASSASSINATION,
                 actorId = memberB,
-                battlefieldClaimIds = setOf(claimA.id),
+                eligibleClaimIds = setOf(claimA.id),
                 allowedActions = setOf(
                     PlayerProtectionAction.PVP,
                     PlayerProtectionAction.BLOCK_BREAK,

@@ -47,13 +47,13 @@ sealed interface ConflictAuthorization {
     data class Active(
         val kind: ConflictKind,
         val actorId: PlayerId,
-        val battlefieldClaimIds: Set<ClaimId>,
+        val eligibleClaimIds: Set<ClaimId>,
         val allowedActions: Set<PlayerProtectionAction>,
         val targetPlayerIds: Set<PlayerId> = emptySet(),
     ) : ConflictAuthorization {
         init {
-            require(battlefieldClaimIds.isNotEmpty()) {
-                "Conflict authorization must identify at least one battlefield claim"
+            require(eligibleClaimIds.isNotEmpty()) {
+                "Conflict authorization must identify at least one eligible claim"
             }
             require(allowedActions.isNotEmpty()) {
                 "Conflict authorization must identify at least one allowed action"
@@ -225,7 +225,7 @@ class ProtectionService(
     ): Boolean {
         val active = this as? ConflictAuthorization.Active ?: return false
         if (active.actorId != request.actorId ||
-            claim.id !in active.battlefieldClaimIds ||
+            claim.id !in active.eligibleClaimIds ||
             request.action !in active.allowedActions
         ) {
             return false

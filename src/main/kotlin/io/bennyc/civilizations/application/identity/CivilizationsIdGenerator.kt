@@ -3,6 +3,8 @@ package io.bennyc.civilizations.application.identity
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
+import io.bennyc.civilizations.domain.war.BattleId
+import io.bennyc.civilizations.domain.war.WarId
 
 interface CivilizationsIdGenerator {
     fun newSeasonId(): SeasonId
@@ -10,4 +12,8 @@ interface CivilizationsIdGenerator {
     fun newCivilizationId(): CivilizationId
 
     fun newClaimId(): ClaimId
+
+    fun newWarId(): WarId
+
+    fun newBattleId(): BattleId
 }

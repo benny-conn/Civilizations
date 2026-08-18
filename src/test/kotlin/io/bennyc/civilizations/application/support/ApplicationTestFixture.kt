@@ -5,6 +5,8 @@ import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
+import io.bennyc.civilizations.domain.war.BattleId
+import io.bennyc.civilizations.domain.war.WarId
 import java.util.UUID
 import kotlin.test.fail
 
@@ -12,12 +14,18 @@ internal class SequentialIdGenerator : CivilizationsIdGenerator {
     private var season = 0L
     private var civilization = 100L
     private var claim = 200L
+    private var war = 300L
+    private var battle = 400L
 
     override fun newSeasonId(): SeasonId = SeasonId(UUID(0, ++season))
 
     override fun newCivilizationId(): CivilizationId = CivilizationId(UUID(0, ++civilization))
 
     override fun newClaimId(): ClaimId = ClaimId(UUID(0, ++claim))
+
+    override fun newWarId(): WarId = WarId(UUID(0, ++war))
+
+    override fun newBattleId(): BattleId = BattleId(UUID(0, ++battle))
 }
 
 internal fun playerId(value: Long) = io.bennyc.civilizations.domain.identity.PlayerId(UUID(1, value))

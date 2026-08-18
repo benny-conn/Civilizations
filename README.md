@@ -4,9 +4,9 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The plugin is undergoing an incremental architecture rework. See [TODO.md](TODO.md) for the prioritized roadmap and [docs/architecture.md](docs/architecture.md) for the dependency and persistence boundaries followed by new code.
 
-The V2 core is now the live runtime. It includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, and centralized land protection.
+The V2 core is now the live runtime. It includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, and a durable war/timed-battle lifecycle.
 
-Legacy commands, scheduled tasks, and JSON-blob datastores are temporarily quarantined rather than running beside V2 as a second source of truth. V2 Paper listeners now protect claims, but there is intentionally no live war override until the persisted war and damage-journal slice can authorize and record destruction safely.
+Legacy commands, scheduled tasks, and JSON-blob datastores are temporarily quarantined rather than running beside V2 as a second source of truth. V2 Paper listeners now protect claims. Active battles publish an immutable eligibility read model, but there is intentionally no live war override until the damage-journal slice can record every authorized mutation safely.
 
 ## Current platform
 
@@ -32,13 +32,13 @@ The deployable plugin is written to `build/libs/Civilizations-0.0.16-BETA.jar`.
 
 Run the plugin on Paper 26.2 with Java 25. Copy the built JAR into the server's `plugins` directory and restart the server. V2 packages its selected SQLite driver and stores its authoritative data in `plugins/Civilizations/civilizations-v2.db` by default.
 
-The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, and claimed-versus-wilderness explosion behavior. Protection decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
+The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, claimed-versus-wilderness explosion behavior, and an in-place schema 2 to 3 migration followed by another restart. War/battle persistence and timer recovery are covered against real SQLite and runtime restarts. Protection decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
 
 ## V2 administration
 
 The native `/civadmin` command requires `civilizations.admin`, which defaults to operators. Run `/civadmin` for help. The focused cutover commands currently support:
 
-- runtime/active-season status;
+- runtime/active-season status, including open-war and active-battle counts;
 - season creation, selection, and phase changes;
 - landless drafts and idempotent offline-UUID provisioning;
 - membership assignment, leadership transfer, and activation;

@@ -9,6 +9,11 @@ import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.Season
+import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleId
+import io.bennyc.civilizations.domain.war.BattleParticipant
+import io.bennyc.civilizations.domain.war.War
+import io.bennyc.civilizations.domain.war.WarId
 
 /**
  * Durable storage port owned by the application layer.
@@ -44,6 +49,20 @@ interface CivilizationsReadContext {
     fun listClaims(civilizationId: CivilizationId): List<Claim>
 
     fun listClaimsForSeason(seasonId: SeasonId): List<Claim>
+
+    fun findWar(id: WarId): War?
+
+    fun listWarsForSeason(seasonId: SeasonId): List<War>
+
+    fun listOpenWarsForCivilization(civilizationId: CivilizationId): List<War>
+
+    fun findBattle(id: BattleId): Battle?
+
+    fun listBattlesForWar(warId: WarId): List<Battle>
+
+    fun listBattlesForSeason(seasonId: SeasonId): List<Battle>
+
+    fun listBattleParticipants(battleId: BattleId): List<BattleParticipant>
 }
 
 interface CivilizationsWriteContext : CivilizationsReadContext {
@@ -66,6 +85,16 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
     fun insertClaim(claim: Claim)
 
     fun deleteClaim(id: ClaimId): Boolean
+
+    fun insertWar(war: War)
+
+    fun updateWar(war: War)
+
+    fun insertBattle(battle: Battle)
+
+    fun updateBattle(battle: Battle)
+
+    fun insertBattleParticipant(participant: BattleParticipant)
 }
 
 class PersistenceRecordNotFoundException(message: String) : IllegalStateException(message)

@@ -9,16 +9,26 @@ import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
 import io.bennyc.civilizations.application.protection.ProtectionService
 import io.bennyc.civilizations.application.season.SeasonService
+import io.bennyc.civilizations.application.war.WarService
 import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.civilization.CivilizationName
 import io.bennyc.civilizations.domain.civilization.CivilizationStatus
 import io.bennyc.civilizations.domain.civilization.Membership
 import io.bennyc.civilizations.domain.civilization.MembershipRole
 import io.bennyc.civilizations.domain.claim.Claim
+import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.identity.CivilizationId
+import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.season.SeasonStatus
+import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleId
+import io.bennyc.civilizations.domain.war.BattleParticipant
+import io.bennyc.civilizations.domain.war.BattleSide
+import io.bennyc.civilizations.domain.war.BattleStatus
+import io.bennyc.civilizations.domain.war.War
+import io.bennyc.civilizations.domain.war.WarStatus
 import io.bennyc.civilizations.infrastructure.identity.UuidCivilizationsIdGenerator
 import io.bennyc.civilizations.infrastructure.persistence.jdbc.JdbcCivilizationsRepository
 import io.bennyc.civilizations.infrastructure.persistence.jdbc.SchemaMigrationReport
@@ -55,6 +65,7 @@ class CivilizationsRuntime private constructor(
         seasons = SeasonService(repository, idGenerator, clock),
         civilizations = CivilizationService(repository, idGenerator, clock),
         claims = ClaimService(repository, idGenerator, claimRules),
+        wars = WarService(repository, idGenerator, clock),
     )
 
     @Volatile
@@ -134,6 +145,7 @@ class CivilizationsRuntime private constructor(
     }
 
     private fun loadReadyState(): CivilizationsRuntimeState.Ready {
+        repository.read { findActiveSeasonId() }?.let(mutationScope.wars::recoverExpiredBattles)
         val loaded = repository.read {
             val activeSeasonId = findActiveSeasonId()
                 ?: return@read LoadedActiveSeason.None
@@ -142,6 +154,7 @@ class CivilizationsRuntime private constructor(
                     "Runtime state references missing active season $activeSeasonId",
                 )
             val civilizations = listCivilizations(activeSeasonId)
+            val battles = listBattlesForSeason(activeSeasonId)
             LoadedActiveSeason.Present(
                 season = season,
                 civilizations = civilizations,
@@ -149,6 +162,11 @@ class CivilizationsRuntime private constructor(
                     civilization.id to listMemberships(civilization.id)
                 },
                 claims = listClaimsForSeason(activeSeasonId),
+                wars = listWarsForSeason(activeSeasonId),
+                battles = battles,
+                battleParticipants = battles.associate { battle ->
+                    battle.id to listBattleParticipants(battle.id)
+                },
             )
         }
 
@@ -158,6 +176,7 @@ class CivilizationsRuntime private constructor(
                 validate(loaded)
                 val index = ClaimSpatialIndex(loaded.season.id, loaded.claims)
                 validateNoOverlaps(loaded.claims, index)
+                validateWarsAndBattles(loaded)
                 val protection = ProtectionService(
                     seasonStatus = loaded.season.status,
                     claimIndex = index,
@@ -170,6 +189,10 @@ class CivilizationsRuntime private constructor(
                         memberships = loaded.memberships,
                         claimIndex = index,
                         protection = protection,
+                        wars = loaded.wars,
+                        battles = loaded.battles,
+                        battleParticipants = loaded.battleParticipants,
+                        activeBattleEligibility = buildActiveBattleEligibility(loaded),
                     ),
                 )
             }
@@ -217,6 +240,144 @@ class CivilizationsRuntime private constructor(
                 )
             }
         }
+    }
+
+    private fun validateWarsAndBattles(loaded: LoadedActiveSeason.Present) {
+        val civilizationsById = loaded.civilizations.associateBy(Civilization::id)
+        val claimsById = loaded.claims.associateBy(Claim::id)
+        val warsById = loaded.wars.associateBy(War::id)
+
+        val openWarPairs = mutableMapOf<Set<CivilizationId>, War>()
+        for (war in loaded.wars) {
+            if (war.seasonId != loaded.season.id) {
+                throw RuntimeIntegrityException(
+                    "War ${war.id} belongs to season ${war.seasonId}, not ${loaded.season.id}",
+                )
+            }
+            if (war.status == WarStatus.DECLARED || war.status == WarStatus.ACTIVE) {
+                for (civilizationId in war.civilizationIds) {
+                    val civilization = civilizationsById[civilizationId]
+                        ?: throw RuntimeIntegrityException(
+                            "Open war ${war.id} references missing civilization $civilizationId",
+                        )
+                    if (civilization.status != CivilizationStatus.ACTIVE) {
+                        throw RuntimeIntegrityException(
+                            "Open war ${war.id} references ${civilization.status} " +
+                                "civilization $civilizationId",
+                        )
+                    }
+                }
+                openWarPairs.put(war.civilizationIds, war)?.let { existing ->
+                    throw RuntimeIntegrityException(
+                        "Civilizations ${war.civilizationIds} have duplicate open wars " +
+                            "${existing.id} and ${war.id}",
+                    )
+                }
+            }
+        }
+
+        for (battle in loaded.battles) {
+            if (battle.seasonId != loaded.season.id) {
+                throw RuntimeIntegrityException(
+                    "Battle ${battle.id} belongs to season ${battle.seasonId}, " +
+                        "not ${loaded.season.id}",
+                )
+            }
+            val war = warsById[battle.warId]
+                ?: throw RuntimeIntegrityException(
+                    "Battle ${battle.id} references missing war ${battle.warId}",
+                )
+            if (setOf(
+                    battle.attackingCivilizationId,
+                    battle.defendingCivilizationId,
+                ) != war.civilizationIds
+            ) {
+                throw RuntimeIntegrityException(
+                    "Battle ${battle.id} parties do not match war ${war.id}",
+                )
+            }
+            val participants = loaded.battleParticipants[battle.id].orEmpty()
+            if (participants.map(BattleParticipant::playerId).toSet().size != participants.size) {
+                throw RuntimeIntegrityException("Battle ${battle.id} has duplicate participants")
+            }
+            for (participant in participants) {
+                val expectedCivilizationId = when (participant.side) {
+                    BattleSide.ATTACKER -> battle.attackingCivilizationId
+                    BattleSide.DEFENDER -> battle.defendingCivilizationId
+                }
+                if (participant.seasonId != battle.seasonId ||
+                    participant.civilizationId != expectedCivilizationId
+                ) {
+                    throw RuntimeIntegrityException(
+                        "Participant ${participant.playerId} does not match battle ${battle.id}",
+                    )
+                }
+            }
+            if (battle.status == BattleStatus.ACTIVE ||
+                battle.status == BattleStatus.RESOLVING
+            ) {
+                if (war.status != WarStatus.ACTIVE) {
+                    throw RuntimeIntegrityException(
+                        "Open battle ${battle.id} belongs to ${war.status} war ${war.id}",
+                    )
+                }
+                val triggerClaim = claimsById[battle.triggerClaimId]
+                    ?: throw RuntimeIntegrityException(
+                        "Open battle ${battle.id} references missing trigger claim " +
+                            battle.triggerClaimId,
+                    )
+                if (triggerClaim.civilizationId != battle.defendingCivilizationId) {
+                    throw RuntimeIntegrityException(
+                        "Battle ${battle.id} trigger claim ${triggerClaim.id} is not defender land",
+                    )
+                }
+                if (participants.none { it.side == BattleSide.ATTACKER } ||
+                    participants.none { it.side == BattleSide.DEFENDER }
+                ) {
+                    throw RuntimeIntegrityException(
+                        "Open battle ${battle.id} requires participants on both sides",
+                    )
+                }
+            }
+        }
+    }
+
+    private fun buildActiveBattleEligibility(
+        loaded: LoadedActiveSeason.Present,
+    ): List<ActiveBattleEligibilityRuntimeState> {
+        if (loaded.season.status != SeasonStatus.WAR) {
+            return emptyList()
+        }
+        val warsById = loaded.wars.associateBy(War::id)
+        val claimsByCivilization = loaded.claims.groupBy(Claim::civilizationId)
+        return loaded.battles
+            .filter { it.status == BattleStatus.ACTIVE }
+            .map { battle ->
+                val participants = loaded.battleParticipants.getValue(battle.id)
+                ActiveBattleEligibilityRuntimeState(
+                    war = warsById.getValue(battle.warId),
+                    battle = battle,
+                    participants = participants,
+                    opposingClaimIdsByCivilization = mapOf(
+                        battle.attackingCivilizationId to
+                            claimsByCivilization[battle.defendingCivilizationId]
+                                .orEmpty()
+                                .mapTo(linkedSetOf(), Claim::id),
+                        battle.defendingCivilizationId to
+                            claimsByCivilization[battle.attackingCivilizationId]
+                                .orEmpty()
+                                .mapTo(linkedSetOf(), Claim::id),
+                    ),
+                    opposingPlayerIdsByCivilization = mapOf(
+                        battle.attackingCivilizationId to participants
+                            .filter { it.side == BattleSide.DEFENDER }
+                            .mapTo(linkedSetOf(), BattleParticipant::playerId),
+                        battle.defendingCivilizationId to participants
+                            .filter { it.side == BattleSide.ATTACKER }
+                            .mapTo(linkedSetOf(), BattleParticipant::playerId),
+                    ),
+                )
+            }
     }
 
     private fun publishFatal(
@@ -276,6 +437,7 @@ class RuntimeMutationScope internal constructor(
     val seasons: SeasonService,
     val civilizations: CivilizationService,
     val claims: ClaimService,
+    val wars: WarService,
 ) {
     fun activeSeasonId(): SeasonId? = repository.read { findActiveSeasonId() }
 
@@ -327,6 +489,22 @@ data class ActiveSeasonRuntimeState(
     val memberships: Map<CivilizationId, List<Membership>>,
     val claimIndex: ClaimSpatialIndex,
     val protection: ProtectionService,
+    val wars: List<War>,
+    val battles: List<Battle>,
+    val battleParticipants: Map<BattleId, List<BattleParticipant>>,
+    val activeBattleEligibility: List<ActiveBattleEligibilityRuntimeState>,
+)
+
+/**
+ * Published combat eligibility only. Paper protection deliberately does not
+ * consume it until the next slice can journal block mutations before allowing them.
+ */
+data class ActiveBattleEligibilityRuntimeState(
+    val war: War,
+    val battle: Battle,
+    val participants: List<BattleParticipant>,
+    val opposingClaimIdsByCivilization: Map<CivilizationId, Set<ClaimId>>,
+    val opposingPlayerIdsByCivilization: Map<CivilizationId, Set<PlayerId>>,
 )
 
 sealed interface RuntimeStartOutcome {
@@ -361,5 +539,8 @@ private sealed interface LoadedActiveSeason {
         val civilizations: List<Civilization>,
         val memberships: Map<CivilizationId, List<Membership>>,
         val claims: List<Claim>,
+        val wars: List<War>,
+        val battles: List<Battle>,
+        val battleParticipants: Map<BattleId, List<BattleParticipant>>,
     ) : LoadedActiveSeason
 }

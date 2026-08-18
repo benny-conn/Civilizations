@@ -108,5 +108,236 @@ object CivilizationsSchema {
                 "INSERT INTO runtime_state(singleton_id, active_season_id) VALUES (1, NULL)",
             ),
         ),
+        SchemaMigration(
+            version = 3,
+            name = "wars_and_timed_battles",
+            statements = listOf(
+                """
+                CREATE TABLE wars (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    declaring_civilization_id TEXT NOT NULL,
+                    target_civilization_id TEXT NOT NULL,
+                    declared_by_player_id TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK (status IN ('DECLARED', 'ACTIVE', 'CLOSED', 'CANCELLED')),
+                    battle_trigger TEXT NOT NULL CHECK (battle_trigger = 'HOSTILE_CLAIM_ENTRY'),
+                    destruction_scope TEXT NOT NULL CHECK (
+                        destruction_scope = 'OPPOSING_CIVILIZATION_CLAIMS'
+                    ),
+                    battle_duration_seconds INTEGER NOT NULL CHECK (battle_duration_seconds > 0),
+                    declared_at_ms INTEGER NOT NULL CHECK (declared_at_ms >= 0),
+                    activated_at_ms INTEGER,
+                    ended_at_ms INTEGER,
+                    updated_at_ms INTEGER NOT NULL CHECK (updated_at_ms >= declared_at_ms),
+                    pair_low_id TEXT NOT NULL,
+                    pair_high_id TEXT NOT NULL,
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(declaring_civilization_id) = 36),
+                    CHECK (length(target_civilization_id) = 36),
+                    CHECK (length(declared_by_player_id) = 36),
+                    CHECK (declaring_civilization_id <> target_civilization_id),
+                    CHECK (pair_low_id < pair_high_id),
+                    CHECK (
+                        (pair_low_id = declaring_civilization_id AND
+                            pair_high_id = target_civilization_id) OR
+                        (pair_low_id = target_civilization_id AND
+                            pair_high_id = declaring_civilization_id)
+                    ),
+                    CHECK (activated_at_ms IS NULL OR activated_at_ms >= declared_at_ms),
+                    CHECK (ended_at_ms IS NULL OR ended_at_ms >= declared_at_ms),
+                    CHECK (
+                        (status = 'DECLARED' AND activated_at_ms IS NULL AND ended_at_ms IS NULL) OR
+                        (status = 'ACTIVE' AND activated_at_ms IS NOT NULL AND ended_at_ms IS NULL) OR
+                        (status = 'CLOSED' AND activated_at_ms IS NOT NULL AND ended_at_ms IS NOT NULL) OR
+                        (status = 'CANCELLED' AND ended_at_ms IS NOT NULL)
+                    ),
+                    UNIQUE (season_id, id),
+                    FOREIGN KEY (season_id, declaring_civilization_id)
+                        REFERENCES civilizations(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, target_civilization_id)
+                        REFERENCES civilizations(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE UNIQUE INDEX wars_one_open_pair
+                ON wars(season_id, pair_low_id, pair_high_id)
+                WHERE status IN ('DECLARED', 'ACTIVE')
+                """.trimIndent(),
+                """
+                CREATE INDEX wars_by_season_and_status
+                ON wars(season_id, status, declared_at_ms, id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER wars_validate_declarer_insert
+                BEFORE INSERT ON wars
+                WHEN NOT EXISTS (
+                    SELECT 1 FROM memberships membership
+                    WHERE membership.season_id = NEW.season_id
+                      AND membership.civilization_id = NEW.declaring_civilization_id
+                      AND membership.player_id = NEW.declared_by_player_id
+                      AND membership.role = 'LEADER'
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'war declarer must lead the declaring civilization');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE battles (
+                    id TEXT PRIMARY KEY,
+                    war_id TEXT NOT NULL,
+                    season_id TEXT NOT NULL,
+                    attacking_civilization_id TEXT NOT NULL,
+                    defending_civilization_id TEXT NOT NULL,
+                    triggered_by_player_id TEXT NOT NULL,
+                    trigger_claim_id TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK (status IN ('ACTIVE', 'RESOLVING', 'CLOSED', 'CANCELLED')),
+                    started_at_ms INTEGER NOT NULL CHECK (started_at_ms >= 0),
+                    ends_at_ms INTEGER NOT NULL CHECK (ends_at_ms > started_at_ms),
+                    resolving_at_ms INTEGER,
+                    ended_at_ms INTEGER,
+                    outcome TEXT CHECK (outcome IN ('ATTACKER_VICTORY', 'DEFENDER_VICTORY', 'DRAW')),
+                    winner_civilization_id TEXT,
+                    updated_at_ms INTEGER NOT NULL CHECK (updated_at_ms >= started_at_ms),
+                    CHECK (length(id) = 36),
+                    CHECK (length(war_id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(attacking_civilization_id) = 36),
+                    CHECK (length(defending_civilization_id) = 36),
+                    CHECK (length(triggered_by_player_id) = 36),
+                    CHECK (length(trigger_claim_id) = 36),
+                    CHECK (attacking_civilization_id <> defending_civilization_id),
+                    CHECK (resolving_at_ms IS NULL OR resolving_at_ms >= started_at_ms),
+                    CHECK (ended_at_ms IS NULL OR ended_at_ms >= started_at_ms),
+                    CHECK (
+                        (status = 'ACTIVE' AND resolving_at_ms IS NULL AND ended_at_ms IS NULL AND
+                            outcome IS NULL AND winner_civilization_id IS NULL) OR
+                        (status = 'RESOLVING' AND resolving_at_ms IS NOT NULL AND ended_at_ms IS NULL AND
+                            outcome IS NULL AND winner_civilization_id IS NULL) OR
+                        (status = 'CLOSED' AND resolving_at_ms IS NOT NULL AND ended_at_ms IS NOT NULL AND
+                            outcome IS NOT NULL) OR
+                        (status = 'CANCELLED' AND ended_at_ms IS NOT NULL AND outcome IS NULL AND
+                            winner_civilization_id IS NULL)
+                    ),
+                    CHECK (
+                        outcome IS NULL OR
+                        (outcome = 'ATTACKER_VICTORY' AND winner_civilization_id IS NOT NULL AND
+                            winner_civilization_id = attacking_civilization_id) OR
+                        (outcome = 'DEFENDER_VICTORY' AND winner_civilization_id IS NOT NULL AND
+                            winner_civilization_id = defending_civilization_id) OR
+                        (outcome = 'DRAW' AND winner_civilization_id IS NULL)
+                    ),
+                    UNIQUE (season_id, id),
+                    FOREIGN KEY (season_id, war_id)
+                        REFERENCES wars(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, attacking_civilization_id)
+                        REFERENCES civilizations(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, defending_civilization_id)
+                        REFERENCES civilizations(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE UNIQUE INDEX battles_one_open_per_war
+                ON battles(war_id)
+                WHERE status IN ('ACTIVE', 'RESOLVING')
+                """.trimIndent(),
+                """
+                CREATE INDEX battles_by_season_and_status
+                ON battles(season_id, status, started_at_ms, id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battles_validate_entry_insert
+                BEFORE INSERT ON battles
+                WHEN NEW.status <> 'ACTIVE' OR NOT EXISTS (
+                    SELECT 1
+                    FROM wars war
+                    JOIN claims claim ON claim.id = NEW.trigger_claim_id
+                    JOIN memberships membership
+                      ON membership.season_id = NEW.season_id
+                     AND membership.player_id = NEW.triggered_by_player_id
+                    WHERE war.id = NEW.war_id
+                      AND war.season_id = NEW.season_id
+                      AND war.status = 'ACTIVE'
+                      AND (
+                          (war.declaring_civilization_id = NEW.attacking_civilization_id AND
+                           war.target_civilization_id = NEW.defending_civilization_id) OR
+                          (war.target_civilization_id = NEW.attacking_civilization_id AND
+                           war.declaring_civilization_id = NEW.defending_civilization_id)
+                      )
+                      AND claim.season_id = NEW.season_id
+                      AND claim.civilization_id = NEW.defending_civilization_id
+                      AND membership.civilization_id = NEW.attacking_civilization_id
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle does not represent a valid hostile claim entry');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER wars_prevent_end_with_open_battle
+                BEFORE UPDATE OF status ON wars
+                WHEN NEW.status IN ('CLOSED', 'CANCELLED') AND EXISTS (
+                    SELECT 1 FROM battles battle
+                    WHERE battle.war_id = NEW.id
+                      AND battle.status IN ('ACTIVE', 'RESOLVING')
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'war cannot end with an open battle');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE battle_participants (
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT NOT NULL,
+                    player_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    side TEXT NOT NULL CHECK (side IN ('ATTACKER', 'DEFENDER')),
+                    joined_at_ms INTEGER NOT NULL CHECK (joined_at_ms >= 0),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(player_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    PRIMARY KEY (battle_id, player_id),
+                    FOREIGN KEY (season_id, battle_id)
+                        REFERENCES battles(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, civilization_id)
+                        REFERENCES civilizations(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX battle_participants_by_civilization
+                ON battle_participants(battle_id, civilization_id, side, player_id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_participants_validate_insert
+                BEFORE INSERT ON battle_participants
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM battles battle
+                    JOIN memberships membership
+                      ON membership.season_id = NEW.season_id
+                     AND membership.player_id = NEW.player_id
+                    WHERE battle.id = NEW.battle_id
+                      AND battle.season_id = NEW.season_id
+                      AND membership.civilization_id = NEW.civilization_id
+                      AND (
+                          (NEW.side = 'ATTACKER' AND
+                           NEW.civilization_id = battle.attacking_civilization_id) OR
+                          (NEW.side = 'DEFENDER' AND
+                           NEW.civilization_id = battle.defending_civilization_id)
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle participant does not match battle roster');
+                END
+                """.trimIndent(),
+            ),
+        ),
     )
 }

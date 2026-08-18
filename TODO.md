@@ -17,7 +17,7 @@ Audit date: 2026-08-18
 - [x] Slice 3: add command-ready application services for season setup and war gating, landless civilization provisioning, membership assignment/leadership transfer, and validated claim placement. The services return structured outcomes and are covered against the real SQLite adapter.
 - [x] Slice 4: open/migrate V2 storage at startup, persist/select an active season, serialize mutations on a plugin-owned storage executor, publish copy-on-write server-thread state/indexes, quarantine legacy runtime entry points, and expose focused native Paper admin commands.
 - [x] Slice 5: route Paper protection events through a centralized policy backed by the active claim index, use exact affected coordinates and cross-boundary checks, and keep all legacy claim reads off the live path.
-- [ ] Slice 6: add the persisted war state machine, battlefield/participant model, restart recovery, and live conflict-capability publication.
+- [x] Slice 6: add distinct persisted war and timed-battle state machines, hostile-entry/participant snapshots, deterministic expiry recovery, and an immutable conflict-eligibility read model. Destructive capabilities remain disconnected until Slice 7 can journal mutations first.
 - [ ] Slice 7: establish the first-write-wins damage journal, durable ledger/repair-job core, and finish adapter/legacy cleanup so Foundation can be removed. Full gameplay tuning remains post-architecture work.
 
 ## Recommended direction
@@ -27,7 +27,7 @@ Audit date: 2026-08-18
 - [ ] **[P0][S] Keep Paper as the server platform and Kotlin as the implementation language.** A 20–30 player server does not need Folia's threading complexity.
 - [ ] **[P0][S] Keep Foundation temporarily, but do not build new core domain or persistence code on Foundation types.** It currently supplies commands, config, menus, conversations, serialization, and economy hooks. Replace it behind subsystem boundaries after the core model is stable; a full removal does not need to block the first implementation milestone.
 - [ ] **[P0][S] Make landless civilizations an explicit supported state.** A home and claims must remain optional. An admin-created draft may have no members or leader; an activated civilization must have a valid leader and roster but may still have no land.
-- [ ] **[P0][S] Separate diplomacy from warfare.** “Enemy” status is not an active war. Wars need durable identities, rules, participants, start/end times, battlefield claims, results, and repair records.
+- [x] **[P0][S] Separate diplomacy from warfare.** “Enemy” status is not an active war. V2 now gives wars and their timed battles durable identities, parties, rules, roster snapshots, timestamps, and results; damage/repair records follow in Slice 7.
 - [ ] **[P0][S] Prefer a copy-on-write pre-war journal over eagerly copying every block in a city.** On the first authorized change to a coordinate during a war, save its pre-war state with `putIfAbsent`. This has pre-war snapshot semantics for every changed block without scanning millions of untouched blocks.
 - [ ] **[P0][S] Make all game-phase gates centralized and durable.** Use a mode such as `PEACE`, `DECLARATIONS`, `ACTIVE`, and `FINALE` rather than scattering a single boolean through event listeners.
 
@@ -42,13 +42,13 @@ The project compiles and starts on Paper 26.2. Its current gameplay is a broad p
 | Land | Immutable inclusive rectangles, exact geometry, chunk spatial index, relational rows | Live admin claim/protection path; player selection, unclaim, settlements/colonies, and costs remain |
 | Protection | Central policy plus thin V2 listeners for blocks, containers, entities, PVP, fire, explosions, fluids, pistons, and automation boundaries | Live peacetime protection; conflict capabilities exist in policy but no live war is authorized until durable wars/journaling land |
 | Diplomacy | Allies, enemies, outlaws; mutual enemy status implies “warring” | Prototype; no durable declaration or treaty lifecycle |
-| Battles | Timed raid, participant lives, ratios, TNT tagging, physics-like falling blocks | Prototype; not restart-safe and contains correctness/unit bugs |
+| Battles | V2 durable war relationship plus timed hostile-entry battle, roster snapshot, terminal result, and expiry recovery; legacy raid/TNT prototype remains quarantined | Architecture core is restart-safe; no Paper entry trigger or destructive capability is live before journaling |
 | Damage | Saves a block-data string by Bukkit `Location` when a block is destroyed | Proof of concept; not a complete pre-war snapshot or auditable damage ledger |
 | Reconstruction | Paid, chunked, bottom-up block replacement | Proof of concept; partial percentages, costing, containers, conflicts, and restart recovery are broken or undefined |
 | Economy | Vault/Foundation balance hooks, civilization bank, deposits, withdrawals, taxes, upkeep | Partial; persistence and task behavior are unsafe |
 | Permissions | Default/outsider/ally/enemy ranks plus custom ranks and plots | Partial; configuration loading has a group-assignment bug and the policy is spread across listeners |
 | Utilities | Home, warps, colony teleports, flight, chat, signs, menus, info/list/top | Broad but not playtest-critical; several features should be quarantined until the core loop is stable |
-| Persistence | Versioned relational SQLite with prepared statements, transactions, constraints, WAL, and startup integrity checks | Live for seasons/civilizations/memberships/claims; war, damage, repair, ledger, and backup tooling remain |
+| Persistence | Versioned relational SQLite with prepared statements, transactions, constraints, WAL, and startup integrity checks | Live for seasons/civilizations/memberships/claims/wars/battles/participant snapshots; damage, repair, ledger, and backup tooling remain |
 | Seasons/scarcity | Durable active-season selection and `SETUP/PEACE/WAR/FINALE/ARCHIVED` phase controls | Phase gate is live; reset and scarcity systems are not implemented |
 | Assassination/occupation/annexation | None | Not implemented |
 
@@ -59,7 +59,7 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 1. An admin provisions three named civilizations, each with a preselected leader and four players, before any civilization owns land. Self-service civilization creation can be disabled.
 2. The server begins in `PEACE`. Players claim connected rectangular regions, and protection is correct on edges, negative coordinates, overlapping selections, explosions, fluids, pistons, containers, and cross-border interactions.
 3. A restart preserves rosters, leaders, land, homes, balances, the global phase, and all indexes.
-4. An admin opens declarations and then activates war. One civilization declares/starts a timed battle against another. Only the configured battlefield and participants receive war overrides.
+4. An admin enables war. One civilization declares war, and a timed battle starts when a member enters the opponent's claimed land. Only snapshotted participants acting in the opposing civilization's claims receive eventual war overrides.
 5. Attackers break blocks and use war TNT. The visual falling-block effect is cosmetic; every real world mutation is authorized and journaled before it happens. Repeated changes retain the original pre-war state, and attacker-placed blocks are also reversible.
 6. The battle ends deterministically, even if nobody is online. A result and damage summary are saved, destruction stops immediately, and an idempotent ledger records reparations/spoils.
 7. The losing civilization pays to repair some or all eligible damage. The correct fraction is charged, restoration is visibly paced, and the task resumes safely after a restart.
@@ -71,8 +71,8 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 - [ ] **[P0][S] Write the Season One rules that the code must enforce.** Decide who can create civilizations, whether rosters are locked, who may claim, the number/size of claims, and whether the main settlement must remain connected.
 - [ ] **[P0][S] Define claim adjacency.** Recommended MVP rule: rectangles are inclusive, may not overlap, and a new non-colony rectangle must share at least one block-length edge with the existing settlement; corner-only contact does not count.
 - [ ] **[P0][S] Decide whether disconnected colonies are in MVP.** Recommendation: omit them from the first playtest. If retained, model settlements/claim groups explicitly instead of bypassing connectivity with a boolean.
-- [ ] **[P0][S] Define who can declare and start wars.** Recommendation: leader/admin declaration, admin-controlled global phase, one active war per civilization, and an explicit preparation countdown.
-- [ ] **[P0][S] Define the battlefield.** Recommendation: snapshot/war overrides apply only to the defender's selected claims, not every claim everywhere.
+- [ ] **[P0][S] Define who can declare and start wars.** The architecture currently accepts leader declaration during `WAR`, prevents duplicate open wars for the same pair, supports multiple fronts, and models hostile claim entry as the battle trigger. Decide whether Season One adds admin approval or a preparation countdown before exposing commands/listeners.
+- [x] **[P0][S] Define the battle land scope.** There is no separate battlefield object: during an active battle, each side's eligible area is the ordinary claimed land of the opposing civilization. The exact destruction policy remains inert until it is coupled to the damage journal.
 - [ ] **[P0][S] Define the first victory calculation.** Keep it legible: time limit plus a small set of metrics such as blocks damaged, attacker/defender deaths, surrender, or an admin-set result. Avoid power formulas until the playtest produces evidence for them.
 - [ ] **[P0][S] Define repair economics.** Specify cost per eligible block, what fraction becomes victor spoils, whether the balance may go into debt, who may initiate repair, and whether admins can waive costs.
 - [ ] **[P0][S] Protect inventory-bearing blocks during MVP wars.** Chests, shulkers, furnaces, and other containers should not be destructible until inventory snapshot/loot/duplication rules exist. Preserve signs/banners and other important block-entity data if they are allowed to break.
@@ -85,7 +85,7 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 
 - [ ] **[P0][L] Replace the cyclic mutable object graph with ID-based domain records and services.** At minimum model `Season`, `Civilization`, `Membership`, `Claim`, `War`, `WarParticipant`, `BlockChange`, and `LedgerEntry` separately.
 - [ ] **[P0][M] Add explicit lifecycle states.** Suggested examples: civilization `DRAFT/ACTIVE/DISSOLVED`; war `DECLARED/PREPARING/ACTIVE/RESOLVING/REPAIRABLE/REPAIRING/CLOSED/CANCELLED`; season `SETUP/PEACE/WAR/FINALE/ARCHIVED`.
-- [ ] **[P0][M] Enforce invariants in one service layer.** A player has at most one civilization; an active leader is a member; names are uniquely normalized; claims have an owner; a civilization cannot enter conflicting active wars.
+- [ ] **[P0][M] Enforce invariants in one service layer.** A player has at most one civilization; an active leader is a member; names are uniquely normalized; claims have an owner; and one civilization pair cannot have duplicate open wars.
 - [ ] **[P0][M] Stop commands and listeners from directly mutating model collections.** Route changes through application services that validate, persist, update indexes, and emit messages/events as one operation.
 - [ ] **[P0][S] Use stable world identifiers and integer block coordinates.** Store a Paper world key (with a documented recovery policy), `minX/maxX/minZ/maxZ`, and inclusive bounds rather than serializing Bukkit `Location` objects as domain keys.
 
@@ -147,7 +147,7 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 - [x] **[P0][M] Make event listeners thin adapters.** V2 listeners translate Paper events into policy actions and apply the decision without claim scans, database reads, or business rules.
 - [x] **[P0][M] Define and test an event coverage matrix.** `docs/architecture.md` records the live coverage and intentional movement/teleport pass-through; pure tests cover the policy matrix and boundary cases.
 - [x] **[P0][M] Use the affected block/entity location, not the player's feet, for authorization.** Block, entity, projectile target, and inventory endpoints use exact stable-world X/Z coordinates.
-- [x] **[P0][M] Make war permissions an explicit override in the same policy.** Capabilities are actor/action/phase/battlefield/PVP-target scoped; the runtime supplies none until persisted wars and journaling are available.
+- [x] **[P0][M] Make war permissions an explicit override in the same policy.** Capabilities are actor/action/phase/eligible-claim/PVP-target scoped. The runtime now publishes battle eligibility but deliberately supplies no destructive capability until journaling is available.
 - [x] **[P1][M] Simplify MVP roles to leader/member/outsider/admin unless playtesting proves custom ranks are necessary.** Protection treats leader/member as owners, all others as outsiders, and uses an explicit operator-default bypass.
 - [x] **[P1][S] Default outsiders/enemies to no build, break, switch, or container access.** The centralized live policy is default-deny on claimed land.
 
@@ -170,13 +170,13 @@ The MVP is ready for a real 12-player Saturday test when this complete scenario 
 
 ## Milestone 3 — durable war lifecycle
 
-- [ ] **[P1][M] Add the persisted global gameplay phase and admin controls.** Provide status, schedule/activate, pause, and emergency peace commands; broadcast phase changes and include them in logs.
-- [ ] **[P1][XL] Implement a persisted war state machine.** Validate transitions centrally, use timestamps rather than decrement-only in-memory counters, and make every transition idempotent after crashes/restarts.
-- [ ] **[P1][M] Store attacker, defender, initiator, battlefield claim IDs, rules snapshot, participants, preparation/start/end timestamps, and terminal result.** Changing config must not rewrite the rules of an active war.
-- [ ] **[P1][M] Separate declaration from battle activation.** Mutual enemy flags should not silently create a war; diplomacy may influence eligibility but never substitutes for a war record.
-- [ ] **[P1][M] Add preparation and clear boundary feedback.** Warn both rosters, show exact start/end time, prevent damage before activation, and make the battlefield visible.
+- [x] **[P1][M] Add the persisted global gameplay phase and admin controls.** `SETUP/PEACE/WAR/FINALE/ARCHIVED` and emergency `WAR -> PEACE` are durable and exposed through `/civadmin`; scheduling, broadcasts, and audit logs remain follow-ups.
+- [x] **[P1][XL] Implement persisted war and battle state machines.** A durable war moves through `DECLARED/ACTIVE/CLOSED/CANCELLED`; each timed battle moves through `ACTIVE/RESOLVING/CLOSED/CANCELLED`. Central transitions are timestamp-based and idempotent.
+- [x] **[P1][M] Store war parties, declarer, trigger claim/player, rules snapshot, participant snapshot, start/end/resolution timestamps, and terminal result.** Eligible land is derived from the ordinary opposing claims rather than stored as a separate battlefield.
+- [x] **[P1][M] Separate declaration from battle activation.** Diplomacy flags no longer substitute for a V2 war record; declaration, war activation, and hostile-entry battle start are separate operations.
+- [ ] **[P1][M] Add preparation and clear boundary feedback.** Warn both rosters, show exact start/end time, prevent damage before activation, and make eligible opposing land visible.
 - [ ] **[P1][M] Define participation robustly.** Membership, alliances, joining/leaving the zone, disconnects, deaths, and spectators must have explicit behavior; do not infer all participation from whichever claim-enter event happens to fire.
-- [ ] **[P1][M] End wars outside player loops.** Resolution must run with zero players online, clear all live overrides, stop plugin-owned effects, persist the result, and start cooldown/repair eligibility exactly once.
+- [ ] **[P1][M] End wars outside player loops.** Runtime startup/refresh now advances expired battles to `RESOLVING` with zero players online and removes active eligibility. Slice 7 still must calculate/persist damage results, ledger effects, and repair eligibility exactly once.
 - [ ] **[P1][M] Add admin recovery commands.** Inspect state and participants, start, pause, resume, force-resolve, cancel/rollback, and clear a stuck war with an audit reason.
 - [ ] **[P1][M] Add war restart tests at every transition.** Restart in declaration, preparation, active combat, resolution, and repairable states and assert the same eventual result.
 - [ ] **[P1][S] Make balance/power rewards idempotent ledger entries.** A restarted resolution must not pay twice.

@@ -18,9 +18,22 @@ import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.season.SeasonStatus
+import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleId
+import io.bennyc.civilizations.domain.war.BattleOutcome
+import io.bennyc.civilizations.domain.war.BattleParticipant
+import io.bennyc.civilizations.domain.war.BattleSide
+import io.bennyc.civilizations.domain.war.BattleStatus
+import io.bennyc.civilizations.domain.war.BattleTrigger
+import io.bennyc.civilizations.domain.war.LandDestructionScope
+import io.bennyc.civilizations.domain.war.War
+import io.bennyc.civilizations.domain.war.WarId
+import io.bennyc.civilizations.domain.war.WarRulesSnapshot
+import io.bennyc.civilizations.domain.war.WarStatus
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.Types
 import java.time.Instant
 import java.util.UUID
 
@@ -135,6 +148,62 @@ private open class JdbcReadContext(
         map = ResultSet::toClaim,
     )
 
+    override fun findWar(id: WarId): War? = queryOne(
+        sql = "$WAR_SELECT WHERE id = ?",
+        bind = { setString(1, id.toString()) },
+        map = ResultSet::toWar,
+    )
+
+    override fun listWarsForSeason(seasonId: SeasonId): List<War> = queryMany(
+        sql = "$WAR_SELECT WHERE season_id = ? ORDER BY declared_at_ms, id",
+        bind = { setString(1, seasonId.toString()) },
+        map = ResultSet::toWar,
+    )
+
+    override fun listOpenWarsForCivilization(
+        civilizationId: CivilizationId,
+    ): List<War> = queryMany(
+        sql = """
+            $WAR_SELECT
+            WHERE status IN ('DECLARED', 'ACTIVE')
+              AND (declaring_civilization_id = ? OR target_civilization_id = ?)
+            ORDER BY declared_at_ms, id
+        """.trimIndent(),
+        bind = {
+            setString(1, civilizationId.toString())
+            setString(2, civilizationId.toString())
+        },
+        map = ResultSet::toWar,
+    )
+
+    override fun findBattle(id: BattleId): Battle? = queryOne(
+        sql = "$BATTLE_SELECT WHERE id = ?",
+        bind = { setString(1, id.toString()) },
+        map = ResultSet::toBattle,
+    )
+
+    override fun listBattlesForWar(warId: WarId): List<Battle> = queryMany(
+        sql = "$BATTLE_SELECT WHERE war_id = ? ORDER BY started_at_ms, id",
+        bind = { setString(1, warId.toString()) },
+        map = ResultSet::toBattle,
+    )
+
+    override fun listBattlesForSeason(seasonId: SeasonId): List<Battle> = queryMany(
+        sql = "$BATTLE_SELECT WHERE season_id = ? ORDER BY started_at_ms, id",
+        bind = { setString(1, seasonId.toString()) },
+        map = ResultSet::toBattle,
+    )
+
+    override fun listBattleParticipants(battleId: BattleId): List<BattleParticipant> = queryMany(
+        sql = """
+            $BATTLE_PARTICIPANT_SELECT
+            WHERE battle_id = ?
+            ORDER BY side, joined_at_ms, player_id
+        """.trimIndent(),
+        bind = { setString(1, battleId.toString()) },
+        map = ResultSet::toBattleParticipant,
+    )
+
     protected fun executeUpdate(
         sql: String,
         bind: PreparedStatement.() -> Unit,
@@ -186,6 +255,24 @@ private open class JdbcReadContext(
         const val CLAIM_SELECT = """
             SELECT id, season_id, civilization_id, world_id, min_x, max_x, min_z, max_z
             FROM claims
+        """
+        const val WAR_SELECT = """
+            SELECT id, season_id, declaring_civilization_id, target_civilization_id,
+                   declared_by_player_id, status, battle_trigger, destruction_scope,
+                   battle_duration_seconds, declared_at_ms, activated_at_ms, ended_at_ms,
+                   updated_at_ms
+            FROM wars
+        """
+        const val BATTLE_SELECT = """
+            SELECT id, war_id, season_id, attacking_civilization_id,
+                   defending_civilization_id, triggered_by_player_id, trigger_claim_id,
+                   status, started_at_ms, ends_at_ms, resolving_at_ms, ended_at_ms,
+                   outcome, winner_civilization_id, updated_at_ms
+            FROM battles
+        """
+        const val BATTLE_PARTICIPANT_SELECT = """
+            SELECT season_id, battle_id, player_id, civilization_id, side, joined_at_ms
+            FROM battle_participants
         """
     }
 }
@@ -336,10 +423,136 @@ private class JdbcWriteContext(
             setString(1, id.toString())
         } > 0
 
+    override fun insertWar(war: War) {
+        val orderedCivilizationIds = listOf(
+            war.declaringCivilizationId.toString(),
+            war.targetCivilizationId.toString(),
+        ).sorted()
+        executeUpdate(
+            sql = """
+                INSERT INTO wars(
+                    id, season_id, declaring_civilization_id, target_civilization_id,
+                    declared_by_player_id, status, battle_trigger, destruction_scope,
+                    battle_duration_seconds, declared_at_ms, activated_at_ms, ended_at_ms,
+                    updated_at_ms, pair_low_id, pair_high_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, war.id.toString())
+            setString(2, war.seasonId.toString())
+            setString(3, war.declaringCivilizationId.toString())
+            setString(4, war.targetCivilizationId.toString())
+            setString(5, war.declaredByPlayerId.toString())
+            setString(6, war.status.name)
+            setString(7, war.rules.battleTrigger.name)
+            setString(8, war.rules.destructionScope.name)
+            setLong(9, war.rules.battleDurationSeconds)
+            setLong(10, war.declaredAt.toEpochMilli())
+            setInstantOrNull(11, war.activatedAt)
+            setInstantOrNull(12, war.endedAt)
+            setLong(13, war.updatedAt.toEpochMilli())
+            setString(14, orderedCivilizationIds[0])
+            setString(15, orderedCivilizationIds[1])
+        }
+    }
+
+    override fun updateWar(war: War) {
+        val updated = executeUpdate(
+            sql = """
+                UPDATE wars
+                SET status = ?, activated_at_ms = ?, ended_at_ms = ?, updated_at_ms = ?
+                WHERE id = ? AND season_id = ?
+            """.trimIndent(),
+        ) {
+            setString(1, war.status.name)
+            setInstantOrNull(2, war.activatedAt)
+            setInstantOrNull(3, war.endedAt)
+            setLong(4, war.updatedAt.toEpochMilli())
+            setString(5, war.id.toString())
+            setString(6, war.seasonId.toString())
+        }
+        requireUpdated(updated, "War ${war.id}")
+    }
+
+    override fun insertBattle(battle: Battle) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battles(
+                    id, war_id, season_id, attacking_civilization_id,
+                    defending_civilization_id, triggered_by_player_id, trigger_claim_id,
+                    status, started_at_ms, ends_at_ms, resolving_at_ms, ended_at_ms,
+                    outcome, winner_civilization_id, updated_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, battle.id.toString())
+            setString(2, battle.warId.toString())
+            setString(3, battle.seasonId.toString())
+            setString(4, battle.attackingCivilizationId.toString())
+            setString(5, battle.defendingCivilizationId.toString())
+            setString(6, battle.triggeredByPlayerId.toString())
+            setString(7, battle.triggerClaimId.toString())
+            setString(8, battle.status.name)
+            setLong(9, battle.startedAt.toEpochMilli())
+            setLong(10, battle.endsAt.toEpochMilli())
+            setInstantOrNull(11, battle.resolvingAt)
+            setInstantOrNull(12, battle.endedAt)
+            setString(13, battle.outcome?.name)
+            setString(14, battle.winnerCivilizationId?.toString())
+            setLong(15, battle.updatedAt.toEpochMilli())
+        }
+    }
+
+    override fun updateBattle(battle: Battle) {
+        val updated = executeUpdate(
+            sql = """
+                UPDATE battles
+                SET status = ?, resolving_at_ms = ?, ended_at_ms = ?, outcome = ?,
+                    winner_civilization_id = ?, updated_at_ms = ?
+                WHERE id = ? AND season_id = ?
+            """.trimIndent(),
+        ) {
+            setString(1, battle.status.name)
+            setInstantOrNull(2, battle.resolvingAt)
+            setInstantOrNull(3, battle.endedAt)
+            setString(4, battle.outcome?.name)
+            setString(5, battle.winnerCivilizationId?.toString())
+            setLong(6, battle.updatedAt.toEpochMilli())
+            setString(7, battle.id.toString())
+            setString(8, battle.seasonId.toString())
+        }
+        requireUpdated(updated, "Battle ${battle.id}")
+    }
+
+    override fun insertBattleParticipant(participant: BattleParticipant) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_participants(
+                    season_id, battle_id, player_id, civilization_id, side, joined_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, participant.seasonId.toString())
+            setString(2, participant.battleId.toString())
+            setString(3, participant.playerId.toString())
+            setString(4, participant.civilizationId.toString())
+            setString(5, participant.side.name)
+            setLong(6, participant.joinedAt.toEpochMilli())
+        }
+    }
+
     private fun requireUpdated(updated: Int, description: String) {
         if (updated != 1) {
             throw PersistenceRecordNotFoundException("$description does not exist")
         }
+    }
+}
+
+private fun PreparedStatement.setInstantOrNull(index: Int, instant: Instant?) {
+    if (instant == null) {
+        setNull(index, Types.BIGINT)
+    } else {
+        setLong(index, instant.toEpochMilli())
     }
 }
 
@@ -387,9 +600,61 @@ private fun ResultSet.toClaim(): Claim = Claim(
     ),
 )
 
+private fun ResultSet.toWar(): War = War(
+    id = WarId(uuid("id")),
+    seasonId = SeasonId(uuid("season_id")),
+    declaringCivilizationId = CivilizationId(uuid("declaring_civilization_id")),
+    targetCivilizationId = CivilizationId(uuid("target_civilization_id")),
+    declaredByPlayerId = PlayerId(uuid("declared_by_player_id")),
+    status = WarStatus.valueOf(getString("status")),
+    rules = WarRulesSnapshot(
+        battleTrigger = BattleTrigger.valueOf(getString("battle_trigger")),
+        destructionScope = LandDestructionScope.valueOf(getString("destruction_scope")),
+        battleDurationSeconds = getLong("battle_duration_seconds"),
+    ),
+    declaredAt = instant("declared_at_ms"),
+    activatedAt = nullableInstant("activated_at_ms"),
+    endedAt = nullableInstant("ended_at_ms"),
+    updatedAt = instant("updated_at_ms"),
+)
+
+private fun ResultSet.toBattle(): Battle = Battle(
+    id = BattleId(uuid("id")),
+    warId = WarId(uuid("war_id")),
+    seasonId = SeasonId(uuid("season_id")),
+    attackingCivilizationId = CivilizationId(uuid("attacking_civilization_id")),
+    defendingCivilizationId = CivilizationId(uuid("defending_civilization_id")),
+    triggeredByPlayerId = PlayerId(uuid("triggered_by_player_id")),
+    triggerClaimId = ClaimId(uuid("trigger_claim_id")),
+    status = BattleStatus.valueOf(getString("status")),
+    startedAt = instant("started_at_ms"),
+    endsAt = instant("ends_at_ms"),
+    resolvingAt = nullableInstant("resolving_at_ms"),
+    endedAt = nullableInstant("ended_at_ms"),
+    outcome = getString("outcome")?.let(BattleOutcome::valueOf),
+    winnerCivilizationId = getString("winner_civilization_id")?.let {
+        CivilizationId(UUID.fromString(it))
+    },
+    updatedAt = instant("updated_at_ms"),
+)
+
+private fun ResultSet.toBattleParticipant(): BattleParticipant = BattleParticipant(
+    seasonId = SeasonId(uuid("season_id")),
+    battleId = BattleId(uuid("battle_id")),
+    playerId = PlayerId(uuid("player_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    side = BattleSide.valueOf(getString("side")),
+    joinedAt = instant("joined_at_ms"),
+)
+
 private fun ResultSet.uuid(column: String): UUID = UUID.fromString(getString(column))
 
 private fun ResultSet.instant(column: String): Instant = Instant.ofEpochMilli(getLong(column))
+
+private fun ResultSet.nullableInstant(column: String): Instant? {
+    val millis = getLong(column)
+    return if (wasNull()) null else Instant.ofEpochMilli(millis)
+}
 
 private fun Connection.rollbackAfter(failure: Throwable) {
     try {

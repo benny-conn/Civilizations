@@ -50,7 +50,7 @@ The V2 persistence boundary lives under `application.persistence`; JDBC is an im
 
 - `CivilizationsRepository` exposes scoped read contexts and atomic write transactions. Application code does not receive JDBC connections or SQL types.
 - Schema changes are ordered, named, and recorded in `schema_migrations`. Startup refuses unknown or renamed migrations instead of guessing.
-- The first schema models seasons, civilizations, memberships, and claims as separate relational records.
+- The schema models seasons, civilizations, memberships, claims, wars, timed battles, and battle-participant snapshots as separate relational records.
 - Civilization display names are normalized before storage and unique within a season.
 - Composite foreign keys prevent a membership or claim from referencing a civilization in a different season.
 - The membership primary key permits one civilization per player per season while retaining membership history across seasons.
@@ -64,7 +64,7 @@ SQLite is the first implementation and uses foreign keys, WAL mode, and a bounde
 
 ## Application services
 
-The V2 mutation boundary is under `application.season`, `application.civilization`, and `application.claim`.
+The V2 mutation boundary is under `application.season`, `application.civilization`, `application.claim`, and `application.war`.
 
 - Services return `ApplicationResult.Applied`, `Unchanged`, or `Rejected`. Expected rule failures are immutable values that an adapter can translate into chat or console messages; infrastructure faults still throw and roll back.
 - `SeasonService` owns phase transitions. `WAR` is a durable global gate rather than a scattered configuration boolean, and an admin may transition `WAR` back to `PEACE` to stop war without ending the season.
@@ -72,16 +72,28 @@ The V2 mutation boundary is under `application.season`, `application.civilizatio
 - A player may belong to at most one civilization per season. Reassignment is explicit, and a leader must transfer leadership before moving.
 - Roster and claim mutations are open in `SETUP` and `PEACE` and closed in `WAR`, `FINALE`, and `ARCHIVED`. This is an initial safe MVP policy, not a promise that future season rules cannot make it configurable.
 - `ClaimService` validates status, area/count limits, exact overlap, and same-civilization edge connectivity before inserting a claim. Corner contact is not connectivity.
+- `WarService` separates a durable relationship (`War`) from each timed engagement (`Battle`). Declaration, activation, hostile-entry battle start, expiry/resolution, and terminal transitions are explicit transactional operations.
 
-Application services are synchronous because the repository port represents blocking durable work. The Paper mutation adapter invokes them on one plugin-owned storage executor, preserving submission order. After every operation it reloads authoritative active-season data and constructs a replacement spatial index off-thread; the replacement snapshot is installed on the Paper thread before success is reported. Event-time protection reads only the published index and never waits for SQL.
+Application services are synchronous because the repository port represents blocking durable work. The Paper mutation adapter invokes them on one plugin-owned storage executor, preserving submission order. After every operation it reloads authoritative active-season data and constructs replacement indexes/read models off-thread; the replacement snapshot is installed on the Paper thread before success is reported. Event-time protection reads only published memory and never waits for SQL.
+
+## War and battle model
+
+A `War` is the durable political relationship between two civilizations. A `Battle` is one timed engagement within that war. This avoids treating every war as a single transient raid and leaves room for multiple engagements, reparations, surrender, or later occupation rules without changing identity.
+
+- Open wars are unique per civilization pair, but a civilization may participate in multiple wars. Avoiding a multi-front war is a gameplay/political policy, not a storage limitation.
+- The current rules snapshot records `HOSTILE_CLAIM_ENTRY`, `OPPOSING_CIVILIZATION_CLAIMS`, and the battle duration. When a battle is eventually connected to movement, the entering side becomes attacker and the entered claim's owner becomes defender.
+- “Battlefield” is not a separate region type. All claim lookup continues through the normal chunk index; the active read model maps each civilization to the opposing civilization's ordinary claim IDs.
+- Both civilization rosters are snapshotted as battle participants when the battle starts. Later membership changes cannot rewrite the historical roster.
+- Absolute timestamps, not decrementing task counters, drive expiry. Startup and every runtime refresh idempotently move expired `ACTIVE` battles to `RESOLVING`, which immediately removes their eligibility from live memory.
+- The eligibility read model is intentionally inert. No Paper movement listener starts battles and no protection request receives a destructive capability until Slice 7 can durably journal the original block state before allowing a mutation.
 
 ## Live runtime cutover
 
 `CivilizationsRuntime` is the owner of V2 runtime state and structured background work.
 
 - Startup migrations and reads run on the storage executor. The plugin remains in a visible `Starting` state until a `Ready` snapshot is published on the server thread.
-- Runtime snapshots contain the active season, civilizations, memberships, a read-only-by-convention claim index, and a protection policy built over those values. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
-- Startup verifies that an active season is not archived, every active civilization has exactly one leader, every claim has an active owner, and no persisted claims overlap. Invalid durable state fails closed with actionable IDs instead of partially enabling gameplay.
+- Runtime snapshots contain the active season, civilizations, memberships, wars, battles, participant snapshots, a read-only-by-convention claim index, derived active-battle eligibility, and a protection policy built over those values. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
+- Startup verifies that an active season is not archived, every active civilization has exactly one leader, every claim has an active owner, no persisted claims overlap, open wars reference active parties, and open battles/participants match their war and trigger claim. Invalid durable state fails closed with actionable IDs instead of partially enabling gameplay.
 - Mutations submitted before readiness are rejected. Infrastructure failures move the runtime to `Failed` and disable the plugin rather than falling back to legacy data.
 - Shutdown stops new work and gives the storage executor a bounded drain period. Civilizations no longer cancels scheduler tasks owned by other plugins.
 
@@ -95,7 +107,7 @@ Legacy commands, listeners, tasks, placeholders, and datastores are deliberately
 
 - Unclaimed coordinates retain vanilla behavior. Members and leaders may mutate their civilization's claims in `SETUP`, `PEACE`, and `WAR`; outsiders may not. `FINALE` and `ARCHIVED` freeze claimed land except for explicit admin bypass.
 - PVP in claimed land always requires a conflict capability. Merely putting the season in `WAR` does not authorize anybody to attack or destroy blocks.
-- A conflict capability is bound to its actor, kind, allowed actions, battlefield claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The live runtime currently produces no capabilities, so claimed destruction remains closed until persisted conflicts and the damage journal land.
+- A conflict capability is bound to its actor, kind, allowed actions, eligible claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The runtime publishes persisted battle eligibility but does not convert it into capabilities, so claimed destruction remains closed until the damage journal lands.
 - Inventory-bearing blocks cannot appear in an MVP conflict capability. Block-break translation classifies them as container actions so a generic break grant cannot bypass that invariant.
 - Explosions remove only claimed blocks from the event's block list. Autonomous fire and entity block changes are denied on claimed targets. Fluids, pistons, hopper transfers, and inventory pickup may move within one ownership area but not between civilizations or across wilderness boundaries.
 - While runtime state is loading or failed, mutation listeners fail closed. Once a ready runtime has no active season, events retain vanilla behavior.

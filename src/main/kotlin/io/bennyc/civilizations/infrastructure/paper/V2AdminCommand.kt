@@ -8,6 +8,8 @@ import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.season.SeasonStatus
+import io.bennyc.civilizations.domain.war.BattleStatus
+import io.bennyc.civilizations.domain.war.WarStatus
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeMutationOutcome
@@ -281,11 +283,18 @@ class V2AdminCommand(
                 if (active == null) {
                     info(sender, "V2 is ready; no active season is selected")
                 } else {
+                    val openWars = active.wars.count {
+                        it.status == WarStatus.DECLARED || it.status == WarStatus.ACTIVE
+                    }
+                    val activeBattles = active.battles.count {
+                        it.status == BattleStatus.ACTIVE
+                    }
                     success(
                         sender,
                         "Active season '${active.season.name}' (${active.season.id}) is " +
                             "${active.season.status}; ${active.civilizations.size} civilizations, " +
-                            "${active.claimIndex.size} claims",
+                            "${active.claimIndex.size} claims, $openWars open wars, " +
+                            "$activeBattles active battles",
                     )
                 }
             }

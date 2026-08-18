@@ -9,6 +9,7 @@ import io.bennyc.civilizations.application.protection.PlayerProtectionRequest
 import io.bennyc.civilizations.application.protection.ProtectionDecision
 import io.bennyc.civilizations.application.support.SequentialIdGenerator
 import io.bennyc.civilizations.application.support.playerId
+import io.bennyc.civilizations.application.war.DeclareWar
 import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.civilization.CivilizationName
 import io.bennyc.civilizations.domain.civilization.CivilizationStatus
@@ -19,6 +20,7 @@ import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.season.SeasonStatus
+import io.bennyc.civilizations.domain.war.BattleStatus
 import io.bennyc.civilizations.infrastructure.persistence.jdbc.JdbcCivilizationsRepository
 import io.bennyc.civilizations.infrastructure.persistence.jdbc.SchemaMigrator
 import io.bennyc.civilizations.infrastructure.persistence.jdbc.SqliteConnectionFactory
@@ -49,7 +51,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(2, started.migration.currentVersion)
+            assertEquals(3, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -135,6 +137,115 @@ class CivilizationsRuntimeTest {
     }
 
     @Test
+    fun `active battle eligibility survives restart and expiry recovers fail closed`() {
+        RuntimeDatabase().use { database ->
+            val mutableClock = MutableClock(instant)
+            val runtime = database.runtime(clock = mutableClock)
+            runtime.startAwait()
+
+            val season = runtime.submitAwait { seasons.create("Season One") }
+                .awaitCompleted()
+                .appliedValue()
+            val north = runtime.submitAwait {
+                civilizations.provision(
+                    ProvisionCivilization(
+                        seasonId = season.id,
+                        rawName = "North",
+                        leaderId = playerId(1),
+                        memberIds = setOf(playerId(2)),
+                    ),
+                )
+            }.awaitCompleted().appliedValue()
+            val south = runtime.submitAwait {
+                civilizations.provision(
+                    ProvisionCivilization(
+                        seasonId = season.id,
+                        rawName = "South",
+                        leaderId = playerId(3),
+                        memberIds = setOf(playerId(4)),
+                    ),
+                )
+            }.awaitCompleted().appliedValue()
+            val northClaim = runtime.submitAwait {
+                claims.place(
+                    PlaceClaim(
+                        north.civilization.id,
+                        ClaimBounds.between(world, 0, 0, 15, 15),
+                    ),
+                )
+            }.awaitCompleted().appliedValue()
+            val southClaim = runtime.submitAwait {
+                claims.place(
+                    PlaceClaim(
+                        south.civilization.id,
+                        ClaimBounds.between(world, 32, 0, 47, 15),
+                    ),
+                )
+            }.awaitCompleted().appliedValue()
+            runtime.submitAwait { seasons.transition(season.id, SeasonStatus.PEACE) }
+                .awaitCompleted()
+            runtime.submitAwait { seasons.transition(season.id, SeasonStatus.WAR) }
+                .awaitCompleted()
+            val war = runtime.submitAwait {
+                wars.declare(
+                    DeclareWar(
+                        seasonId = season.id,
+                        declaringCivilizationId = north.civilization.id,
+                        targetCivilizationId = south.civilization.id,
+                        declaredByPlayerId = playerId(1),
+                        battleDurationSeconds = 60,
+                    ),
+                )
+            }.awaitCompleted().appliedValue()
+            runtime.submitAwait { wars.activate(war.id) }.awaitCompleted()
+            val battleOutcome = runtime.submitAwait {
+                wars.startBattleFromEntry(war.id, playerId(2), southClaim.id)
+            }.awaitCompleted()
+            val battle = battleOutcome.appliedValue().battle
+            val live = assertNotNull(battleOutcome.state.activeSeason)
+            val eligibility = live.activeBattleEligibility.single()
+            assertEquals(
+                setOf(southClaim.id),
+                eligibility.opposingClaimIdsByCivilization[north.civilization.id],
+            )
+            assertEquals(
+                setOf(northClaim.id),
+                eligibility.opposingClaimIdsByCivilization[south.civilization.id],
+            )
+            assertIs<ProtectionDecision.Denied>(
+                live.protection.decidePlayerAction(
+                    PlayerProtectionRequest(
+                        actorId = playerId(1),
+                        action = PlayerProtectionAction.BLOCK_BREAK,
+                        target = BlockPosition2D(world, 32, 0),
+                    ),
+                ),
+            )
+            runtime.close()
+
+            val restarted = database.runtime(clock = mutableClock)
+            assertEquals(
+                BattleStatus.ACTIVE,
+                restarted.startAwait().state.activeSeason?.battles?.single()?.status,
+            )
+            assertEquals(
+                1,
+                (restarted.state as CivilizationsRuntimeState.Ready)
+                    .activeSeason?.activeBattleEligibility?.size,
+            )
+            restarted.close()
+
+            mutableClock.advanceSeconds(60)
+            val expiredRestart = database.runtime(clock = mutableClock)
+            val recovered = assertNotNull(expiredRestart.startAwait().state.activeSeason)
+            assertEquals(BattleStatus.RESOLVING, recovered.battles.single().status)
+            assertEquals(battle.endsAt, recovered.battles.single().resolvingAt)
+            assertTrue(recovered.activeBattleEligibility.isEmpty())
+            expiredRestart.close()
+        }
+    }
+
+    @Test
     fun `startup fails closed when active durable state violates invariants`() {
         RuntimeDatabase().use { database ->
             val connectionFactory = SqliteConnectionFactory(database.path)
@@ -192,6 +303,7 @@ class CivilizationsRuntimeTest {
 
     private fun RuntimeDatabase.runtime(
         fatalFailureHandler: (Throwable) -> Unit = {},
+        clock: Clock = this@CivilizationsRuntimeTest.clock,
     ): CivilizationsRuntime = CivilizationsRuntime.sqlite(
         databasePath = path,
         claimRules = ClaimRules(
@@ -220,6 +332,23 @@ class CivilizationsRuntimeTest {
     private fun <T> CompletableFuture<RuntimeMutationOutcome<T>>.awaitCompleted():
         RuntimeMutationOutcome.Completed<T> =
         assertIs(get(TIMEOUT_SECONDS, TimeUnit.SECONDS))
+
+    private fun <T> RuntimeMutationOutcome.Completed<T>.appliedValue(): T =
+        assertIs<ApplicationResult.Applied<T>>(result).value
+
+    private class MutableClock(
+        private var current: Instant,
+    ) : Clock() {
+        override fun getZone() = ZoneOffset.UTC
+
+        override fun withZone(zone: java.time.ZoneId): Clock = this
+
+        override fun instant(): Instant = current
+
+        fun advanceSeconds(seconds: Long) {
+            current = current.plusSeconds(seconds)
+        }
+    }
 
     private class RuntimeDatabase : AutoCloseable {
         private val directory: Path = Files.createTempDirectory("civilizations-runtime-test-")
