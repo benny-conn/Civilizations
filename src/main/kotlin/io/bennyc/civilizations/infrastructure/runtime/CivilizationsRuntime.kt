@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Owns V2 persistence work and publishes immutable/copy-on-write runtime state.
+ * Owns persistence work and publishes immutable/copy-on-write runtime state.
  * Every mutation is serialized on one storage thread. Refreshed state is then
  * installed by the supplied server-thread executor in the same order.
  */

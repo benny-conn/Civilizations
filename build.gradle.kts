@@ -24,7 +24,7 @@ dependencies {
 
     implementation(kotlin("stdlib"))
 
-    // V2 owns its database driver instead of depending on Paper internals.
+    // Civilizations owns its database driver instead of depending on Paper internals.
     implementation("org.xerial:sqlite-jdbc:$sqliteJdbcVersion")
 
     testImplementation(kotlin("test"))

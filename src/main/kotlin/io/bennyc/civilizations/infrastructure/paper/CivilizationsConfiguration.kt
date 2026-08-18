@@ -14,24 +14,35 @@ data class CivilizationsConfiguration(
             config: FileConfiguration,
         ): CivilizationsConfiguration {
             val normalizedDataFolder = dataFolder.toAbsolutePath().normalize()
-            val configuredFile = config.getString("v2.database-file")
-                ?: error("Missing v2.database-file")
-            require(configuredFile.isNotBlank()) { "v2.database-file cannot be blank" }
+            val configuredFile = config.getString(
+                config.path("storage.database-file", "v2.database-file"),
+            ) ?: error("Missing storage.database-file")
+            require(configuredFile.isNotBlank()) { "storage.database-file cannot be blank" }
             val databasePath = normalizedDataFolder.resolve(configuredFile).normalize()
             require(databasePath.parent == normalizedDataFolder) {
-                "v2.database-file must be a file directly inside the plugin data folder"
+                "storage.database-file must be a file directly inside the plugin data folder"
             }
 
             return CivilizationsConfiguration(
                 databasePath = databasePath,
                 claimRules = ClaimRules(
-                    maxArea = config.getLong("v2.claims.max-area"),
-                    maxClaimsPerCivilization = config.getInt("v2.claims.max-count"),
+                    maxArea = config.getLong(config.path("claims.max-area", "v2.claims.max-area")),
+                    maxClaimsPerCivilization = config.getInt(
+                        config.path("claims.max-count", "v2.claims.max-count"),
+                    ),
                     requireEdgeConnection = config.getBoolean(
-                        "v2.claims.require-edge-connection",
+                        config.path(
+                            "claims.require-edge-connection",
+                            "v2.claims.require-edge-connection",
+                        ),
                     ),
                 ),
             )
         }
+
+        private fun FileConfiguration.path(
+            current: String,
+            previous: String,
+        ): String = if (contains(current)) current else previous
     }
 }

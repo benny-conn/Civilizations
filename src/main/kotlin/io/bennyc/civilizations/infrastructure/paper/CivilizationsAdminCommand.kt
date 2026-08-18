@@ -274,14 +274,14 @@ class CivilizationsAdminCommand(
 
     private fun showStatus(sender: CommandSender) {
         when (val state = runtime.state) {
-            CivilizationsRuntimeState.Stopped -> error(sender, "V2 runtime is stopped")
-            CivilizationsRuntimeState.Starting -> info(sender, "V2 runtime is starting")
+            CivilizationsRuntimeState.Stopped -> error(sender, "Runtime is stopped")
+            CivilizationsRuntimeState.Starting -> info(sender, "Runtime is starting")
             is CivilizationsRuntimeState.Failed ->
-                error(sender, "V2 runtime failed: ${state.failure.message}")
+                error(sender, "Runtime failed: ${state.failure.message}")
             is CivilizationsRuntimeState.Ready -> {
                 val active = state.activeSeason
                 if (active == null) {
-                    info(sender, "V2 is ready; no active season is selected")
+                    info(sender, "Civilizations is ready; no active season is selected")
                 } else {
                     val openWars = active.wars.count {
                         it.status == WarStatus.DECLARED || it.status == WarStatus.ACTIVE
@@ -323,7 +323,7 @@ class CivilizationsAdminCommand(
     }
 
     private fun showHelp(sender: CommandSender) {
-        info(sender, "V2 commands:")
+        info(sender, "Civilizations commands:")
         sender.sendMessage(Component.text("/civadmin status", NamedTextColor.GRAY))
         sender.sendMessage(
             Component.text("/civadmin season <create|select|phase> ...", NamedTextColor.GRAY),
@@ -372,7 +372,7 @@ class CivilizationsAdminCommand(
         operation: RuntimeMutationScope.() -> ApplicationResult<T>,
         describe: (T) -> String,
     ) {
-        info(sender, "Queued V2 mutation...")
+        info(sender, "Queued mutation...")
         runtime.submitMutation(operation) { outcome ->
             when (outcome) {
                 is RuntimeMutationOutcome.Completed -> when (val result = outcome.result) {
@@ -384,9 +384,9 @@ class CivilizationsAdminCommand(
                     is ApplicationResult.Rejected -> error(sender, result.failure.description)
                 }
                 is RuntimeMutationOutcome.Failed ->
-                    error(sender, "V2 storage failed: ${outcome.failure.message}")
+                    error(sender, "Storage failed: ${outcome.failure.message}")
                 is RuntimeMutationOutcome.NotReady ->
-                    error(sender, "V2 runtime is not ready (${outcome.state.statusName()})")
+                    error(sender, "Runtime is not ready (${outcome.state.statusName()})")
             }
         }
     }
@@ -416,7 +416,7 @@ class CivilizationsAdminCommand(
     private fun prefixed(
         message: String,
         color: NamedTextColor,
-    ): Component = Component.text("[Civilizations V2] ", NamedTextColor.DARK_PURPLE)
+    ): Component = Component.text("[Civilizations] ", NamedTextColor.DARK_PURPLE)
         .append(Component.text(message, color))
 
     private data class CommandFailure(

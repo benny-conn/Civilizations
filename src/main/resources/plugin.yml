@@ -7,8 +7,8 @@ description: Civilization, territory, economy, and warfare gameplay for Paper.
 website: https://github.com/benny-conn/Civilizations
 permissions:
   civilizations.admin:
-    description: Administer the Civilizations V2 runtime.
+    description: Administer Civilizations.
     default: op
   civilizations.admin.bypass:
-    description: Bypass Civilizations V2 land protection.
+    description: Bypass Civilizations land protection.
     default: op
