@@ -39,7 +39,7 @@ Before assigning parallel tasks, use the lanes and merge order in [docs/worktree
 
 Run the plugin on Paper 26.2 with Java 25. Copy the built JAR into the server's `plugins` directory and restart the server. Civilizations packages its selected SQLite driver and stores its authoritative data in `plugins/Civilizations/civilizations-v2.db` by default.
 
-The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, claimed-versus-wilderness explosion behavior, and incremental schema migrations followed by clean restarts. War/battle persistence, timer recovery, and damage-journal durability are covered against real SQLite and runtime restarts. Protection decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
+The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, claimed-versus-wilderness explosion behavior, and incremental schema migrations followed by clean restarts. The Foundation-free native Paper build also passed consecutive boots with Civilizations as the only installed plugin while loading the previous `v2:` configuration layout and existing schema-v4 database. War/battle persistence, timer recovery, and damage-journal durability are covered against real SQLite and runtime restarts. Protection decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
 
 ## Administration
 
