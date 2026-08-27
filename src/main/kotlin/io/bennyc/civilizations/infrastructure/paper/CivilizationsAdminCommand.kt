@@ -8,7 +8,10 @@ import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.season.SeasonStatus
+import io.bennyc.civilizations.domain.war.BattleId
+import io.bennyc.civilizations.domain.war.BattleOutcome
 import io.bennyc.civilizations.domain.war.BattleStatus
+import io.bennyc.civilizations.domain.war.WarId
 import io.bennyc.civilizations.domain.war.WarStatus
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
@@ -22,9 +25,11 @@ import org.bukkit.NamespacedKey
 import org.bukkit.command.CommandSender
 import java.util.Locale
 import java.util.UUID
+import java.util.logging.Logger
 
 class CivilizationsAdminCommand(
     private val runtime: CivilizationsRuntime,
+    private val logger: Logger,
 ) : BasicCommand {
     override fun execute(
         source: CommandSourceStack,
@@ -36,6 +41,8 @@ class CivilizationsAdminCommand(
             "season" -> handleSeason(sender, args)
             "civilization", "civ" -> handleCivilization(sender, args)
             "claim" -> handleClaim(sender, args)
+            "war" -> handleWar(sender, args)
+            "battle" -> handleBattle(sender, args)
             else -> showHelp(sender)
         }
     }
@@ -45,7 +52,8 @@ class CivilizationsAdminCommand(
         args: Array<out String>,
     ): Collection<String> {
         val choices = when {
-            args.size <= 1 -> listOf("status", "season", "civilization", "claim")
+            args.size <= 1 ->
+                listOf("status", "season", "civilization", "claim", "war", "battle")
             args[0].equals("season", true) && args.size == 2 ->
                 listOf("create", "select", "phase")
             args[0].equals("season", true) && args.getOrNull(1).equals("phase", true) ->
@@ -56,12 +64,22 @@ class CivilizationsAdminCommand(
                     "draft",
                     "provision",
                     "add-member",
+                    "move-member",
                     "leader",
                     "activate",
                 )
             args[0].equals("claim", true) && args.size == 2 -> civilizationReferences()
             args[0].equals("claim", true) && args.size == 3 ->
                 source.sender.server.worlds.map { it.key.asString() }
+            args[0].equals("war", true) && args.size == 2 ->
+                listOf("list", "inspect", "activate", "close", "cancel")
+            args[0].equals("war", true) && args.size == 3 -> warReferences()
+            args[0].equals("battle", true) && args.size == 2 ->
+                listOf("list", "inspect", "force-resolve", "cancel")
+            args[0].equals("battle", true) && args.size == 3 -> battleReferences()
+            args[0].equals("battle", true) &&
+                args.getOrNull(1).equals("force-resolve", true) && args.size == 4 ->
+                listOf("attacker", "defender", "draw")
             else -> emptyList()
         }
         val partial = args.lastOrNull()?.lowercase(Locale.ROOT).orEmpty()
@@ -104,6 +122,18 @@ class CivilizationsAdminCommand(
                         sender,
                         "/civadmin season phase <setup|peace|war|finale|archived>",
                     )
+                val current = (runtime.state as? CivilizationsRuntimeState.Ready)
+                    ?.activeSeason
+                    ?.season
+                    ?.status
+                if ((current == SeasonStatus.WAR || target == SeasonStatus.WAR) &&
+                    !sender.hasPermission(WAR_PHASE_PERMISSION)
+                ) {
+                    return error(
+                        sender,
+                        "You need $WAR_PHASE_PERMISSION to enter or leave WAR phase",
+                    )
+                }
                 mutate(
                     sender,
                     operation = {
@@ -187,6 +217,29 @@ class CivilizationsAdminCommand(
                     "Assigned ${membership.playerId} to civilization ${membership.civilizationId}"
                 }
             }
+            "move-member" -> {
+                if (args.size != 4) {
+                    return usage(
+                        sender,
+                        "/civadmin civilization move-member <player-uuid> <target-civ>",
+                    )
+                }
+                val playerId = parsePlayerId(sender, args[2]) ?: return
+                mutate(
+                    sender,
+                    operation = {
+                        val seasonId = activeSeasonId()
+                            ?: return@mutate rejected("No active season is selected")
+                        val target = findActiveCivilization(args[3])
+                            ?: return@mutate rejected(
+                                "Active civilization '${args[3]}' does not exist",
+                            )
+                        civilizations.moveMember(seasonId, playerId, target.id)
+                    },
+                ) { membership ->
+                    "Moved ${membership.playerId} to civilization ${membership.civilizationId}"
+                }
+            }
             "leader" -> {
                 if (args.size != 4) {
                     return usage(
@@ -224,7 +277,8 @@ class CivilizationsAdminCommand(
             }
             else -> usage(
                 sender,
-                "/civadmin civilization <list|draft|provision|add-member|leader|activate> ...",
+                "/civadmin civilization " +
+                    "<list|draft|provision|add-member|move-member|leader|activate> ...",
             )
         }
     }
@@ -270,6 +324,180 @@ class CivilizationsAdminCommand(
             "Created claim ${claim.id} for ${claim.civilizationId} " +
                 "(${claim.bounds.area} blocks in ${claim.bounds.worldId})"
         }
+    }
+
+    private fun handleWar(sender: CommandSender, args: Array<out String>) {
+        when (args.getOrNull(1)?.lowercase(Locale.ROOT)) {
+            "list" -> listWars(sender)
+            "inspect" -> {
+                val warId = args.getOrNull(2)?.let { parseWarId(sender, it) } ?: return
+                inspectWar(sender, warId)
+            }
+            "activate", "close", "cancel" -> {
+                val operationName = args[1].lowercase(Locale.ROOT)
+                val warId = args.getOrNull(2)?.let { parseWarId(sender, it) } ?: return
+                val reason = args.drop(3).joinToString(" ").trim()
+                if (reason.isEmpty()) {
+                    return usage(
+                        sender,
+                        "/civadmin war $operationName <war-id> <audit-reason>",
+                    )
+                }
+                mutate(
+                    sender = sender,
+                    operation = {
+                        when (operationName) {
+                            "activate" -> wars.activate(warId)
+                            "close" -> wars.closeWar(warId)
+                            else -> wars.cancelWar(warId)
+                        }
+                    },
+                    describe = { war -> "War ${war.id} is now ${war.status}" },
+                    afterApplied = { war ->
+                        audit(sender, "war.$operationName", war.id.toString(), reason)
+                    },
+                )
+            }
+            else -> usage(
+                sender,
+                "/civadmin war <list|inspect|activate|close|cancel> ...",
+            )
+        }
+    }
+
+    private fun handleBattle(sender: CommandSender, args: Array<out String>) {
+        when (args.getOrNull(1)?.lowercase(Locale.ROOT)) {
+            "list" -> listBattles(sender)
+            "inspect" -> {
+                val battleId = args.getOrNull(2)?.let { parseBattleId(sender, it) } ?: return
+                inspectBattle(sender, battleId)
+            }
+            "force-resolve" -> {
+                val battleId = args.getOrNull(2)?.let { parseBattleId(sender, it) } ?: return
+                val outcome = args.getOrNull(3)?.let(::parseBattleOutcome)
+                    ?: return usage(
+                        sender,
+                        "/civadmin battle force-resolve <battle-id> " +
+                            "<attacker|defender|draw> <audit-reason>",
+                    )
+                val reason = args.drop(4).joinToString(" ").trim()
+                if (reason.isEmpty()) {
+                    return usage(sender, "Force-resolution requires an audit reason")
+                }
+                mutate(
+                    sender = sender,
+                    operation = { wars.forceResolve(battleId, outcome) },
+                    describe = { battle ->
+                        "Battle ${battle.id} is ${battle.status} with ${battle.outcome}"
+                    },
+                    afterApplied = { battle ->
+                        audit(
+                            sender,
+                            "battle.force-resolve",
+                            "${battle.id}; outcome=$outcome",
+                            reason,
+                        )
+                    },
+                )
+            }
+            "cancel" -> {
+                val battleId = args.getOrNull(2)?.let { parseBattleId(sender, it) } ?: return
+                val reason = args.drop(3).joinToString(" ").trim()
+                if (reason.isEmpty()) {
+                    return usage(
+                        sender,
+                        "/civadmin battle cancel <battle-id> <audit-reason>",
+                    )
+                }
+                mutate(
+                    sender = sender,
+                    operation = { wars.cancelBattle(battleId) },
+                    describe = { battle -> "Battle ${battle.id} is now ${battle.status}" },
+                    afterApplied = { battle ->
+                        audit(sender, "battle.cancel", battle.id.toString(), reason)
+                    },
+                )
+            }
+            else -> usage(
+                sender,
+                "/civadmin battle <list|inspect|force-resolve|cancel> ...",
+            )
+        }
+    }
+
+    private fun listWars(sender: CommandSender) {
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+            ?: return error(sender, "No active season is loaded")
+        if (active.wars.isEmpty()) {
+            return info(sender, "The active season has no wars")
+        }
+        info(sender, "Wars in '${active.season.name}':")
+        active.wars.forEach { war ->
+            sender.sendMessage(
+                Component.text(
+                    "- ${war.id}: ${war.declaringCivilizationId} -> " +
+                        "${war.targetCivilizationId}, ${war.status}",
+                    NamedTextColor.GRAY,
+                ),
+            )
+        }
+    }
+
+    private fun inspectWar(sender: CommandSender, warId: WarId) {
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+            ?: return error(sender, "No active season is loaded")
+        val war = active.wars.singleOrNull { it.id == warId }
+            ?: return error(sender, "War $warId does not exist in the active season")
+        info(
+            sender,
+            "War ${war.id}: ${war.declaringCivilizationId} -> ${war.targetCivilizationId}; " +
+                "status=${war.status}; declaredBy=${war.declaredByPlayerId}; " +
+                "declaredAt=${war.declaredAt}; activatedAt=${war.activatedAt}; " +
+                "endedAt=${war.endedAt}; battleDuration=${war.rules.battleDurationSeconds}s",
+        )
+    }
+
+    private fun listBattles(sender: CommandSender) {
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+            ?: return error(sender, "No active season is loaded")
+        if (active.battles.isEmpty()) {
+            return info(sender, "The active season has no battles")
+        }
+        info(sender, "Battles in '${active.season.name}':")
+        active.battles.forEach { battle ->
+            sender.sendMessage(
+                Component.text(
+                    "- ${battle.id}: ${battle.attackingCivilizationId} vs " +
+                        "${battle.defendingCivilizationId}, ${battle.status}",
+                    NamedTextColor.GRAY,
+                ),
+            )
+        }
+    }
+
+    private fun inspectBattle(sender: CommandSender, battleId: BattleId) {
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+            ?: return error(sender, "No active season is loaded")
+        val battle = active.battles.singleOrNull { it.id == battleId }
+            ?: return error(sender, "Battle $battleId does not exist in the active season")
+        val participants = active.battleParticipants[battle.id].orEmpty()
+        val surrender = active.battleSurrenders[battle.id]
+        info(
+            sender,
+            "Battle ${battle.id}: war=${battle.warId}; " +
+                "attacker=${battle.attackingCivilizationId}; " +
+                "defender=${battle.defendingCivilizationId}; status=${battle.status}; " +
+                "participants=${participants.size}; startedAt=${battle.startedAt}; " +
+                "endsAt=${battle.endsAt}; resolvingAt=${battle.resolvingAt}; " +
+                "endedAt=${battle.endedAt}; outcome=${battle.outcome}; " +
+                if (surrender == null) {
+                    "surrender=none"
+                } else {
+                    "surrender=${surrender.surrenderedCivilizationId} by " +
+                        "${surrender.surrenderedByPlayerId} at ${surrender.surrenderedAt}; " +
+                        "requestedOutcome=${surrender.requestedOutcome}"
+                },
+        )
     }
 
     private fun showStatus(sender: CommandSender) {
@@ -340,6 +568,18 @@ class CivilizationsAdminCommand(
                 NamedTextColor.GRAY,
             ),
         )
+        sender.sendMessage(
+            Component.text(
+                "/civadmin war <list|inspect|activate|close|cancel> ...",
+                NamedTextColor.GRAY,
+            ),
+        )
+        sender.sendMessage(
+            Component.text(
+                "/civadmin battle <list|inspect|force-resolve|cancel> ...",
+                NamedTextColor.GRAY,
+            ),
+        )
     }
 
     private fun civilizationReferences(): List<String> =
@@ -356,6 +596,20 @@ class CivilizationsAdminCommand(
             }
             .orEmpty()
 
+    private fun warReferences(): List<String> =
+        (runtime.state as? CivilizationsRuntimeState.Ready)
+            ?.activeSeason
+            ?.wars
+            ?.map { it.id.toString() }
+            .orEmpty()
+
+    private fun battleReferences(): List<String> =
+        (runtime.state as? CivilizationsRuntimeState.Ready)
+            ?.activeSeason
+            ?.battles
+            ?.map { it.id.toString() }
+            .orEmpty()
+
     private fun parsePlayerId(sender: CommandSender, value: String): PlayerId? =
         try {
             PlayerId(UUID.fromString(value))
@@ -367,16 +621,45 @@ class CivilizationsAdminCommand(
     private fun parseSeasonStatus(value: String): SeasonStatus? =
         runCatching { SeasonStatus.valueOf(value.uppercase(Locale.ROOT)) }.getOrNull()
 
+    private fun parseBattleOutcome(value: String): BattleOutcome? = when (
+        value.lowercase(Locale.ROOT)
+    ) {
+        "attacker" -> BattleOutcome.ATTACKER_VICTORY
+        "defender" -> BattleOutcome.DEFENDER_VICTORY
+        "draw" -> BattleOutcome.DRAW
+        else -> null
+    }
+
+    private fun parseWarId(sender: CommandSender, value: String): WarId? =
+        try {
+            WarId(UUID.fromString(value))
+        } catch (_: IllegalArgumentException) {
+            error(sender, "'$value' is not a valid war UUID")
+            null
+        }
+
+    private fun parseBattleId(sender: CommandSender, value: String): BattleId? =
+        try {
+            BattleId(UUID.fromString(value))
+        } catch (_: IllegalArgumentException) {
+            error(sender, "'$value' is not a valid battle UUID")
+            null
+        }
+
     private fun <T> mutate(
         sender: CommandSender,
         operation: RuntimeMutationScope.() -> ApplicationResult<T>,
+        afterApplied: (T) -> Unit = {},
         describe: (T) -> String,
     ) {
         info(sender, "Queued mutation...")
         runtime.submitMutation(operation) { outcome ->
             when (outcome) {
                 is RuntimeMutationOutcome.Completed -> when (val result = outcome.result) {
-                    is ApplicationResult.Applied -> success(sender, describe(result.value))
+                    is ApplicationResult.Applied -> {
+                        success(sender, describe(result.value))
+                        afterApplied(result.value)
+                    }
                     is ApplicationResult.Unchanged -> info(
                         sender,
                         "No change: ${describe(result.value)}",
@@ -389,6 +672,18 @@ class CivilizationsAdminCommand(
                     error(sender, "Runtime is not ready (${outcome.state.statusName()})")
             }
         }
+    }
+
+    private fun audit(
+        sender: CommandSender,
+        action: String,
+        target: String,
+        reason: String,
+    ) {
+        logger.info(
+            "Civilizations admin audit: actor=${sender.name}; action=$action; " +
+                "target=$target; reason=$reason",
+        )
     }
 
     private fun rejected(description: String): ApplicationResult.Rejected =
@@ -425,5 +720,6 @@ class CivilizationsAdminCommand(
 
     private companion object {
         const val ADMIN_PERMISSION = "civilizations.admin"
+        const val WAR_PHASE_PERMISSION = "civilizations.admin.phase.war"
     }
 }

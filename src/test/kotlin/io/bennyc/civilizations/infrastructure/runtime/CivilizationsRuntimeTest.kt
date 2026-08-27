@@ -58,7 +58,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(5, started.migration.currentVersion)
+            assertEquals(6, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -203,8 +203,27 @@ class CivilizationsRuntimeTest {
                         battleDurationSeconds = 60,
                     ),
                 )
-            }.awaitCompleted().appliedValue()
-            runtime.submitAwait { wars.activate(war.id) }.awaitCompleted()
+            }.awaitCompleted().let { outcome ->
+                val declared = outcome.appliedValue()
+                val live = assertNotNull(outcome.state.activeSeason)
+                val entry = assertNotNull(
+                    live.hostileClaimEntry(
+                        playerId(2),
+                        BlockPosition2D(world, 40, 8),
+                    ),
+                )
+                assertEquals(declared.id, entry.war.id)
+                assertEquals(southClaim.id, entry.enteredClaim.id)
+                assertTrue(entry.battlePhaseOpen)
+                assertNull(entry.existingOpenBattle)
+                assertNull(
+                    live.hostileClaimEntry(
+                        playerId(2),
+                        BlockPosition2D(world, 8, 8),
+                    ),
+                )
+                declared
+            }
             val battleOutcome = runtime.submitAwait {
                 wars.startBattleFromEntry(war.id, playerId(2), southClaim.id)
             }.awaitCompleted()
@@ -218,6 +237,13 @@ class CivilizationsRuntimeTest {
             assertEquals(
                 setOf(northClaim.id),
                 eligibility.opposingClaimIdsByCivilization[south.civilization.id],
+            )
+            assertEquals(
+                battle.id,
+                live.hostileClaimEntry(
+                    playerId(2),
+                    BlockPosition2D(world, 40, 8),
+                )?.existingOpenBattle?.id,
             )
             assertNotNull(
                 live.authorizeBattleBlockMutation(
@@ -256,6 +282,35 @@ class CivilizationsRuntimeTest {
                         target = BlockPosition2D(world, 32, 0),
                     ),
                 ),
+            )
+            val moved = runtime.submitAwait {
+                civilizations.moveMember(
+                    season.id,
+                    playerId(2),
+                    south.civilization.id,
+                )
+            }.awaitCompleted()
+            val movedLive = assertNotNull(moved.state.activeSeason)
+            assertEquals(
+                south.civilization.id,
+                movedLive.membershipOf(playerId(2))?.civilizationId,
+            )
+            assertEquals(
+                north.civilization.id,
+                movedLive.activeBattleEligibility.single().participants
+                    .single { it.playerId == playerId(2) }
+                    .civilizationId,
+                "Political roster changes must not rewrite active battle sides",
+            )
+            assertEquals(
+                north.civilization.id,
+                assertNotNull(
+                    movedLive.authorizeBattleBlockMutation(
+                        playerId(2),
+                        PlayerProtectionAction.BLOCK_BREAK,
+                        BlockPosition2D(world, 40, 8),
+                    ),
+                ).actorCivilizationId,
             )
             val stateBeforeJournal = runtime.state
             val journaled = runtime.prepareBlockMutationAwait(

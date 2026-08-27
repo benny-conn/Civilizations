@@ -25,6 +25,10 @@ class CivilizationsConfigurationTest {
             assertEquals(65_536, loaded.claimRules.maxArea)
             assertEquals(32, loaded.claimRules.maxClaimsPerCivilization)
             assertEquals(
+                setOf(SeasonStatus.SETUP, SeasonStatus.PEACE, SeasonStatus.WAR),
+                loaded.phaseRules.rosterChangesAllowedIn,
+            )
+            assertEquals(
                 setOf(SeasonStatus.SETUP, SeasonStatus.PEACE),
                 loaded.phaseRules.claimCreationAllowedIn,
             )
@@ -32,6 +36,7 @@ class CivilizationsConfigurationTest {
                 setOf(SeasonStatus.SETUP, SeasonStatus.PEACE, SeasonStatus.WAR),
                 loaded.phaseRules.memberLandActionsAllowedIn,
             )
+            assertEquals(1_800, loaded.warRules.battleDurationSeconds)
         } finally {
             dataFolder.toFile().deleteRecursively()
         }
@@ -77,7 +82,7 @@ class CivilizationsConfigurationTest {
             assertEquals(2, loaded.claimRules.maxClaimsPerCivilization)
             assertEquals(false, loaded.claimRules.requireEdgeConnection)
             assertEquals(
-                setOf(SeasonStatus.SETUP, SeasonStatus.PEACE),
+                setOf(SeasonStatus.SETUP, SeasonStatus.PEACE, SeasonStatus.WAR),
                 loaded.phaseRules.rosterChangesAllowedIn,
             )
         } finally {
@@ -93,6 +98,15 @@ class CivilizationsConfigurationTest {
 
         assertContains(failure.message.orEmpty(), "claims.max-area")
         assertContains(failure.message.orEmpty(), "integer")
+    }
+
+    @Test
+    fun `battle duration is path-validated`() {
+        val failure = assertFailsWith<IllegalArgumentException> {
+            load(validYaml.replace("battle-duration-seconds: 1800", "battle-duration-seconds: 0"))
+        }
+
+        assertContains(failure.message.orEmpty(), "gameplay.war.battle-duration-seconds")
     }
 
     private fun load(yaml: String): CivilizationsConfiguration {
@@ -125,6 +139,8 @@ class CivilizationsConfigurationTest {
                 roster-changes: [SETUP, PEACE]
                 claim-creation: [SETUP, PEACE]
                 member-land-actions: [SETUP, PEACE, WAR]
+              war:
+                battle-duration-seconds: 1800
         """.trimIndent()
     }
 }

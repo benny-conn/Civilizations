@@ -125,8 +125,8 @@ The mutation boundary is under `application.season`, `application.civilization`,
 - `SeasonService` owns phase transitions. `WAR` is a durable global gate rather than a scattered configuration boolean, and an admin may transition `WAR` back to `PEACE` to stop war without ending the season.
 - `CivilizationService` supports empty drafts as well as atomic, idempotent provisioning from offline player UUIDs. Activation requires one leader and a roster but deliberately does not require a home or claim.
 - A player may belong to at most one civilization per season. Reassignment is explicit, and a leader must transfer leadership before moving.
-- Roster and claim mutations default to open in `SETUP` and `PEACE`. YAML may narrow either gate, but application validation prevents enabling them in `WAR`, `FINALE`, or `ARCHIVED` because those combinations are not yet safe.
-- The accepted Season One rule keeps political-war rosters mutable during `WAR`. A follow-up must safely widen the roster gate while preserving every already-started battle's immutable participant and side snapshot; switching civilizations never rewrites or grants eligibility in the active battle.
+- Roster mutations default to open in `SETUP`, `PEACE`, and `WAR`; claim mutations default to `SETUP` and `PEACE`. YAML may narrow either gate, but application validation prevents either operation in `FINALE` or `ARCHIVED` and prevents claim creation in `WAR`.
+- Political-war rosters remain mutable during `WAR`, while every already-started battle retains its immutable participant and side snapshot. Switching civilizations never rewrites or grants eligibility in the active battle and affects only later battles.
 - `ClaimService` validates status, area/count limits, exact overlap, and same-civilization edge connectivity before inserting a claim. Corner contact is not connectivity.
 - `WarService` separates a durable relationship (`War`) from each timed engagement (`Battle`). Declaration, activation, hostile-entry battle start, expiry/resolution, and terminal transitions are explicit transactional operations.
 
@@ -140,17 +140,15 @@ Wars are winnerless relationships. A civilization member with global access to t
 declaration command may declare during `SETUP`, `PEACE`, or `WAR` without admin approval
 or a preparation countdown, but only the global `WAR` phase can start or sustain a
 battle. A dedicated global-phase permission, operator/admin by default, controls that
-combat gate. This is an accepted target rule: the current service remains leader-only and
-`WAR`-only until the battle-entry slice updates it. A current civilization leader may
-surrender its side in a battle; an admin force-resolution is an explicit audited recovery
-operation, not an ordinary victory rule.
+combat gate. A current civilization leader may surrender its side in a battle; an admin
+force-resolution is an explicit audited recovery operation, not an ordinary victory rule.
 
 - Open wars are unique per civilization pair, and a civilization may participate in multiple political wars. The current safety invariant permits only one `ACTIVE`/`RESOLVING` battle per civilization, preventing overlapping journals from claiming incompatible original states for the same land.
-- The current rules snapshot records `HOSTILE_CLAIM_ENTRY`, `OPPOSING_CIVILIZATION_CLAIMS`, and the battle duration. When a battle is eventually connected to movement, the entering side becomes attacker and the entered claim's owner becomes defender.
+- The rules snapshot records `HOSTILE_CLAIM_ENTRY`, `OPPOSING_CIVILIZATION_CLAIMS`, and the configured battle duration. A horizontal block transition or teleport into a hostile claim starts an eligible battle: the entering side becomes attacker and the entered claim's owner becomes defender.
 - “Battlefield” is not a separate region type. All claim lookup continues through the normal chunk index; the active read model maps each civilization to the opposing civilization's ordinary claim IDs.
 - Both civilization rosters are snapshotted as battle participants when the battle starts. Later membership changes cannot rewrite the historical roster.
 - Absolute timestamps, not decrementing task counters, drive expiry. Startup and every runtime refresh idempotently move expired `ACTIVE` battles to `RESOLVING`, which immediately removes their eligibility from live memory.
-- The eligibility read model supplies only the narrow break/place authorization consumed by the journal-first Paper mutation adapter. No Paper movement listener starts battles, and PVP or other destructive capabilities remain disconnected until their own slices define and enforce them.
+- The runtime precomputes membership, open-war-pair, open-battle, and active-battle lookups. The Paper entry listener uses only those published values and the claim index on movement/teleport paths, coalesces per-player attempts behind a bounded gate, and submits durable battle start work off-thread. PVP or other destructive capabilities remain disconnected until their own slices define and enforce them.
 
 ## Damage journal
 
@@ -167,6 +165,8 @@ operation, not an ordinary victory rule.
 `DamageReportService` owns the resolution-time readout of that journal. It accepts a complete set of final `SimpleBlockSnapshot` observations only while a battle is `RESOLVING`; it never reads Paper state itself. Each journal row is frozen as already restored or repair-eligible. Eligible rows are categorized as restoring an original block or removing a block placed over an air-like original, producing stable one-coordinate repair units without choosing monetary rates.
 
 Schema migration 5 stores one sealed report per battle plus its final-state entries. Entries are staged and the summary row atomically seals the complete set; SQL triggers verify exact journal coverage, category/count consistency, battle state, and immutability. An identical retry returns the stored report, while changed observations fail as an explicit conflict. Repository reads page the joined report and journal rows in stable journal order so later repair work can resume without loading an unbounded report.
+
+Schema migration 6 replaces the former leader-only war-declarer trigger with a same-season civilization-member check and adds immutable battle-surrender records. A surrender preserves its leader, civilization, time, and requested opponent victory while the battle remains `RESOLVING` for damage-report sealing. Application validation still requires global declaration permission and an allowed gameplay phase; the database preserves the durable membership and surrender invariants independently of Paper commands.
 
 Damage does not lock a coordinate against manual rebuilding. A future repair runner uses
 the report's sealed final snapshot as an optimistic compare value: it restores only when
@@ -185,7 +185,7 @@ blocks themselves, and must be bounded and restart-clean.
 - Mutations submitted before readiness are rejected. Infrastructure failures move the runtime to `Failed` and disable the plugin rather than falling back to another store.
 - Shutdown stops new work and gives the storage executor a bounded drain period. Civilizations no longer cancels scheduler tasks owned by other plugins.
 
-The live `/civadmin` adapter uses Paper's `BasicCommand` API, explicit UUIDs for offline roster operations, Adventure messages, and an operator-default permission. It parses and translates only; business decisions remain in application services.
+The live `/civadmin` and `/civ` adapters use Paper's `BasicCommand` API, explicit UUIDs for offline roster operations, Adventure messages, and explicit global permissions. `/civadmin` exposes focused setup plus war/battle inspection and recovery operations; `/civ` exposes player war status, declaration, and leader surrender. Both parse and translate only; business decisions remain in application services.
 
 The former commands, listeners, tasks, placeholders, menus, global managers, serializers, compatibility adapters, and datastores were deleted after the cutover. Git history preserves them for reference without allowing a second source of truth to compile or ship.
 
@@ -210,7 +210,7 @@ The current event matrix is:
 | PVP | entity damage by player or player-shot projectile | Vanilla in wilderness; denied in claims without a targeted conflict capability |
 | Environment | entity/block explosions, burn/ignite/fire spread, entity block change | Claimed targets are removed or cancelled |
 | Boundaries | fluid flow, piston head/moved blocks, inventory transfer | Every source/destination pair must have the same owner, including wilderness as no owner |
-| Movement | ordinary movement and teleport | Intentionally unrestricted for MVP; land ownership is not a border-entry rule |
+| Movement | horizontal block transitions and teleport | Movement remains physically unrestricted; entering a hostile claim resolves the candidate entirely from published memory, gives immediate phase/permission/battle feedback, and submits an eligible battle start through a bounded/coalesced off-thread path |
 
 Every later war integration must preserve the journal-before-mutation contract before it hands a conflict capability to another destructive Paper path. The visual TNT effect may never become the authoritative mutation.
 
@@ -218,10 +218,10 @@ Every later war integration must preserve the journal-before-mutation contract b
 
 The architecture rework has no remaining slice. Net-new MVP work is split into a durable-feature lane and a Paper-integration lane. Schema/repository migrations are ordered and must not be developed concurrently with another schema slice. Paper plugin/runtime/listener lifecycle changes are likewise serialized. A branch in each lane may proceed concurrently when both use an application-owned port already present on `main`.
 
-[worktree-roadmap.md](worktree-roadmap.md) is the executable feature merge queue. In summary, damage reporting precedes the ledger, the ledger precedes repair jobs, and repair jobs precede the Paper repair runner. The live simple-block Paper war adapter uses only published in-memory authorization on its event path, captures immutable input without loading chunks, and cancels immediately. Pending journal work is bounded and duplicate battle/coordinate attempts are coalesced; saturation fails closed. After durable preparation, the adapter returns to the server thread, revalidates the unchanged block and current capability, and applies at most once. Queue depth, latency, stale attempts, and backpressure are observable without per-block normal-verbosity logs. Containers, block entities, entities, explosions, and cascading physics remain closed for later explicitly journaled integrations.
+[worktree-roadmap.md](worktree-roadmap.md) is the executable feature merge queue. In summary, damage reporting precedes the ledger, the ledger precedes repair jobs, and repair jobs precede the Paper repair runner. The live simple-block Paper war adapter uses only published in-memory authorization on its event path, captures immutable input without loading chunks, and cancels immediately. Pending journal work is bounded and duplicate battle/coordinate attempts are coalesced; saturation fails closed. After durable preparation, the adapter returns to the server thread, revalidates the unchanged block and current capability, and applies at most once. The hostile-entry adapter similarly resolves candidates from memory, rate-limits and coalesces per-player attempts, and performs durable activation through the runtime executor. Queue depth, latency, stale attempts, and backpressure are observable without per-event normal-verbosity logs. Containers, block entities, entities, explosions, and cascading physics remain closed for later explicitly journaled integrations.
 
 ## Retired architecture
 
-The 2026 architecture cleanup permanently removed the Foundation lifecycle, command framework, settings/localization framework, menus/conversations, Vault hooks, JitPack repository, coroutine helper, global managers, Towny/Factions adapters, mutable legacy civilization/claim/raid graph, JSON-blob datastore, and all legacy tasks/listeners/commands. `CivilizationsPlugin` is a native `JavaPlugin`; `/civadmin` is a native Paper `BasicCommand`; configuration uses Bukkit's configuration API at the Paper boundary; user-facing components use Adventure.
+The 2026 architecture cleanup permanently removed the Foundation lifecycle, command framework, settings/localization framework, menus/conversations, Vault hooks, JitPack repository, coroutine helper, global managers, Towny/Factions adapters, mutable legacy civilization/claim/raid graph, JSON-blob datastore, and all legacy tasks/listeners/commands. `CivilizationsPlugin` is a native `JavaPlugin`; `/civadmin` and `/civ` are native Paper `BasicCommand` adapters; configuration uses Bukkit's configuration API at the Paper boundary; user-facing components use Adventure.
 
 An architecture regression test scans all production sources and the build file for retired framework imports/dependencies. Reusing an old behavior means designing it against the current domain/services and persistence ports, not copying the deleted implementation back into production.

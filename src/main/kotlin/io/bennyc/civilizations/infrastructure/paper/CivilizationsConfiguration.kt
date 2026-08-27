@@ -2,7 +2,9 @@ package io.bennyc.civilizations.infrastructure.paper
 
 import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.season.GameplayPhaseRules
+import io.bennyc.civilizations.application.war.WarService
 import io.bennyc.civilizations.domain.season.SeasonStatus
+import io.bennyc.civilizations.domain.war.WarRulesSnapshot
 import org.bukkit.configuration.file.FileConfiguration
 import java.nio.file.Path
 
@@ -10,6 +12,7 @@ data class CivilizationsConfiguration(
     val databasePath: Path,
     val claimRules: ClaimRules,
     val phaseRules: GameplayPhaseRules,
+    val warRules: WarRulesSnapshot,
 ) {
     companion object {
         fun load(
@@ -44,16 +47,26 @@ data class CivilizationsConfiguration(
                 phaseRules = GameplayPhaseRules(
                     rosterChangesAllowedIn = config.requiredPhases(
                         path = "gameplay.phase-gates.roster-changes",
-                        safePhases = ROSTER_AND_CLAIM_PHASES,
+                        safePhases = ROSTER_PHASES,
                     ),
                     claimCreationAllowedIn = config.requiredPhases(
                         path = "gameplay.phase-gates.claim-creation",
-                        safePhases = ROSTER_AND_CLAIM_PHASES,
+                        safePhases = CLAIM_PHASES,
                     ),
                     memberLandActionsAllowedIn = config.requiredPhases(
                         path = "gameplay.phase-gates.member-land-actions",
                         safePhases = MEMBER_LAND_ACTION_PHASES,
                     ),
+                ),
+                warRules = WarRulesSnapshot(
+                    battleDurationSeconds = config.requiredLong(
+                        "gameplay.war.battle-duration-seconds",
+                    ).also { seconds ->
+                        require(seconds in 1..WarService.MAX_BATTLE_DURATION_SECONDS) {
+                            "gameplay.war.battle-duration-seconds must be between 1 and " +
+                                WarService.MAX_BATTLE_DURATION_SECONDS
+                        }
+                    },
                 ),
             )
         }
@@ -133,9 +146,10 @@ data class CivilizationsConfiguration(
             return phases.toSet()
         }
 
-        private val ROSTER_AND_CLAIM_PHASES =
+        private val CLAIM_PHASES =
             setOf(SeasonStatus.SETUP, SeasonStatus.PEACE)
+        private val ROSTER_PHASES = CLAIM_PHASES + SeasonStatus.WAR
         private val MEMBER_LAND_ACTION_PHASES =
-            ROSTER_AND_CLAIM_PHASES + SeasonStatus.WAR
+            ROSTER_PHASES
     }
 }

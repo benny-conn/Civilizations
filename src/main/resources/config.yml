@@ -10,12 +10,14 @@ claims:
   require-edge-connection: true
 gameplay:
   # Phase gates may disable behavior in any listed phase. Unsafe phases cannot
-  # be added: roster/claim changes during war and all archived-state mutation
-  # remain application invariants rather than configuration switches.
+  # be added: claim changes during war and all archived-state mutation remain
+  # application invariants rather than configuration switches. Active battle
+  # participant/side snapshots do not change when the political roster changes.
   phase-gates:
     roster-changes:
       - SETUP
       - PEACE
+      - WAR
     claim-creation:
       - SETUP
       - PEACE
@@ -23,3 +25,6 @@ gameplay:
       - SETUP
       - PEACE
       - WAR
+  war:
+    # Snapshotted into each declaration; changes affect future wars after restart.
+    battle-duration-seconds: 1800

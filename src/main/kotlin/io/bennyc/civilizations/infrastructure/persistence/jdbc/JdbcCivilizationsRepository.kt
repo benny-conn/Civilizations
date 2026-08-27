@@ -35,6 +35,7 @@ import io.bennyc.civilizations.domain.war.BattleOutcome
 import io.bennyc.civilizations.domain.war.BattleParticipant
 import io.bennyc.civilizations.domain.war.BattleSide
 import io.bennyc.civilizations.domain.war.BattleStatus
+import io.bennyc.civilizations.domain.war.BattleSurrenderRecord
 import io.bennyc.civilizations.domain.war.BattleTrigger
 import io.bennyc.civilizations.domain.war.LandDestructionScope
 import io.bennyc.civilizations.domain.war.War
@@ -231,6 +232,20 @@ private open class JdbcReadContext(
         map = ResultSet::toBattleParticipant,
     )
 
+    override fun findBattleSurrender(battleId: BattleId): BattleSurrenderRecord? = queryOne(
+        sql = "$BATTLE_SURRENDER_SELECT WHERE battle_id = ?",
+        bind = { setString(1, battleId.toString()) },
+        map = ResultSet::toBattleSurrenderRecord,
+    )
+
+    override fun listBattleSurrendersForSeason(
+        seasonId: SeasonId,
+    ): List<BattleSurrenderRecord> = queryMany(
+        sql = "$BATTLE_SURRENDER_SELECT WHERE season_id = ? ORDER BY surrendered_at_ms, battle_id",
+        bind = { setString(1, seasonId.toString()) },
+        map = ResultSet::toBattleSurrenderRecord,
+    )
+
     override fun findBlockChange(
         battleId: BattleId,
         position: BlockPosition3D,
@@ -424,6 +439,11 @@ private open class JdbcReadContext(
         const val BATTLE_PARTICIPANT_SELECT = """
             SELECT season_id, battle_id, player_id, civilization_id, side, joined_at_ms
             FROM battle_participants
+        """
+        const val BATTLE_SURRENDER_SELECT = """
+            SELECT season_id, battle_id, surrendered_civilization_id,
+                   surrendered_by_player_id, requested_outcome, surrendered_at_ms
+            FROM battle_surrenders
         """
         const val BLOCK_CHANGE_SELECT = """
             SELECT id, season_id, battle_id, claim_id, world_id,
@@ -715,6 +735,24 @@ private class JdbcWriteContext(
         }
     }
 
+    override fun insertBattleSurrender(surrender: BattleSurrenderRecord) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_surrenders(
+                    season_id, battle_id, surrendered_civilization_id,
+                    surrendered_by_player_id, requested_outcome, surrendered_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, surrender.seasonId.toString())
+            setString(2, surrender.battleId.toString())
+            setString(3, surrender.surrenderedCivilizationId.toString())
+            setString(4, surrender.surrenderedByPlayerId.toString())
+            setString(5, surrender.requestedOutcome.name)
+            setLong(6, surrender.surrenderedAt.toEpochMilli())
+        }
+    }
+
     override fun insertBlockChangeIfAbsent(blockChange: BattleBlockChange): Boolean =
         executeUpdate(
             sql = """
@@ -883,6 +921,15 @@ private fun ResultSet.toBattleParticipant(): BattleParticipant = BattleParticipa
     civilizationId = CivilizationId(uuid("civilization_id")),
     side = BattleSide.valueOf(getString("side")),
     joinedAt = instant("joined_at_ms"),
+)
+
+private fun ResultSet.toBattleSurrenderRecord(): BattleSurrenderRecord = BattleSurrenderRecord(
+    seasonId = SeasonId(uuid("season_id")),
+    battleId = BattleId(uuid("battle_id")),
+    surrenderedCivilizationId = CivilizationId(uuid("surrendered_civilization_id")),
+    surrenderedByPlayerId = PlayerId(uuid("surrendered_by_player_id")),
+    requestedOutcome = BattleOutcome.valueOf(getString("requested_outcome")),
+    surrenderedAt = instant("surrendered_at_ms"),
 )
 
 private fun ResultSet.toBattleBlockChange(): BattleBlockChange = BattleBlockChange(

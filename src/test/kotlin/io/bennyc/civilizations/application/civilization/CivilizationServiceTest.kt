@@ -127,7 +127,7 @@ class CivilizationServiceTest {
     }
 
     @Test
-    fun `rosters lock while war is enabled`() {
+    fun `default roster gate allows war changes for future battle snapshots`() {
         SqliteTestDatabase().use { database ->
             database.migrator.migrate()
             val ids = SequentialIdGenerator()
@@ -140,9 +140,8 @@ class CivilizationServiceTest {
             seasonService.transition(season.id, SeasonStatus.PEACE).appliedValue()
             seasonService.transition(season.id, SeasonStatus.WAR).appliedValue()
 
-            assertIs<RosterChangesClosed>(
-                service.assignMember(civilization.id, playerId(2)).rejection(),
-            )
+            val membership = service.assignMember(civilization.id, playerId(2)).appliedValue()
+            assertEquals(civilization.id, membership.civilizationId)
         }
     }
 

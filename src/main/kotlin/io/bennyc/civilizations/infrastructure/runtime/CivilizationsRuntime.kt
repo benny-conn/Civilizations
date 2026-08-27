@@ -38,6 +38,7 @@ import io.bennyc.civilizations.domain.war.BattleId
 import io.bennyc.civilizations.domain.war.BattleParticipant
 import io.bennyc.civilizations.domain.war.BattleSide
 import io.bennyc.civilizations.domain.war.BattleStatus
+import io.bennyc.civilizations.domain.war.BattleSurrenderRecord
 import io.bennyc.civilizations.domain.war.War
 import io.bennyc.civilizations.domain.war.WarStatus
 import io.bennyc.civilizations.infrastructure.identity.UuidCivilizationsIdGenerator
@@ -221,6 +222,8 @@ class CivilizationsRuntime private constructor(
                 battleParticipants = battles.associate { battle ->
                     battle.id to listBattleParticipants(battle.id)
                 },
+                battleSurrenders = listBattleSurrendersForSeason(activeSeasonId)
+                    .associateBy(BattleSurrenderRecord::battleId),
             )
         }
 
@@ -247,6 +250,7 @@ class CivilizationsRuntime private constructor(
                         wars = loaded.wars,
                         battles = loaded.battles,
                         battleParticipants = loaded.battleParticipants,
+                        battleSurrenders = loaded.battleSurrenders,
                         activeBattleEligibility = buildActiveBattleEligibility(loaded),
                     ),
                 )
@@ -562,8 +566,51 @@ data class ActiveSeasonRuntimeState(
     val wars: List<War>,
     val battles: List<Battle>,
     val battleParticipants: Map<BattleId, List<BattleParticipant>>,
+    val battleSurrenders: Map<BattleId, BattleSurrenderRecord>,
     val activeBattleEligibility: List<ActiveBattleEligibilityRuntimeState>,
 ) {
+    private val membershipByPlayer = buildMap {
+        for (membership in memberships.values.flatten()) {
+            require(put(membership.playerId, membership) == null) {
+                "Player ${membership.playerId} has multiple active-season memberships"
+            }
+        }
+    }
+    private val openWarByPair = buildMap {
+        for (war in wars) {
+            if (war.status == WarStatus.DECLARED || war.status == WarStatus.ACTIVE) {
+                require(put(CivilizationPair.of(war.civilizationIds), war) == null) {
+                    "Civilization pair ${war.civilizationIds} has multiple open wars"
+                }
+            }
+        }
+    }
+    private val openBattleByCivilization = buildMap {
+        for (battle in battles) {
+            if (battle.status == BattleStatus.ACTIVE || battle.status == BattleStatus.RESOLVING) {
+                for (civilizationId in setOf(
+                    battle.attackingCivilizationId,
+                    battle.defendingCivilizationId,
+                )) {
+                    require(put(civilizationId, battle) == null) {
+                        "Civilization $civilizationId participates in multiple open battles"
+                    }
+                }
+            }
+        }
+    }
+    private val activeBattleByCivilization = buildMap {
+        for (eligibility in activeBattleEligibility) {
+            for (civilizationId in setOf(
+                eligibility.battle.attackingCivilizationId,
+                eligibility.battle.defendingCivilizationId,
+            )) {
+                require(put(civilizationId, eligibility.battle) == null) {
+                    "Civilization $civilizationId participates in multiple active battles"
+                }
+            }
+        }
+    }
     private val activeBattleParticipantByPlayer = buildMap {
         for (eligibility in activeBattleEligibility) {
             for (participant in eligibility.participants) {
@@ -572,6 +619,37 @@ data class ActiveSeasonRuntimeState(
                 }
             }
         }
+    }
+
+    fun membershipOf(playerId: PlayerId): Membership? = membershipByPlayer[playerId]
+
+    fun activeBattleAt(target: BlockPosition2D): Battle? {
+        val claim = claimIndex.claimAt(target) ?: return null
+        return activeBattleByCivilization[claim.civilizationId]
+    }
+
+    /** Resolves an opposing-claim entry entirely from the published hot-path state. */
+    fun hostileClaimEntry(
+        actorId: PlayerId,
+        target: BlockPosition2D,
+    ): HostileClaimEntryRuntimeState? {
+        val membership = membershipByPlayer[actorId] ?: return null
+        val claim = claimIndex.claimAt(target) ?: return null
+        if (claim.civilizationId == membership.civilizationId) {
+            return null
+        }
+        val war = openWarByPair[
+            CivilizationPair.of(membership.civilizationId, claim.civilizationId)
+        ] ?: return null
+        return HostileClaimEntryRuntimeState(
+            war = war,
+            enteredClaim = claim,
+            enteringCivilizationId = membership.civilizationId,
+            defendingCivilizationId = claim.civilizationId,
+            battlePhaseOpen = season.status == SeasonStatus.WAR,
+            existingOpenBattle = openBattleByCivilization[membership.civilizationId]
+                ?: openBattleByCivilization[claim.civilizationId],
+        )
     }
 
     /**
@@ -623,6 +701,34 @@ data class ActiveSeasonRuntimeState(
             action = action,
             target = target,
         )
+    }
+}
+
+data class HostileClaimEntryRuntimeState(
+    val war: War,
+    val enteredClaim: Claim,
+    val enteringCivilizationId: CivilizationId,
+    val defendingCivilizationId: CivilizationId,
+    val battlePhaseOpen: Boolean,
+    val existingOpenBattle: Battle?,
+)
+
+private data class CivilizationPair(
+    val low: CivilizationId,
+    val high: CivilizationId,
+) {
+    companion object {
+        fun of(civilizationIds: Set<CivilizationId>): CivilizationPair {
+            require(civilizationIds.size == 2) { "A civilization pair requires two IDs" }
+            return of(civilizationIds.first(), civilizationIds.last())
+        }
+
+        fun of(first: CivilizationId, second: CivilizationId): CivilizationPair =
+            if (first.toString() < second.toString()) {
+                CivilizationPair(first, second)
+            } else {
+                CivilizationPair(second, first)
+            }
     }
 }
 
@@ -682,5 +788,6 @@ private sealed interface LoadedActiveSeason {
         val wars: List<War>,
         val battles: List<Battle>,
         val battleParticipants: Map<BattleId, List<BattleParticipant>>,
+        val battleSurrenders: Map<BattleId, BattleSurrenderRecord>,
     ) : LoadedActiveSeason
 }

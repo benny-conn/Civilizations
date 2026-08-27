@@ -638,5 +638,87 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        SchemaMigration(
+            version = 6,
+            name = "member_war_declarations_and_battle_surrenders",
+            statements = listOf(
+                "DROP TRIGGER wars_validate_declarer_insert",
+                """
+                CREATE TRIGGER wars_validate_declarer_insert
+                BEFORE INSERT ON wars
+                WHEN NOT EXISTS (
+                    SELECT 1 FROM memberships membership
+                    WHERE membership.season_id = NEW.season_id
+                      AND membership.civilization_id = NEW.declaring_civilization_id
+                      AND membership.player_id = NEW.declared_by_player_id
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'war declarer must belong to the declaring civilization');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE battle_surrenders (
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT PRIMARY KEY,
+                    surrendered_civilization_id TEXT NOT NULL,
+                    surrendered_by_player_id TEXT NOT NULL,
+                    requested_outcome TEXT NOT NULL CHECK (
+                        requested_outcome IN ('ATTACKER_VICTORY', 'DEFENDER_VICTORY')
+                    ),
+                    surrendered_at_ms INTEGER NOT NULL CHECK (surrendered_at_ms >= 0),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(surrendered_civilization_id) = 36),
+                    CHECK (length(surrendered_by_player_id) = 36),
+                    FOREIGN KEY (season_id, battle_id)
+                        REFERENCES battles(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, surrendered_civilization_id)
+                        REFERENCES civilizations(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_surrenders_validate_insert
+                BEFORE INSERT ON battle_surrenders
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM battles battle
+                    JOIN memberships membership
+                      ON membership.season_id = NEW.season_id
+                     AND membership.civilization_id = NEW.surrendered_civilization_id
+                     AND membership.player_id = NEW.surrendered_by_player_id
+                     AND membership.role = 'LEADER'
+                    WHERE battle.id = NEW.battle_id
+                      AND battle.season_id = NEW.season_id
+                      AND battle.status = 'RESOLVING'
+                      AND NEW.surrendered_at_ms >= battle.started_at_ms
+                      AND (
+                          (NEW.surrendered_civilization_id = battle.attacking_civilization_id AND
+                           NEW.requested_outcome = 'DEFENDER_VICTORY') OR
+                          (NEW.surrendered_civilization_id = battle.defending_civilization_id AND
+                           NEW.requested_outcome = 'ATTACKER_VICTORY')
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid battle surrender');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_surrenders_are_immutable
+                BEFORE UPDATE ON battle_surrenders
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle surrenders are immutable');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_surrenders_cannot_be_deleted
+                BEFORE DELETE ON battle_surrenders
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle surrenders cannot be deleted');
+                END
+                """.trimIndent(),
+            ),
+        ),
     )
 }

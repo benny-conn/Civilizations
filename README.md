@@ -4,7 +4,7 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The architecture rework is complete. See [TODO.md](TODO.md) for the prioritized product roadmap, [docs/architecture.md](docs/architecture.md) for the stable dependency and persistence boundaries, and [docs/worktree-roadmap.md](docs/worktree-roadmap.md) for the dependency-aware multi-worktree queue for net-new MVP work.
 
-The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, a durable war/timed-battle lifecycle, a first-write-wins battle damage journal, and immutable resolution-time damage reports.
+The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, a first-write-wins battle damage journal, and immutable resolution-time damage reports.
 
 The incomplete pre-rework commands, mutable model graph, menus, scheduled tasks, adapters, and JSON-blob datastores have been deleted. Paper listeners protect claims through the application policy. During an active battle in the global `WAR` phase, snapshotted participants may break or place simple single blocks in either side's claimed land. The listener cancels the original event, commits its first-write-wins journal record off-thread, then revalidates and applies the mutation on the server thread. Block entities, multi-place operations, entities, explosions, and unsafe cascading blocks remain protected.
 
@@ -39,7 +39,7 @@ Before assigning parallel tasks, use the lanes and merge order in [docs/worktree
 
 Run the plugin on Paper 26.2 with Java 25. Copy the built JAR into the server's `plugins` directory and restart the server. Civilizations packages its selected SQLite driver and stores its authoritative data in `plugins/Civilizations/civilizations-v2.db` by default.
 
-The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, claimed-versus-wilderness explosion behavior, battle-mutation listener registration, and incremental schema migrations followed by clean restarts. The Foundation-free native Paper build also passed consecutive boots with Civilizations as the only installed plugin while loading the previous `v2:` configuration layout and existing schema-v4 database. War/battle persistence, timer recovery, damage-journal durability, and the cancel/journal/revalidate/replay event flow are covered by real-SQLite runtime tests and focused Paper-adapter tests. Protection decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
+The current build has been smoke-tested on Paper 26.2 build 112 through season creation, offline-UUID roster provisioning, claim creation, phase changes, clean shutdown, restart/index recovery, claimed-versus-wilderness explosion behavior, battle-mutation and hostile-entry listener registration, native war/admin command registration, and incremental schema migrations followed by clean restarts. The Foundation-free native Paper build also passed consecutive boots with Civilizations as the only installed plugin while loading the previous `v2:` configuration layout and existing databases. War/battle persistence, timer recovery, hostile-entry activation, bounded entry backpressure, damage-journal durability, and the cancel/journal/revalidate/replay event flow are covered by real-SQLite runtime tests and focused Paper-adapter tests. Protection and entry-candidate decisions use only the published in-memory snapshot and claim index; event handlers never query SQLite.
 
 ## Administration
 
@@ -49,11 +49,15 @@ The native Paper `/civadmin` command requires `civilizations.admin`, which defau
 - season creation, selection, and phase changes;
 - landless drafts and idempotent offline-UUID provisioning;
 - membership assignment, leadership transfer, and activation;
-- civilization listing and rectangular admin claim creation.
+- civilization listing and rectangular admin claim creation;
+- war/battle listing and inspection, war activation/closure/cancellation, and battle force-resolution/cancellation with required audit reasons;
+- explicit roster moves that preserve immutable participant sides in already-started battles.
+
+The player-facing `/civ` command exposes `status`, `declare <civilization>`, and leader-only `surrender`. Its `civilizations.war.declare`, `civilizations.war.surrender`, and `civilizations.war.participate` permissions default to players so LuckPerms can narrow access. Declaration is allowed in `SETUP`, `PEACE`, and `WAR`; a battle can start only during `WAR`. Entering or leaving the global `WAR` phase additionally requires the operator-default `civilizations.admin.phase.war` permission.
 
 Claim size/count/connectivity rules, safe gameplay phase gates, and the database filename are in `config.yml`; see [docs/configuration.md](docs/configuration.md) for the key reference and configuration contract. Configuration is validated and installed at startup, so changes currently require a server restart. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
 
-Operators have the explicit `civilizations.admin.bypass` permission. Ordinary members may mutate their own claims; outsiders cannot build, break, use containers/switches, move fluids or pistons across a border, damage protected entities, or PVP inside claimed land. Movement and teleportation are not restricted by land ownership.
+Operators have the explicit `civilizations.admin.bypass` permission. Ordinary members may mutate their own claims; outsiders cannot build, break, use containers/switches, move fluids or pistons across a border, damage protected entities, or PVP inside claimed land. Movement and teleportation are not blocked by land ownership, but a horizontal block transition or teleport into a hostile claim can start an eligible declared battle. Entry candidates are resolved from published memory and coalesced behind a bounded queue before durable work runs off-thread.
 
 ## Local test server
 

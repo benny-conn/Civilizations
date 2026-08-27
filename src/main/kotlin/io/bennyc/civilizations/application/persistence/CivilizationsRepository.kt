@@ -18,6 +18,7 @@ import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.war.Battle
 import io.bennyc.civilizations.domain.war.BattleId
 import io.bennyc.civilizations.domain.war.BattleParticipant
+import io.bennyc.civilizations.domain.war.BattleSurrenderRecord
 import io.bennyc.civilizations.domain.war.War
 import io.bennyc.civilizations.domain.war.WarId
 
@@ -72,6 +73,10 @@ interface CivilizationsReadContext {
 
     fun listBattleParticipants(battleId: BattleId): List<BattleParticipant>
 
+    fun findBattleSurrender(battleId: BattleId): BattleSurrenderRecord?
+
+    fun listBattleSurrendersForSeason(seasonId: SeasonId): List<BattleSurrenderRecord>
+
     fun findBlockChange(battleId: BattleId, position: BlockPosition3D): BattleBlockChange?
 
     fun countBlockChanges(battleId: BattleId): Long
@@ -121,6 +126,8 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
     fun updateBattle(battle: Battle)
 
     fun insertBattleParticipant(participant: BattleParticipant)
+
+    fun insertBattleSurrender(surrender: BattleSurrenderRecord)
 
     /** Returns false only when this battle/coordinate was already journaled. */
     fun insertBlockChangeIfAbsent(blockChange: BattleBlockChange): Boolean

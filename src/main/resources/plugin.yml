@@ -6,9 +6,28 @@ author: Tolmikarc
 description: Civilization, territory, economy, and warfare gameplay for Paper.
 website: https://github.com/benny-conn/Civilizations
 permissions:
+  civilizations.war:
+    description: Use player-facing Civilizations war commands.
+    default: true
+    children:
+      civilizations.war.declare: true
+      civilizations.war.surrender: true
+      civilizations.war.participate: true
+  civilizations.war.declare:
+    description: Declare war for the player's current civilization.
+    default: true
+  civilizations.war.surrender:
+    description: Surrender a battle as the current civilization leader.
+    default: true
+  civilizations.war.participate:
+    description: Trigger and use participant capabilities in active battles.
+    default: true
   civilizations.admin:
     description: Administer Civilizations.
     default: op
   civilizations.admin.bypass:
     description: Bypass Civilizations land protection.
+    default: op
+  civilizations.admin.phase.war:
+    description: Enter or leave the global WAR phase.
     default: op

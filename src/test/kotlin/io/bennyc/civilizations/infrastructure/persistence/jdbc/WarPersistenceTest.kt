@@ -80,7 +80,11 @@ class WarPersistenceTest {
 
             assertFailsWith<SQLException> {
                 database.repository.transaction {
-                    insertWar(seed.war(declaredBy = seed.northMember))
+                    insertWar(
+                        seed.war(
+                            declaredBy = seed.northMember.copy(playerId = PlayerId(id(99))),
+                        ),
+                    )
                 }
             }
 

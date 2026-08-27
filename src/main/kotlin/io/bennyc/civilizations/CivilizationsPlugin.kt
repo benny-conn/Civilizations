@@ -2,7 +2,9 @@ package io.bennyc.civilizations
 
 import io.bennyc.civilizations.infrastructure.paper.CivilizationsAdminCommand
 import io.bennyc.civilizations.infrastructure.paper.CivilizationsConfiguration
+import io.bennyc.civilizations.infrastructure.paper.CivilizationsWarCommand
 import io.bennyc.civilizations.infrastructure.paper.protection.PaperProtectionListener
+import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeStartOutcome
 import org.bukkit.Bukkit
@@ -13,6 +15,7 @@ import java.util.logging.Level
 class CivilizationsPlugin : JavaPlugin() {
     private lateinit var runtime: CivilizationsRuntime
     private lateinit var protectionListener: PaperProtectionListener
+    private lateinit var battleEntryListener: PaperBattleEntryListener
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -42,10 +45,23 @@ class CivilizationsPlugin : JavaPlugin() {
             "civadmin",
             "Administer Civilizations",
             listOf("civilizationsadmin"),
-            CivilizationsAdminCommand(runtime),
+            CivilizationsAdminCommand(runtime, logger),
+        )
+        registerCommand(
+            "civilizations",
+            "Civilizations war operations",
+            listOf("civ"),
+            CivilizationsWarCommand(
+                runtime = runtime,
+                rules = runtimeConfiguration.warRules,
+                server = server,
+                logger = logger,
+            ),
         )
         protectionListener = PaperProtectionListener(runtime, server, logger)
         server.pluginManager.registerEvents(protectionListener, this)
+        battleEntryListener = PaperBattleEntryListener(runtime, server, logger)
+        server.pluginManager.registerEvents(battleEntryListener, this)
         runtime.start { outcome ->
             when (outcome) {
                 is RuntimeStartOutcome.Ready -> {
@@ -70,6 +86,11 @@ class CivilizationsPlugin : JavaPlugin() {
             logger.info(
                 "Battle block mutation metrics: " +
                     protectionListener.battleMutationMetricsSummary(),
+            )
+        }
+        if (::battleEntryListener.isInitialized) {
+            logger.info(
+                "Battle entry metrics: " + battleEntryListener.metricsSummary(),
             )
         }
         if (::runtime.isInitialized) {

@@ -13,6 +13,7 @@ import io.bennyc.civilizations.infrastructure.runtime.ActiveBattleBlockMutationA
 import io.bennyc.civilizations.infrastructure.runtime.BattleBlockJournalCompletion
 import io.bennyc.civilizations.infrastructure.runtime.BattleBlockMutationQueue
 import io.bennyc.civilizations.infrastructure.runtime.BattleBlockQueueSubmission
+import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.GameMode
@@ -44,6 +45,7 @@ internal class PaperBattleBlockMutationAdapter(
         PlayerProtectionAction,
         BlockPosition2D,
     ) -> ActiveBattleBlockMutationAuthorization?,
+    private val isActiveBattleLand: (BlockPosition2D) -> Boolean,
 ) {
     private var replayToken: BattleBlockReplayToken? = null
     private var appliedBattleMutations = 0L
@@ -55,11 +57,22 @@ internal class PaperBattleBlockMutationAdapter(
         if (isReplaying(event.player, PlayerProtectionAction.BLOCK_BREAK, target)) {
             return true
         }
+        if (event.player.hasPermission(ADMIN_BYPASS_PERMISSION)) {
+            return false
+        }
         val battle = battleAuthorization(
             event.player,
             PlayerProtectionAction.BLOCK_BREAK,
             target.horizontal(),
-        ) ?: return false
+        )
+        if (battle == null) {
+            if (!isActiveBattleLand(target.horizontal())) {
+                return false
+            }
+            event.isCancelled = true
+            notifyBattleParticipationRequired(event.player)
+            return true
+        }
 
         event.isCancelled = true
         if (!SimpleBattleBlockPolicy.allowsBreak(event.block)) {
@@ -81,11 +94,12 @@ internal class PaperBattleBlockMutationAdapter(
         }
         if (event is BlockMultiPlaceEvent) {
             val affectsBattle = event.replacedBlockStates.any { state ->
+                val targetPosition = state.block.position()
                 battleAuthorization(
                     event.player,
                     PlayerProtectionAction.BLOCK_PLACE,
-                    state.block.position(),
-                ) != null
+                    targetPosition,
+                ) != null || isActiveBattleLand(targetPosition)
             }
             if (!affectsBattle) {
                 return false
@@ -99,7 +113,15 @@ internal class PaperBattleBlockMutationAdapter(
             event.player,
             PlayerProtectionAction.BLOCK_PLACE,
             target.horizontal(),
-        ) ?: return false
+        )
+        if (battle == null) {
+            if (!isActiveBattleLand(target.horizontal())) {
+                return false
+            }
+            event.isCancelled = true
+            notifyBattleParticipationRequired(event.player)
+            return true
+        }
         event.isCancelled = true
         if (!event.canBuild() || !SimpleBattleBlockPolicy.allowsPlace(event.blockPlaced)) {
             notifyUnsupportedBattleBlock(event.player)
@@ -369,6 +391,9 @@ internal class PaperBattleBlockMutationAdapter(
         if (player.hasPermission(ADMIN_BYPASS_PERMISSION)) {
             return null
         }
+        if (!player.hasPermission(PaperBattleEntryListener.PARTICIPATE_PERMISSION)) {
+            return null
+        }
         return battleAuthorization(PlayerId(player.uniqueId), action, target)
     }
 
@@ -376,7 +401,13 @@ internal class PaperBattleBlockMutationAdapter(
         actorId: PlayerId,
         action: PlayerProtectionAction,
         target: BlockPosition2D,
-    ): ActiveBattleBlockMutationAuthorization? = authorize(actorId, action, target)
+    ): ActiveBattleBlockMutationAuthorization? {
+        val player = server.getPlayer(actorId.value) ?: return null
+        if (!player.hasPermission(PaperBattleEntryListener.PARTICIPATE_PERMISSION)) {
+            return null
+        }
+        return authorize(actorId, action, target)
+    }
 
     private fun isReplaying(
         player: Player,
@@ -424,6 +455,15 @@ internal class PaperBattleBlockMutationAdapter(
     private fun notifyBattleClosed(player: Player) {
         player.sendActionBar(
             Component.text("That battle no longer permits block changes.", NamedTextColor.RED),
+        )
+    }
+
+    private fun notifyBattleParticipationRequired(player: Player) {
+        player.sendActionBar(
+            Component.text(
+                "Only permitted snapshotted participants can change active battle land.",
+                NamedTextColor.RED,
+            ),
         )
     }
 

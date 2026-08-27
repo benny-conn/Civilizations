@@ -38,17 +38,22 @@ class WarServiceTest {
     private val world = WorldId("minecraft:overworld")
 
     @Test
-    fun `declaration requires a leader prevents duplicate pairs and allows multiple fronts`() {
+    fun `declaration accepts any member prevents duplicate pairs and allows multiple fronts`() {
         SqliteTestDatabase().use { database ->
             val fixture = fixture(database)
 
-            assertIs<WarDeclarerMustBeLeader>(
-                fixture.wars.declare(fixture.declaration(declaredBy = 2)).rejection(),
+            assertIs<WarDeclarerMustBeMember>(
+                fixture.wars.declare(fixture.declaration(declaredBy = 99)).rejection(),
             )
 
-            val declared = fixture.wars.declare(fixture.declaration()).appliedValue()
+            val declared = fixture.wars.declare(
+                fixture.declaration(declaredBy = 2),
+            ).appliedValue()
             assertEquals(WarStatus.DECLARED, declared.status)
-            assertEquals(declared, fixture.wars.declare(fixture.declaration()).unchangedValue())
+            assertEquals(
+                declared,
+                fixture.wars.declare(fixture.declaration(declaredBy = 2)).unchangedValue(),
+            )
 
             val secondFront = fixture.wars.declare(
                 fixture.declaration(
@@ -78,10 +83,29 @@ class WarServiceTest {
     }
 
     @Test
+    fun `declaration is open in setup peace and war while battle activation requires war`() {
+        for (status in listOf(SeasonStatus.SETUP, SeasonStatus.PEACE, SeasonStatus.WAR)) {
+            SqliteTestDatabase().use { database ->
+                val fixture = fixture(database, finalSeasonStatus = status)
+                val war = fixture.wars.declare(
+                    fixture.declaration(declaredBy = 2),
+                ).appliedValue()
+
+                assertEquals(WarStatus.DECLARED, war.status)
+                if (status == SeasonStatus.WAR) {
+                    assertEquals(WarStatus.ACTIVE, fixture.wars.activate(war.id).appliedValue().status)
+                } else {
+                    assertIs<WarPhaseClosed>(fixture.wars.activate(war.id).rejection())
+                }
+            }
+        }
+    }
+
+    @Test
     fun `hostile claim entry assigns direction and snapshots both rosters`() {
         SqliteTestDatabase().use { database ->
             val fixture = fixture(database)
-            val war = fixture.activeWar()
+            val war = fixture.wars.declare(fixture.declaration()).appliedValue()
 
             assertIs<EntryIsNotOpponentLand>(
                 fixture.wars.startBattleFromEntry(
@@ -89,6 +113,11 @@ class WarServiceTest {
                     playerId(2),
                     fixture.northClaim.id,
                 ).rejection(),
+            )
+            assertEquals(
+                WarStatus.DECLARED,
+                database.repository.read { findWar(war.id)?.status },
+                "Rejected entry must not activate the political war",
             )
 
             val roster = fixture.wars.startBattleFromEntry(
@@ -115,10 +144,76 @@ class WarServiceTest {
             )
 
             val persisted = database.repository.read {
-                findBattle(roster.battle.id) to listBattleParticipants(roster.battle.id)
+                Triple(
+                    findWar(war.id),
+                    findBattle(roster.battle.id),
+                    listBattleParticipants(roster.battle.id),
+                )
             }
-            assertEquals(roster.battle, persisted.first)
-            assertEquals(roster.participants.toSet(), persisted.second.toSet())
+            assertEquals(WarStatus.ACTIVE, persisted.first?.status)
+            assertEquals(roster.battle, persisted.second)
+            assertEquals(roster.participants.toSet(), persisted.third.toSet())
+        }
+    }
+
+    @Test
+    fun `current leader can surrender its side and immediately remove active eligibility`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database)
+            val battle = fixture.wars.startBattleFromEntry(
+                fixture.wars.declare(fixture.declaration()).appliedValue().id,
+                playerId(2),
+                fixture.southClaim.id,
+            ).appliedValue().battle
+
+            assertIs<SurrendererMustLeadBattleCivilization>(
+                fixture.wars.surrender(
+                    SurrenderBattle(fixture.seasonId, playerId(2)),
+                ).rejection(),
+            )
+            val surrender = fixture.wars.surrender(
+                SurrenderBattle(fixture.seasonId, playerId(1)),
+            ).appliedValue()
+
+            assertEquals(battle.id, surrender.battle.id)
+            assertEquals(BattleStatus.RESOLVING, surrender.battle.status)
+            assertEquals(fixture.northId, surrender.surrenderedCivilizationId)
+            assertEquals(BattleOutcome.DEFENDER_VICTORY, surrender.requestedOutcome)
+            assertEquals(
+                BattleStatus.RESOLVING,
+                database.repository.read { findBattle(battle.id)?.status },
+            )
+            val persisted = database.repository.read { findBattleSurrender(battle.id) }
+            assertEquals(fixture.northId, persisted?.surrenderedCivilizationId)
+            assertEquals(playerId(1), persisted?.surrenderedByPlayerId)
+            assertEquals(BattleOutcome.DEFENDER_VICTORY, persisted?.requestedOutcome)
+            assertIs<ApplicationResult.Unchanged<*>>(
+                fixture.wars.surrender(
+                    SurrenderBattle(fixture.seasonId, playerId(1)),
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `force resolution is explicit idempotent admin recovery`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database)
+            val battle = fixture.wars.startBattleFromEntry(
+                fixture.wars.declare(fixture.declaration()).appliedValue().id,
+                playerId(2),
+                fixture.southClaim.id,
+            ).appliedValue().battle
+
+            val closed = fixture.wars.forceResolve(battle.id, BattleOutcome.DRAW).appliedValue()
+
+            assertEquals(BattleStatus.CLOSED, closed.status)
+            assertEquals(BattleOutcome.DRAW, closed.outcome)
+            assertNull(closed.winnerCivilizationId)
+            assertEquals(
+                closed,
+                fixture.wars.forceResolve(battle.id, BattleOutcome.DRAW).unchangedValue(),
+            )
         }
     }
 
@@ -198,6 +293,7 @@ class WarServiceTest {
     private fun fixture(
         database: SqliteTestDatabase,
         battleDurationSeconds: Long = 600,
+        finalSeasonStatus: SeasonStatus = SeasonStatus.WAR,
     ): Fixture {
         database.migrator.migrate()
         val clock = MutableClock(Instant.parse("2026-08-18T12:00:00Z"))
@@ -241,8 +337,12 @@ class WarServiceTest {
                 ClaimBounds.between(world, 32, 0, 47, 15),
             ),
         ).appliedValue()
-        seasons.transition(season.id, SeasonStatus.PEACE).appliedValue()
-        seasons.transition(season.id, SeasonStatus.WAR).appliedValue()
+        if (finalSeasonStatus != SeasonStatus.SETUP) {
+            seasons.transition(season.id, SeasonStatus.PEACE).appliedValue()
+        }
+        if (finalSeasonStatus == SeasonStatus.WAR) {
+            seasons.transition(season.id, SeasonStatus.WAR).appliedValue()
+        }
         return Fixture(
             clock = clock,
             wars = WarService(database.repository, ids, clock),

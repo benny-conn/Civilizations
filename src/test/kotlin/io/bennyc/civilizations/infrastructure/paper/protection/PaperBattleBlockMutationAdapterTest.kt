@@ -18,6 +18,7 @@ import io.bennyc.civilizations.infrastructure.runtime.ActiveBattleBlockMutationA
 import io.bennyc.civilizations.infrastructure.runtime.BattleBlockMutationQueue
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeMutationOutcome
+import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
@@ -150,6 +151,21 @@ class PaperBattleBlockMutationAdapterTest {
     }
 
     @Test
+    fun `unpermitted player cannot fall through to ordinary owner mutation in battle land`() {
+        val harness = PaperHarness(
+            targetMaterial = Material.STONE,
+            heldMaterial = Material.IRON_PICKAXE,
+            participate = false,
+        )
+        val event = BlockBreakEvent(harness.target, harness.player)
+
+        assertTrue(harness.adapter.intercept(event))
+        assertTrue(event.isCancelled)
+        assertEquals(null, harness.journalRequest)
+        assertEquals(Material.STONE, harness.target.type)
+    }
+
+    @Test
     fun `changed world state aborts instead of overwriting the newer block`() {
         val harness = PaperHarness(targetMaterial = Material.STONE, heldMaterial = Material.IRON_PICKAXE)
         val event = BlockBreakEvent(harness.target, harness.player)
@@ -168,6 +184,7 @@ class PaperBattleBlockMutationAdapterTest {
         heldMaterial: Material,
         targetIsTile: Boolean = false,
         private val cancelReplayPlace: Boolean = false,
+        private val participate: Boolean = true,
     ) {
         private val targetPosition = BlockPosition3D(worldId, 0, 64, 0)
         private val supportPosition = BlockPosition3D(worldId, 0, 63, 0)
@@ -220,7 +237,9 @@ class PaperBattleBlockMutationAdapterTest {
         val player: Player = proxy(Player::class.java, "player") { method, args ->
             when (method.name) {
                 "getUniqueId" -> actorId.value
-                "hasPermission" -> false
+                "hasPermission" ->
+                    participate &&
+                        args.single() == PaperBattleEntryListener.PARTICIPATE_PERMISSION
                 "getInventory" -> inventory
                 "getGameMode" -> GameMode.SURVIVAL
                 "getWorld" -> world
@@ -301,6 +320,7 @@ class PaperBattleBlockMutationAdapterTest {
                         target = target,
                     )
                 },
+                isActiveBattleLand = { true },
             )
         }
 

@@ -70,6 +70,10 @@ class PaperProtectionListener(
             val ready = runtime.state as? CivilizationsRuntimeState.Ready
             ready?.activeSeason?.authorizeBattleBlockMutation(actorId, action, target)
         },
+        isActiveBattleLand = { target ->
+            val ready = runtime.state as? CivilizationsRuntimeState.Ready
+            ready?.activeSeason?.activeBattleAt(target) != null
+        },
     )
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

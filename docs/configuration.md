@@ -16,9 +16,10 @@ currently no `/reload` integration or partial live-reload behavior.
 | `claims.max-area` | `65536` | Maximum inclusive X/Z block area for one rectangular claim. Must be a positive integer. |
 | `claims.max-count` | `32` | Maximum claim rectangles owned by one civilization. Must be a positive integer. |
 | `claims.require-edge-connection` | `true` | Whether every additional rectangle must share a non-zero block edge with the civilization's existing land. |
-| `gameplay.phase-gates.roster-changes` | `[SETUP, PEACE]` | Phases in which drafts, provisioning, membership, leadership, and activation may change. May contain only `SETUP` and `PEACE`; `[]` disables roster changes. |
+| `gameplay.phase-gates.roster-changes` | `[SETUP, PEACE, WAR]` | Phases in which drafts, provisioning, membership, leadership, and activation may change. May contain only `SETUP`, `PEACE`, and `WAR`; active battle participant/side snapshots remain immutable. `[]` disables roster changes. |
 | `gameplay.phase-gates.claim-creation` | `[SETUP, PEACE]` | Phases in which new claims may be created. May contain only `SETUP` and `PEACE`; `[]` disables claiming. |
 | `gameplay.phase-gates.member-land-actions` | `[SETUP, PEACE, WAR]` | Phases in which members may ordinarily interact with their own claimed land. May contain only `SETUP`, `PEACE`, and `WAR`; `[]` freezes ordinary member actions in every phase. Explicit conflict capabilities and admin bypass remain separately authorized. |
+| `gameplay.war.battle-duration-seconds` | `1800` | Duration snapshotted into a new war and used for each hostile-entry battle in that war. Must be from `1` through `31536000`; changes require restart and affect only later declarations. |
 
 Phase names are case-insensitive when loaded, but the shipped file uses uppercase names
 to match the durable season statuses. Duplicate or unknown phase names are rejected.

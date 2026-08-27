@@ -21,6 +21,7 @@ import io.bennyc.civilizations.domain.war.BattleOutcome
 import io.bennyc.civilizations.domain.war.BattleParticipant
 import io.bennyc.civilizations.domain.war.BattleSide
 import io.bennyc.civilizations.domain.war.BattleStatus
+import io.bennyc.civilizations.domain.war.BattleSurrenderRecord
 import io.bennyc.civilizations.domain.war.War
 import io.bennyc.civilizations.domain.war.WarId
 import io.bennyc.civilizations.domain.war.WarRulesSnapshot
@@ -47,7 +48,7 @@ class WarService(
         }
 
         return repository.transaction {
-            validateWarPhase(request.seasonId)?.let {
+            validateDeclarationPhase(request.seasonId)?.let {
                 return@transaction ApplicationResult.Rejected(it)
             }
             val declaring = findCivilization(request.declaringCivilizationId)
@@ -71,11 +72,9 @@ class WarService(
             }
 
             val declarer = findMembership(request.seasonId, request.declaredByPlayerId)
-            if (declarer?.civilizationId != declaring.id ||
-                declarer.role != MembershipRole.LEADER
-            ) {
+            if (declarer?.civilizationId != declaring.id) {
                 return@transaction ApplicationResult.Rejected(
-                    WarDeclarerMustBeLeader(request.declaredByPlayerId, declaring.id),
+                    WarDeclarerMustBeMember(request.declaredByPlayerId, declaring.id),
                 )
             }
 
@@ -125,7 +124,7 @@ class WarService(
                 InvalidWarTransition(warId, current.status, WarStatus.ACTIVE),
             )
         }
-        validateWarPhase(current.seasonId)?.let {
+        validateBattlePhase(current.seasonId)?.let {
             return@transaction ApplicationResult.Rejected(it)
         }
         for (civilizationId in current.civilizationIds) {
@@ -149,30 +148,23 @@ class WarService(
     }
 
     /**
-     * Persists the future movement-trigger boundary without listening to Paper
-     * yet. The entering player's civilization becomes this battle's attacker,
-     * and the entered claim's owner becomes its defender.
+     * Atomically activates a declared war, if needed, and snapshots a battle
+     * when one side enters the opposing side's claim during the global WAR phase.
      */
     fun startBattleFromEntry(
         warId: WarId,
         triggeringPlayerId: PlayerId,
         enteredClaimId: ClaimId,
     ): ApplicationResult<BattleRoster> = repository.transaction {
-        val war = findWar(warId)
+        var war = findWar(warId)
             ?: return@transaction ApplicationResult.Rejected(WarNotFound(warId))
-        if (war.status != WarStatus.ACTIVE) {
+        if (war.status != WarStatus.DECLARED && war.status != WarStatus.ACTIVE) {
             return@transaction ApplicationResult.Rejected(
                 WarNotActive(war.id, war.status),
             )
         }
-        validateWarPhase(war.seasonId)?.let {
+        validateBattlePhase(war.seasonId)?.let {
             return@transaction ApplicationResult.Rejected(it)
-        }
-
-        listBattlesForWar(warId).firstOrNull { it.status.isOpen }?.let { existing ->
-            return@transaction ApplicationResult.Unchanged(
-                BattleRoster(existing, listBattleParticipants(existing.id)),
-            )
         }
 
         val entrant = findMembership(war.seasonId, triggeringPlayerId)
@@ -197,6 +189,11 @@ class WarService(
                 ),
             )
         }
+        listBattlesForWar(warId).firstOrNull { it.status.isOpen }?.let { existing ->
+            return@transaction ApplicationResult.Unchanged(
+                BattleRoster(existing, listBattleParticipants(existing.id)),
+            )
+        }
 
         val attackingRoster = listMemberships(entrant.civilizationId)
         val defendingRoster = listMemberships(defendingCivilizationId)
@@ -217,6 +214,22 @@ class WarService(
         }
 
         val now = clock.instant()
+        if (war.status == WarStatus.DECLARED) {
+            for (civilizationId in war.civilizationIds) {
+                val civilization = findCivilization(civilizationId)
+                    ?: return@transaction ApplicationResult.Rejected(
+                        CivilizationNotFound(civilizationId),
+                    )
+                validateWarParty(civilization, war.seasonId)?.let {
+                    return@transaction ApplicationResult.Rejected(it)
+                }
+            }
+            war = war.copy(
+                status = WarStatus.ACTIVE,
+                activatedAt = now,
+                updatedAt = now,
+            ).also(::updateWar)
+        }
         val battle = Battle(
             id = idGenerator.newBattleId(),
             warId = war.id,
@@ -260,6 +273,87 @@ class WarService(
         participants.forEach(::insertBattleParticipant)
         ApplicationResult.Applied(BattleRoster(battle, participants))
     }
+
+    /**
+     * Lets the current leader of either battle civilization end destructive
+     * eligibility immediately. The returned outcome is the explicit resolution
+     * requested by the surrender; final closure remains a separate resolution step.
+     */
+    fun surrender(request: SurrenderBattle): ApplicationResult<BattleSurrender> =
+        repository.transaction {
+            val leader = findMembership(request.seasonId, request.surrenderedByPlayerId)
+                ?: return@transaction ApplicationResult.Rejected(
+                    SurrendererMustLeadBattleCivilization(request.surrenderedByPlayerId),
+                )
+            if (leader.role != MembershipRole.LEADER) {
+                return@transaction ApplicationResult.Rejected(
+                    SurrendererMustLeadBattleCivilization(request.surrenderedByPlayerId),
+                )
+            }
+            val current = listOpenBattlesForCivilization(leader.civilizationId)
+                .singleOrNull()
+                ?: return@transaction ApplicationResult.Rejected(
+                    NoOpenBattleToSurrender(leader.civilizationId),
+                )
+            if (current.seasonId != request.seasonId) {
+                return@transaction ApplicationResult.Rejected(
+                    NoActiveBattleToSurrender(leader.civilizationId),
+                )
+            }
+            findBattleSurrender(current.id)?.let { existing ->
+                val unchanged = BattleSurrender(
+                    battle = current,
+                    surrenderedCivilizationId = existing.surrenderedCivilizationId,
+                    requestedOutcome = existing.requestedOutcome,
+                    surrenderedByPlayerId = existing.surrenderedByPlayerId,
+                )
+                return@transaction if (
+                    existing.surrenderedCivilizationId == leader.civilizationId &&
+                    existing.surrenderedByPlayerId == request.surrenderedByPlayerId
+                ) {
+                    ApplicationResult.Unchanged(unchanged)
+                } else {
+                    ApplicationResult.Rejected(NoActiveBattleToSurrender(leader.civilizationId))
+                }
+            }
+            if (current.status != BattleStatus.ACTIVE) {
+                return@transaction ApplicationResult.Rejected(
+                    NoActiveBattleToSurrender(leader.civilizationId),
+                )
+            }
+            val outcome = when (leader.civilizationId) {
+                current.attackingCivilizationId -> BattleOutcome.DEFENDER_VICTORY
+                current.defendingCivilizationId -> BattleOutcome.ATTACKER_VICTORY
+                else -> return@transaction ApplicationResult.Rejected(
+                    SurrendererMustLeadBattleCivilization(request.surrenderedByPlayerId),
+                )
+            }
+            val now = clock.instant()
+            val resolving = current.copy(
+                status = BattleStatus.RESOLVING,
+                resolvingAt = now,
+                updatedAt = now,
+            )
+            updateBattle(resolving)
+            insertBattleSurrender(
+                BattleSurrenderRecord(
+                    seasonId = current.seasonId,
+                    battleId = current.id,
+                    surrenderedCivilizationId = leader.civilizationId,
+                    surrenderedByPlayerId = request.surrenderedByPlayerId,
+                    requestedOutcome = outcome,
+                    surrenderedAt = now,
+                ),
+            )
+            ApplicationResult.Applied(
+                BattleSurrender(
+                    battle = resolving,
+                    surrenderedCivilizationId = leader.civilizationId,
+                    requestedOutcome = outcome,
+                    surrenderedByPlayerId = request.surrenderedByPlayerId,
+                ),
+            )
+        }
 
     fun beginResolution(
         battleId: BattleId,
@@ -337,6 +431,39 @@ class WarService(
         ApplicationResult.Applied(closed)
     }
 
+    /** Audited adapter-only recovery path for an active or resolving battle. */
+    fun forceResolve(
+        battleId: BattleId,
+        outcome: BattleOutcome,
+    ): ApplicationResult<Battle> = repository.transaction {
+        val current = findBattle(battleId)
+            ?: return@transaction ApplicationResult.Rejected(BattleNotFound(battleId))
+        if (current.status == BattleStatus.CLOSED && current.outcome == outcome) {
+            return@transaction ApplicationResult.Unchanged(current)
+        }
+        if (current.status != BattleStatus.ACTIVE && current.status != BattleStatus.RESOLVING) {
+            return@transaction ApplicationResult.Rejected(
+                InvalidBattleTransition(battleId, current.status, BattleStatus.CLOSED),
+            )
+        }
+        val winner = when (outcome) {
+            BattleOutcome.ATTACKER_VICTORY -> current.attackingCivilizationId
+            BattleOutcome.DEFENDER_VICTORY -> current.defendingCivilizationId
+            BattleOutcome.DRAW -> null
+        }
+        val now = clock.instant()
+        val closed = current.copy(
+            status = BattleStatus.CLOSED,
+            resolvingAt = current.resolvingAt ?: now,
+            endedAt = now,
+            outcome = outcome,
+            winnerCivilizationId = winner,
+            updatedAt = now,
+        )
+        updateBattle(closed)
+        ApplicationResult.Applied(closed)
+    }
+
     fun cancelBattle(battleId: BattleId): ApplicationResult<Battle> = repository.transaction {
         val current = findBattle(battleId)
             ?: return@transaction ApplicationResult.Rejected(BattleNotFound(battleId))
@@ -395,7 +522,18 @@ class WarService(
             ApplicationResult.Applied(ended)
         }
 
-    private fun CivilizationsWriteContext.validateWarPhase(
+    private fun CivilizationsWriteContext.validateDeclarationPhase(
+        seasonId: SeasonId,
+    ): ApplicationFailure? {
+        val season = findSeason(seasonId) ?: return SeasonNotFound(seasonId)
+        return if (season.status in DECLARATION_PHASES) {
+            null
+        } else {
+            WarDeclarationPhaseClosed(seasonId, season.status)
+        }
+    }
+
+    private fun CivilizationsWriteContext.validateBattlePhase(
         seasonId: SeasonId,
     ): ApplicationFailure? {
         val season = findSeason(seasonId) ?: return SeasonNotFound(seasonId)
@@ -424,8 +562,13 @@ class WarService(
     private val BattleStatus.isOpen: Boolean
         get() = this == BattleStatus.ACTIVE || this == BattleStatus.RESOLVING
 
-    private companion object {
+    companion object {
         const val MAX_BATTLE_DURATION_SECONDS = 365L * 24L * 60L * 60L
+        private val DECLARATION_PHASES = setOf(
+            SeasonStatus.SETUP,
+            SeasonStatus.PEACE,
+            SeasonStatus.WAR,
+        )
     }
 }
 
@@ -442,6 +585,18 @@ data class BattleRoster(
     val participants: List<BattleParticipant>,
 )
 
+data class SurrenderBattle(
+    val seasonId: SeasonId,
+    val surrenderedByPlayerId: PlayerId,
+)
+
+data class BattleSurrender(
+    val battle: Battle,
+    val surrenderedCivilizationId: CivilizationId,
+    val requestedOutcome: BattleOutcome,
+    val surrenderedByPlayerId: PlayerId,
+)
+
 data class InvalidBattleDuration(
     val suppliedSeconds: Long,
     val maximumSeconds: Long,
@@ -454,12 +609,12 @@ data class SelfWarNotAllowed(val civilizationId: CivilizationId) : ApplicationFa
     override val description: String = "Civilization $civilizationId cannot declare war on itself"
 }
 
-data class WarDeclarerMustBeLeader(
+data class WarDeclarerMustBeMember(
     val playerId: PlayerId,
     val civilizationId: CivilizationId,
 ) : ApplicationFailure {
     override val description: String =
-        "Player $playerId must lead civilization $civilizationId to declare war"
+        "Player $playerId must belong to civilization $civilizationId to declare war"
 }
 
 data class WarPairAlreadyOpen(
@@ -494,6 +649,14 @@ data class WarPhaseClosed(
 ) : ApplicationFailure {
     override val description: String =
         "War operations are closed while season $seasonId is $status"
+}
+
+data class WarDeclarationPhaseClosed(
+    val seasonId: SeasonId,
+    val status: SeasonStatus,
+) : ApplicationFailure {
+    override val description: String =
+        "War declarations are closed while season $seasonId is $status"
 }
 
 data class WarCivilizationSeasonMismatch(
@@ -565,6 +728,27 @@ data class BattleHasNotExpired(
     val endsAt: java.time.Instant,
 ) : ApplicationFailure {
     override val description: String = "Battle $battleId does not end until $endsAt"
+}
+
+data class SurrendererMustLeadBattleCivilization(
+    val playerId: PlayerId,
+) : ApplicationFailure {
+    override val description: String =
+        "Player $playerId must currently lead a civilization in an active battle to surrender"
+}
+
+data class NoOpenBattleToSurrender(
+    val civilizationId: CivilizationId,
+) : ApplicationFailure {
+    override val description: String =
+        "Civilization $civilizationId has no open battle to surrender"
+}
+
+data class NoActiveBattleToSurrender(
+    val civilizationId: CivilizationId,
+) : ApplicationFailure {
+    override val description: String =
+        "Civilization $civilizationId has no active battle to surrender"
 }
 
 data class WarHasOpenBattle(
