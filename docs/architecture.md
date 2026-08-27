@@ -71,6 +71,12 @@ the admin adapter should select an explicit target civilization and reuse the ap
 service rather than directly editing durable state. Any admin-only override must be a
 typed, auditable input with deliberately bounded effects.
 
+External permission plugins such as LuckPerms gate global access to player/admin command
+surfaces; operator-default permissions are safe shipped defaults. They are not the
+authoritative model for civilization-scoped authority. Future leader-defined roles and
+capabilities such as claiming or managing local PVP are durable Civilizations records
+evaluated by application policy, with commands and inventory GUIs acting only as adapters.
+
 ## Claim model
 
 The first migrated subsystem is the claim geometry and spatial index under `domain.claim` and `application.claim`.
@@ -82,6 +88,14 @@ The first migrated subsystem is the claim geometry and spatial index under `doma
 - The spatial index maps world/chunk pairs to candidate claim IDs and performs an exact rectangle check after candidate lookup.
 - Arbitrarily shaped territory remains a collection of rectangles. It is not converted into a materialized polygon or block set.
 - The index is derived state and is rebuilt from authoritative claims during startup.
+
+The accepted product model permits more than one disconnected territory per civilization.
+Future persistence represents each connected territory as an explicit claim group:
+rectangles inside a group obey edge-connectivity, while creating another group atomically
+checks a configurable group limit, a substantial establishment price, and optional
+membership/treasury progression thresholds. Those thresholds authorize creation; falling
+below one later does not silently delete durable land. The current live claim model still
+supports only a single connected set and must not emulate groups with a boolean bypass.
 
 The live runtime loads authoritative claim rows, builds this index, and routes Paper protection events through it. The former `Region`, `ClaimUtil`, and full-height materialization implementation have been deleted.
 
@@ -112,6 +126,7 @@ The mutation boundary is under `application.season`, `application.civilization`,
 - `CivilizationService` supports empty drafts as well as atomic, idempotent provisioning from offline player UUIDs. Activation requires one leader and a roster but deliberately does not require a home or claim.
 - A player may belong to at most one civilization per season. Reassignment is explicit, and a leader must transfer leadership before moving.
 - Roster and claim mutations default to open in `SETUP` and `PEACE`. YAML may narrow either gate, but application validation prevents enabling them in `WAR`, `FINALE`, or `ARCHIVED` because those combinations are not yet safe.
+- The accepted Season One rule keeps political-war rosters mutable during `WAR`. A follow-up must safely widen the roster gate while preserving every already-started battle's immutable participant and side snapshot; switching civilizations never rewrites or grants eligibility in the active battle.
 - `ClaimService` validates status, area/count limits, exact overlap, and same-civilization edge connectivity before inserting a claim. Corner contact is not connectivity.
 - `WarService` separates a durable relationship (`War`) from each timed engagement (`Battle`). Declaration, activation, hostile-entry battle start, expiry/resolution, and terminal transitions are explicit transactional operations.
 
@@ -120,6 +135,15 @@ Application services are synchronous because the repository port represents bloc
 ## War and battle model
 
 A `War` is the durable political relationship between two civilizations. A `Battle` is one timed engagement within that war. This avoids treating every war as a single transient raid and leaves room for multiple engagements, reparations, surrender, or later occupation rules without changing identity.
+
+Wars are winnerless relationships. A civilization member with global access to the
+declaration command may declare during `SETUP`, `PEACE`, or `WAR` without admin approval
+or a preparation countdown, but only the global `WAR` phase can start or sustain a
+battle. A dedicated global-phase permission, operator/admin by default, controls that
+combat gate. This is an accepted target rule: the current service remains leader-only and
+`WAR`-only until the battle-entry slice updates it. A current civilization leader may
+surrender its side in a battle; an admin force-resolution is an explicit audited recovery
+operation, not an ordinary victory rule.
 
 - Open wars are unique per civilization pair, and a civilization may participate in multiple political wars. The current safety invariant permits only one `ACTIVE`/`RESOLVING` battle per civilization, preventing overlapping journals from claiming incompatible original states for the same land.
 - The current rules snapshot records `HOSTILE_CLAIM_ENTRY`, `OPPOSING_CIVILIZATION_CLAIMS`, and the battle duration. When a battle is eventually connected to movement, the entering side becomes attacker and the entered claim's owner becomes defender.
@@ -138,11 +162,18 @@ A `War` is the durable political relationship between two civilizations. A `Batt
 - Rows retain season, battle, claim, first actor/cause/time, and canonical simple block data. They are immutable in SQL and can be read in bounded cursor pages without loading a city's damage into live runtime memory.
 - The service validates an active, unexpired battle, global `WAR` phase, snapshotted participant, claim party, and exact X/Z containment. SQL triggers independently enforce the same durable boundary.
 - A prepared result is a single-use handoff, not durable permission. The future Paper adapter must cancel the original event, prepare the journal off-thread, return to the server thread, confirm the block still matches the observed state and battle authorization, then apply exactly one mutation. A mismatch aborts rather than overwriting newer world state.
-- `SimpleBlockSnapshot` deliberately excludes block-entity payloads. Containers and other unsupported block entities remain protected until inventory, text/NBT, loot, and duplication semantics are explicitly modeled.
+- `SimpleBlockSnapshot` deliberately excludes block-entity payloads. Season One conflict mutation permits only simple, independently mutable building blocks whose relevant state it fully represents. Containers, signs, banners, lecterns, spawners, beds, every other block entity, and cascading/multi-block mutations remain protected. Entity damage is not part of block destruction and requires its own targeted participant-PVP capability.
 
 `DamageReportService` owns the resolution-time readout of that journal. It accepts a complete set of final `SimpleBlockSnapshot` observations only while a battle is `RESOLVING`; it never reads Paper state itself. Each journal row is frozen as already restored or repair-eligible. Eligible rows are categorized as restoring an original block or removing a block placed over an air-like original, producing stable one-coordinate repair units without choosing monetary rates.
 
 Schema migration 5 stores one sealed report per battle plus its final-state entries. Entries are staged and the summary row atomically seals the complete set; SQL triggers verify exact journal coverage, category/count consistency, battle state, and immutability. An identical retry returns the stored report, while changed observations fail as an explicit conflict. Repository reads page the joined report and journal rows in stable journal order so later repair work can resume without loading an unbounded report.
+
+Damage does not lock a coordinate against manual rebuilding. A future repair runner uses
+the report's sealed final snapshot as an optimistic compare value: it restores only when
+the live state still matches, records a conflict/skip otherwise, and never overwrites a
+player's later manual change. Falling-block or block-display reconstruction effects may
+decorate an accepted repair mutation, but they are never authoritative, may not place
+blocks themselves, and must be bounded and restart-clean.
 
 ## Live runtime
 
@@ -165,7 +196,7 @@ The former commands, listeners, tasks, placeholders, menus, global managers, ser
 - Unclaimed coordinates retain vanilla behavior. Members and leaders may mutate their civilization's claims in the configured safe subset of `SETUP`, `PEACE`, and `WAR`; outsiders may not. `FINALE` and `ARCHIVED` always freeze claimed land except for explicit admin bypass.
 - PVP in claimed land always requires a conflict capability. Merely putting the season in `WAR` does not authorize anybody to attack or destroy blocks.
 - A conflict capability is bound to its actor, kind, allowed actions, eligible claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The runtime publishes persisted battle eligibility and owns the journal service but does not convert eligibility into capabilities, so claimed destruction remains closed until the two-phase Paper adapter lands.
-- Inventory-bearing blocks cannot appear in an MVP conflict capability. Block-break translation classifies them as container actions so a generic break grant cannot bypass that invariant.
+- No block entity can appear in an MVP conflict capability. Block-break translation must classify and deny containers and other persistent-data blocks so a generic break grant cannot bypass that invariant.
 - Explosions remove only claimed blocks from the event's block list. Autonomous fire and entity block changes are denied on claimed targets. Fluids, pistons, hopper transfers, and inventory pickup may move within one ownership area but not between civilizations or across wilderness boundaries.
 - While runtime state is loading or failed, mutation listeners fail closed. Once a ready runtime has no active season, events retain vanilla behavior.
 
@@ -187,7 +218,7 @@ Later war integration must use the journal-before-mutation contract before it ha
 
 The architecture rework has no remaining slice. Net-new MVP work is split into a durable-feature lane and a Paper-integration lane. Schema/repository migrations are ordered and must not be developed concurrently with another schema slice. Paper plugin/runtime/listener lifecycle changes are likewise serialized. A branch in each lane may proceed concurrently when both use an application-owned port already present on `main`.
 
-[worktree-roadmap.md](worktree-roadmap.md) is the executable feature merge queue. In summary, damage reporting precedes the ledger, the ledger precedes repair jobs, and repair jobs precede the Paper repair runner. The simple-block Paper war adapter may proceed now against the existing first-write-wins journal, but it must not broaden support to containers, block entities, or cascading physics.
+[worktree-roadmap.md](worktree-roadmap.md) is the executable feature merge queue. In summary, damage reporting precedes the ledger, the ledger precedes repair jobs, and repair jobs precede the Paper repair runner. The simple-block Paper war adapter may proceed now against the existing first-write-wins journal, but it must not broaden support to containers, block entities, entities, or cascading physics. Its event-thread path uses only published in-memory authorization, captures immutable input without loading chunks, and cancels immediately. Pending journal work is bounded and duplicate battle/coordinate attempts are coalesced where safe; saturation fails closed. After durable preparation, the adapter returns to the server thread, revalidates the unchanged block and current capability, and applies exactly once. Queue depth, latency, stale retries, and backpressure are observable without per-block normal-verbosity logs.
 
 ## Retired architecture
 
