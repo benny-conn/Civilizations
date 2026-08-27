@@ -5,6 +5,7 @@ import io.bennyc.civilizations.application.civilization.ProvisionCivilization
 import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.claim.PlaceClaim
 import io.bennyc.civilizations.application.damage.PrepareBlockMutation
+import io.bennyc.civilizations.application.damage.PreparedBlockMutation
 import io.bennyc.civilizations.application.protection.PlayerProtectionAction
 import io.bennyc.civilizations.application.protection.PlayerProtectionRequest
 import io.bennyc.civilizations.application.protection.ProtectionDecision
@@ -42,6 +43,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class CivilizationsRuntimeTest {
@@ -216,6 +219,35 @@ class CivilizationsRuntimeTest {
                 setOf(northClaim.id),
                 eligibility.opposingClaimIdsByCivilization[south.civilization.id],
             )
+            assertNotNull(
+                live.authorizeBattleBlockMutation(
+                    playerId(2),
+                    PlayerProtectionAction.BLOCK_BREAK,
+                    BlockPosition2D(world, 40, 8),
+                ),
+            )
+            assertNotNull(
+                live.authorizeBattleBlockMutation(
+                    playerId(3),
+                    PlayerProtectionAction.BLOCK_PLACE,
+                    BlockPosition2D(world, 40, 8),
+                ),
+                "Owner changes in battle land must also enter the journal bridge",
+            )
+            assertNull(
+                live.authorizeBattleBlockMutation(
+                    playerId(99),
+                    PlayerProtectionAction.BLOCK_BREAK,
+                    BlockPosition2D(world, 40, 8),
+                ),
+            )
+            assertNull(
+                live.authorizeBattleBlockMutation(
+                    playerId(2),
+                    PlayerProtectionAction.BLOCK_BREAK,
+                    BlockPosition2D(world, 80, 8),
+                ),
+            )
             assertIs<ProtectionDecision.Denied>(
                 live.protection.decidePlayerAction(
                     PlayerProtectionRequest(
@@ -225,19 +257,23 @@ class CivilizationsRuntimeTest {
                     ),
                 ),
             )
-            val journaled = runtime.submitAwait {
-                damageJournal.prepare(
-                    PrepareBlockMutation(
-                        battleId = battle.id,
-                        claimId = southClaim.id,
-                        position = BlockPosition3D(world, 40, 72, 8),
-                        observedState = SimpleBlockSnapshot("minecraft:stone"),
-                        actorId = playerId(2),
-                        cause = BlockMutationCause.PLAYER_BREAK,
-                    ),
-                )
-            }.awaitCompleted()
+            val stateBeforeJournal = runtime.state
+            val journaled = runtime.prepareBlockMutationAwait(
+                PrepareBlockMutation(
+                    battleId = battle.id,
+                    claimId = southClaim.id,
+                    position = BlockPosition3D(world, 40, 72, 8),
+                    observedState = SimpleBlockSnapshot("minecraft:stone"),
+                    actorId = playerId(2),
+                    cause = BlockMutationCause.PLAYER_BREAK,
+                ),
+            ).awaitCompleted()
             assertIs<ApplicationResult.Applied<*>>(journaled.result)
+            assertSame(
+                stateBeforeJournal,
+                runtime.state,
+                "Journal-only writes must not rebuild the full gameplay snapshot",
+            )
             runtime.close()
 
             val restarted = database.runtime(clock = mutableClock)
@@ -250,18 +286,16 @@ class CivilizationsRuntimeTest {
                 (restarted.state as CivilizationsRuntimeState.Ready)
                     .activeSeason?.activeBattleEligibility?.size,
             )
-            val repeated = restarted.submitAwait {
-                damageJournal.prepare(
-                    PrepareBlockMutation(
-                        battleId = battle.id,
-                        claimId = southClaim.id,
-                        position = BlockPosition3D(world, 40, 72, 8),
-                        observedState = SimpleBlockSnapshot("minecraft:air"),
-                        actorId = playerId(2),
-                        cause = BlockMutationCause.PLAYER_PLACE,
-                    ),
-                )
-            }.awaitCompleted()
+            val repeated = restarted.prepareBlockMutationAwait(
+                PrepareBlockMutation(
+                    battleId = battle.id,
+                    claimId = southClaim.id,
+                    position = BlockPosition3D(world, 40, 72, 8),
+                    observedState = SimpleBlockSnapshot("minecraft:air"),
+                    actorId = playerId(2),
+                    cause = BlockMutationCause.PLAYER_PLACE,
+                ),
+            ).awaitCompleted()
             assertIs<ApplicationResult.Unchanged<*>>(repeated.result)
             restarted.close()
 
@@ -358,6 +392,12 @@ class CivilizationsRuntimeTest {
         CompletableFuture<RuntimeMutationOutcome<T>>().also { future ->
             submitMutation(operation, future::complete)
         }
+
+    private fun CivilizationsRuntime.prepareBlockMutationAwait(
+        request: PrepareBlockMutation,
+    ): CompletableFuture<RuntimeMutationOutcome<PreparedBlockMutation>> =
+        CompletableFuture<RuntimeMutationOutcome<PreparedBlockMutation>>()
+            .also { future -> prepareBlockMutation(request, future::complete) }
 
     private fun <T> CompletableFuture<RuntimeMutationOutcome<T>>.awaitCompleted():
         RuntimeMutationOutcome.Completed<T> =

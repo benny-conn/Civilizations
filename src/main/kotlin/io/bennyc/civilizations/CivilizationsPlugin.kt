@@ -12,6 +12,7 @@ import java.util.logging.Level
 
 class CivilizationsPlugin : JavaPlugin() {
     private lateinit var runtime: CivilizationsRuntime
+    private lateinit var protectionListener: PaperProtectionListener
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -43,7 +44,8 @@ class CivilizationsPlugin : JavaPlugin() {
             listOf("civilizationsadmin"),
             CivilizationsAdminCommand(runtime),
         )
-        server.pluginManager.registerEvents(PaperProtectionListener(runtime), this)
+        protectionListener = PaperProtectionListener(runtime, server, logger)
+        server.pluginManager.registerEvents(protectionListener, this)
         runtime.start { outcome ->
             when (outcome) {
                 is RuntimeStartOutcome.Ready -> {
@@ -64,6 +66,12 @@ class CivilizationsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::protectionListener.isInitialized) {
+            logger.info(
+                "Battle block mutation metrics: " +
+                    protectionListener.battleMutationMetricsSummary(),
+            )
+        }
         if (::runtime.isInitialized) {
             runtime.close()
         }

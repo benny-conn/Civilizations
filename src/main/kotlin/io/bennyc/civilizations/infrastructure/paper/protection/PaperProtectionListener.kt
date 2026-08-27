@@ -9,10 +9,12 @@ import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
+import io.bennyc.civilizations.infrastructure.runtime.BattleBlockMutationQueue
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.Server
 import org.bukkit.block.Block
 import org.bukkit.entity.AreaEffectCloud
 import org.bukkit.entity.Entity
@@ -52,13 +54,30 @@ import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.vehicle.VehicleDestroyEvent
 import org.bukkit.inventory.InventoryHolder
+import java.util.logging.Logger
 
 /** Thin Paper translations around the pure protection policy in the runtime snapshot. */
 class PaperProtectionListener(
     private val runtime: CivilizationsRuntime,
+    server: Server,
+    logger: Logger,
 ) : Listener {
+    private val battleMutations = PaperBattleBlockMutationAdapter(
+        server = server,
+        logger = logger,
+        mutationQueue = BattleBlockMutationQueue(runtime::prepareBlockMutation),
+        authorize = { actorId, action, target ->
+            val ready = runtime.state as? CivilizationsRuntimeState.Ready
+            ready?.activeSeason?.authorizeBattleBlockMutation(actorId, action, target)
+        },
+    )
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onBlockBreak(event: BlockBreakEvent) {
+        if (battleMutations.intercept(event)) {
+            return
+        }
+
         val action = if (event.block.state is InventoryHolder) {
             PlayerProtectionAction.CONTAINER_ACCESS
         } else {
@@ -71,6 +90,10 @@ class PaperProtectionListener(
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onBlockPlace(event: BlockPlaceEvent) {
+        if (battleMutations.intercept(event)) {
+            return
+        }
+
         val affected = if (event is BlockMultiPlaceEvent) {
             event.replacedBlockStates.map { state -> state.block.position() }
         } else {
@@ -352,6 +375,8 @@ class PaperProtectionListener(
             event.isCancelled = true
         }
     }
+
+    fun battleMutationMetricsSummary(): String = battleMutations.metricsSummary()
 
     private fun allows(
         player: Player,

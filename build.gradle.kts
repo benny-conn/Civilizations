@@ -10,6 +10,7 @@ version = "0.0.16-BETA"
 
 val paperVersion = providers.gradleProperty("paperVersion").get()
 val sqliteJdbcVersion = "3.53.2.1"
+val mockitoVersion = "5.23.0"
 val pluginMainClass = "io.bennyc.civilizations.CivilizationsPlugin"
 
 repositories {
@@ -29,6 +30,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation("io.papermc.paper:paper-api:$paperVersion")
+    testImplementation("org.mockito:mockito-core:$mockitoVersion")
 }
 
 java {

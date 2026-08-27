@@ -134,7 +134,7 @@ data class PrepareBlockMutation(
 )
 
 /**
- * A single-use handoff to a future Paper adapter. It is not durable permission:
+ * A single-use handoff to the Paper adapter. It is not durable permission:
  * battle/phase authorization must still be live when the mutation is applied.
  */
 data class PreparedBlockMutation(

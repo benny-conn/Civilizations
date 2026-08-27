@@ -150,18 +150,18 @@ operation, not an ordinary victory rule.
 - “Battlefield” is not a separate region type. All claim lookup continues through the normal chunk index; the active read model maps each civilization to the opposing civilization's ordinary claim IDs.
 - Both civilization rosters are snapshotted as battle participants when the battle starts. Later membership changes cannot rewrite the historical roster.
 - Absolute timestamps, not decrementing task counters, drive expiry. Startup and every runtime refresh idempotently move expired `ACTIVE` battles to `RESOLVING`, which immediately removes their eligibility from live memory.
-- The eligibility read model is intentionally inert. No Paper movement listener starts battles and no protection request receives a destructive capability until the two-phase mutation adapter is implemented.
+- The eligibility read model supplies only the narrow break/place authorization consumed by the journal-first Paper mutation adapter. No Paper movement listener starts battles, and PVP or other destructive capabilities remain disconnected until their own slices define and enforce them.
 
 ## Damage journal
 
-`DamageJournalService` is the durable boundary that must run before a future Paper adapter mutates battle land. It accepts framework-free stable IDs, a 3D block coordinate, the state observed on the server thread, actor, claim, and cause.
+`DamageJournalService` is the durable boundary that runs before the Paper adapter mutates battle land. It accepts framework-free stable IDs, a 3D block coordinate, the state observed on the server thread, actor, claim, and cause.
 
 - Journal identity is battle plus world/X/Y/Z. The first preparation atomically inserts the original state; later breaks, explosions, or placements at that coordinate return the existing row and can never overwrite the baseline.
 - Both enemy and owner mutations in either side's land are journalable. This prevents defenders rebuilding during a battle from silently escaping the same pre-battle restoration history.
 - Attacker placement is represented by journaling the replaced state—often `minecraft:air`—before placement. Restoring air later removes the attacker-created block.
 - Rows retain season, battle, claim, first actor/cause/time, and canonical simple block data. They are immutable in SQL and can be read in bounded cursor pages without loading a city's damage into live runtime memory.
 - The service validates an active, unexpired battle, global `WAR` phase, snapshotted participant, claim party, and exact X/Z containment. SQL triggers independently enforce the same durable boundary.
-- A prepared result is a single-use handoff, not durable permission. The future Paper adapter must cancel the original event, prepare the journal off-thread, return to the server thread, confirm the block still matches the observed state and battle authorization, then apply exactly one mutation. A mismatch aborts rather than overwriting newer world state.
+- A prepared result is a single-use handoff, not durable permission. The Paper adapter cancels the original event, prepares the journal off-thread, returns to the server thread, confirms the block still matches the observed state and live battle authorization, then applies at most one mutation. A mismatch aborts rather than overwriting newer world state.
 - `SimpleBlockSnapshot` deliberately excludes block-entity payloads. Season One conflict mutation permits only simple, independently mutable building blocks whose relevant state it fully represents. Containers, signs, banners, lecterns, spawners, beds, every other block entity, and cascading/multi-block mutations remain protected. Entity damage is not part of block destruction and requires its own targeted participant-PVP capability.
 
 `DamageReportService` owns the resolution-time readout of that journal. It accepts a complete set of final `SimpleBlockSnapshot` observations only while a battle is `RESOLVING`; it never reads Paper state itself. Each journal row is frozen as already restored or repair-eligible. Eligible rows are categorized as restoring an original block or removing a block placed over an air-like original, producing stable one-coordinate repair units without choosing monetary rates.
@@ -195,7 +195,7 @@ The former commands, listeners, tasks, placeholders, menus, global managers, ser
 
 - Unclaimed coordinates retain vanilla behavior. Members and leaders may mutate their civilization's claims in the configured safe subset of `SETUP`, `PEACE`, and `WAR`; outsiders may not. `FINALE` and `ARCHIVED` always freeze claimed land except for explicit admin bypass.
 - PVP in claimed land always requires a conflict capability. Merely putting the season in `WAR` does not authorize anybody to attack or destroy blocks.
-- A conflict capability is bound to its actor, kind, allowed actions, eligible claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The runtime publishes persisted battle eligibility and owns the journal service but does not convert eligibility into capabilities, so claimed destruction remains closed until the two-phase Paper adapter lands.
+- A conflict capability is bound to its actor, kind, allowed actions, eligible claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The runtime converts persisted active-battle eligibility into a claim-scoped break/place capability only for the journal-first adapter. It does not grant PVP, entity, container, explosion, or other destructive capabilities.
 - No block entity can appear in an MVP conflict capability. Block-break translation must classify and deny containers and other persistent-data blocks so a generic break grant cannot bypass that invariant.
 - Explosions remove only claimed blocks from the event's block list. Autonomous fire and entity block changes are denied on claimed targets. Fluids, pistons, hopper transfers, and inventory pickup may move within one ownership area but not between civilizations or across wilderness boundaries.
 - While runtime state is loading or failed, mutation listeners fail closed. Once a ready runtime has no active season, events retain vanilla behavior.
@@ -204,7 +204,7 @@ The current event matrix is:
 
 | Surface | Paper events/policy | Current behavior |
 | --- | --- | --- |
-| Blocks | break, place/multi-place, clicked-block interact, bucket fill/empty, player ignition | Exact affected coordinate; owner/admin allowed, outsider denied |
+| Blocks | break, place/multi-place, clicked-block interact, bucket fill/empty, player ignition | Exact affected coordinate; owner/admin allowed, outsider denied; active battle participants receive journal-first simple single-block break/place |
 | Containers | block interact/break, inventory open, automated move/pickup | Direct access follows membership; automation cannot cross ownership |
 | Entities | interact/damage, armor stands, hanging place/break, vehicles, projectiles | Entity coordinate is authoritative; the responsible projectile/TNT player is resolved |
 | PVP | entity damage by player or player-shot projectile | Vanilla in wilderness; denied in claims without a targeted conflict capability |
@@ -212,13 +212,13 @@ The current event matrix is:
 | Boundaries | fluid flow, piston head/moved blocks, inventory transfer | Every source/destination pair must have the same owner, including wilderness as no owner |
 | Movement | ordinary movement and teleport | Intentionally unrestricted for MVP; land ownership is not a border-entry rule |
 
-Later war integration must use the journal-before-mutation contract before it hands a conflict capability to any destructive Paper path. The visual TNT effect may never become the authoritative mutation.
+Every later war integration must preserve the journal-before-mutation contract before it hands a conflict capability to another destructive Paper path. The visual TNT effect may never become the authoritative mutation.
 
 ## Delivery and worktree sequencing
 
 The architecture rework has no remaining slice. Net-new MVP work is split into a durable-feature lane and a Paper-integration lane. Schema/repository migrations are ordered and must not be developed concurrently with another schema slice. Paper plugin/runtime/listener lifecycle changes are likewise serialized. A branch in each lane may proceed concurrently when both use an application-owned port already present on `main`.
 
-[worktree-roadmap.md](worktree-roadmap.md) is the executable feature merge queue. In summary, damage reporting precedes the ledger, the ledger precedes repair jobs, and repair jobs precede the Paper repair runner. The simple-block Paper war adapter may proceed now against the existing first-write-wins journal, but it must not broaden support to containers, block entities, entities, or cascading physics. Its event-thread path uses only published in-memory authorization, captures immutable input without loading chunks, and cancels immediately. Pending journal work is bounded and duplicate battle/coordinate attempts are coalesced where safe; saturation fails closed. After durable preparation, the adapter returns to the server thread, revalidates the unchanged block and current capability, and applies exactly once. Queue depth, latency, stale retries, and backpressure are observable without per-block normal-verbosity logs.
+[worktree-roadmap.md](worktree-roadmap.md) is the executable feature merge queue. In summary, damage reporting precedes the ledger, the ledger precedes repair jobs, and repair jobs precede the Paper repair runner. The live simple-block Paper war adapter uses only published in-memory authorization on its event path, captures immutable input without loading chunks, and cancels immediately. Pending journal work is bounded and duplicate battle/coordinate attempts are coalesced; saturation fails closed. After durable preparation, the adapter returns to the server thread, revalidates the unchanged block and current capability, and applies at most once. Queue depth, latency, stale attempts, and backpressure are observable without per-block normal-verbosity logs. Containers, block entities, entities, explosions, and cascading physics remain closed for later explicitly journaled integrations.
 
 ## Retired architecture
 

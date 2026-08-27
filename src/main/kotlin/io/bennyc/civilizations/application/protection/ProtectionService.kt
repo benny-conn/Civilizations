@@ -39,7 +39,7 @@ enum class ConflictKind {
 }
 
 /**
- * A narrowly scoped capability produced by a future persisted conflict service.
+ * A narrowly scoped capability produced from persisted conflict state.
  * The season WAR phase is deliberately not an authorization by itself.
  */
 sealed interface ConflictAuthorization {

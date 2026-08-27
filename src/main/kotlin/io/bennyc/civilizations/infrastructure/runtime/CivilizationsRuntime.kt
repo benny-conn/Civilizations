@@ -6,8 +6,16 @@ import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.claim.ClaimService
 import io.bennyc.civilizations.application.claim.ClaimSpatialIndex
 import io.bennyc.civilizations.application.damage.DamageJournalService
+import io.bennyc.civilizations.application.damage.PrepareBlockMutation
+import io.bennyc.civilizations.application.damage.PreparedBlockMutation
 import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
+import io.bennyc.civilizations.application.protection.ConflictAuthorization
+import io.bennyc.civilizations.application.protection.ConflictKind
+import io.bennyc.civilizations.application.protection.PlayerProtectionAction
+import io.bennyc.civilizations.application.protection.PlayerProtectionRequest
+import io.bennyc.civilizations.application.protection.ProtectionDecision
+import io.bennyc.civilizations.application.protection.ProtectionReason
 import io.bennyc.civilizations.application.protection.ProtectionService
 import io.bennyc.civilizations.application.season.SeasonService
 import io.bennyc.civilizations.application.season.GameplayPhaseRules
@@ -17,6 +25,7 @@ import io.bennyc.civilizations.domain.civilization.CivilizationName
 import io.bennyc.civilizations.domain.civilization.CivilizationStatus
 import io.bennyc.civilizations.domain.civilization.Membership
 import io.bennyc.civilizations.domain.civilization.MembershipRole
+import io.bennyc.civilizations.domain.claim.BlockPosition2D
 import io.bennyc.civilizations.domain.claim.Claim
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.identity.CivilizationId
@@ -117,6 +126,47 @@ class CivilizationsRuntime private constructor(
                     dispatchToServer {
                         state = refreshed
                         completion(RuntimeMutationOutcome.Completed(result, refreshed))
+                    }
+                } catch (failure: Throwable) {
+                    publishFatal(failure) {
+                        completion(RuntimeMutationOutcome.Failed(failure))
+                    }
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            dispatchToServer {
+                completion(RuntimeMutationOutcome.NotReady(state))
+            }
+        }
+    }
+
+    /**
+     * Serializes a damage-journal write without rebuilding the published gameplay snapshot.
+     * Journal rows are durable history but are intentionally absent from event-time memory.
+     */
+    fun prepareBlockMutation(
+        request: PrepareBlockMutation,
+        completion: (RuntimeMutationOutcome<PreparedBlockMutation>) -> Unit,
+    ) {
+        val current = state
+        if (closed.get() || current !is CivilizationsRuntimeState.Ready) {
+            dispatchToServer {
+                completion(RuntimeMutationOutcome.NotReady(state))
+            }
+            return
+        }
+
+        try {
+            worker.execute {
+                try {
+                    val result = mutationScope.damageJournal.prepare(request)
+                    dispatchToServer {
+                        val ready = state as? CivilizationsRuntimeState.Ready
+                        if (ready == null) {
+                            completion(RuntimeMutationOutcome.NotReady(state))
+                        } else {
+                            completion(RuntimeMutationOutcome.Completed(result, ready))
+                        }
                     }
                 } catch (failure: Throwable) {
                     publishFatal(failure) {
@@ -513,11 +563,81 @@ data class ActiveSeasonRuntimeState(
     val battles: List<Battle>,
     val battleParticipants: Map<BattleId, List<BattleParticipant>>,
     val activeBattleEligibility: List<ActiveBattleEligibilityRuntimeState>,
+) {
+    private val activeBattleParticipantByPlayer = buildMap {
+        for (eligibility in activeBattleEligibility) {
+            for (participant in eligibility.participants) {
+                require(put(participant.playerId, eligibility to participant) == null) {
+                    "Player ${participant.playerId} participates in more than one active battle"
+                }
+            }
+        }
+    }
+
+    /**
+     * Resolves a block mutation capability entirely from the published snapshot.
+     * Both sides' land is included so owner rebuilding during a battle is journaled too.
+     */
+    fun authorizeBattleBlockMutation(
+        actorId: PlayerId,
+        action: PlayerProtectionAction,
+        target: BlockPosition2D,
+    ): ActiveBattleBlockMutationAuthorization? {
+        require(
+            action == PlayerProtectionAction.BLOCK_BREAK ||
+                action == PlayerProtectionAction.BLOCK_PLACE,
+        ) { "$action is not a battle block mutation" }
+
+        val (eligibility, participant) = activeBattleParticipantByPlayer[actorId]
+            ?: return null
+        val claim = claimIndex.claimAt(target) ?: return null
+        if (claim.civilizationId != eligibility.battle.attackingCivilizationId &&
+            claim.civilizationId != eligibility.battle.defendingCivilizationId
+        ) {
+            return null
+        }
+        val conflict = ConflictAuthorization.Active(
+            kind = ConflictKind.WAR,
+            actorId = actorId,
+            eligibleClaimIds = setOf(claim.id),
+            allowedActions = setOf(action),
+        )
+        val decision = protection.decidePlayerAction(
+            PlayerProtectionRequest(
+                actorId = actorId,
+                action = action,
+                target = target,
+                conflictAuthorization = conflict,
+            ),
+        )
+        if (decision !is ProtectionDecision.Allowed ||
+            decision.reason != ProtectionReason.CONFLICT_OVERRIDE
+        ) {
+            return null
+        }
+        return ActiveBattleBlockMutationAuthorization(
+            battleId = eligibility.battle.id,
+            claimId = claim.id,
+            actorId = actorId,
+            actorCivilizationId = participant.civilizationId,
+            action = action,
+            target = target,
+        )
+    }
+}
+
+data class ActiveBattleBlockMutationAuthorization(
+    val battleId: BattleId,
+    val claimId: ClaimId,
+    val actorId: PlayerId,
+    val actorCivilizationId: CivilizationId,
+    val action: PlayerProtectionAction,
+    val target: BlockPosition2D,
 )
 
 /**
- * Published combat eligibility only. Paper protection deliberately does not
- * consume it until the next slice can journal block mutations before allowing them.
+ * Published combat eligibility. B1 consumes only its simple break/place subset;
+ * participant PVP, battle entry, and other combat behavior remain separate adapters.
  */
 data class ActiveBattleEligibilityRuntimeState(
     val war: War,
