@@ -27,6 +27,8 @@ import io.bennyc.civilizations.infrastructure.runtime.RuntimeMutationScope
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairOutcome
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairStatus
+import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionCoordinator
+import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionOutcome
 import io.papermc.paper.command.brigadier.BasicCommand
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import net.kyori.adventure.text.Component
@@ -43,6 +45,7 @@ class CivilizationsAdminCommand(
     private val runtime: CivilizationsRuntime,
     private val logger: Logger,
     private val repairCoordinator: PaperRepairCoordinator,
+    private val battleResolutionCoordinator: PaperBattleResolutionCoordinator,
 ) : BasicCommand {
     override fun execute(
         source: CommandSourceStack,
@@ -808,21 +811,41 @@ class CivilizationsAdminCommand(
                 if (reason.isEmpty()) {
                     return usage(sender, "Force-resolution requires an audit reason")
                 }
-                mutate(
-                    sender = sender,
-                    operation = { wars.forceResolve(battleId, outcome) },
-                    describe = { battle ->
-                        "Battle ${battle.id} is ${battle.status} with ${battle.outcome}"
-                    },
-                    afterApplied = { battle ->
-                        audit(
-                            sender,
-                            "battle.force-resolve",
-                            "${battle.id}; outcome=$outcome",
-                            reason,
-                        )
-                    },
+                audit(
+                    sender,
+                    "battle.force-resolve.request",
+                    "$battleId; outcome=$outcome",
+                    reason,
                 )
+                info(sender, "Freezing battle damage and scanning it in bounded batches…")
+                battleResolutionCoordinator.forceResolve(battleId, outcome) { resolution ->
+                    when (resolution) {
+                        is PaperBattleResolutionOutcome.Completed -> {
+                            val value = resolution.value
+                            success(
+                                sender,
+                                "Battle ${value.battle.id} is ${value.battle.status} with " +
+                                    "${value.battle.outcome}; sealed " +
+                                    "${value.report.eligibleChangeCount} repairable changes",
+                            )
+                            audit(
+                                sender,
+                                "battle.force-resolve.complete",
+                                "${value.battle.id}; outcome=$outcome; " +
+                                    "reportChanges=${value.report.journaledChangeCount}",
+                                reason,
+                            )
+                        }
+                        is PaperBattleResolutionOutcome.Rejected ->
+                            error(sender, resolution.description)
+                        is PaperBattleResolutionOutcome.Unavailable ->
+                            error(sender, resolution.description)
+                        is PaperBattleResolutionOutcome.Failed -> error(
+                            sender,
+                            "Battle resolution failed: ${resolution.failure.message}",
+                        )
+                    }
+                }
             }
             "cancel" -> {
                 val battleId = args.getOrNull(2)?.let { parseBattleId(sender, it) } ?: return

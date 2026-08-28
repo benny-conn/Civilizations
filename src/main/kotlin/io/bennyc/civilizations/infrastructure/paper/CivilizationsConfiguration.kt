@@ -34,11 +34,27 @@ data class RepairRunnerRules(
     }
 }
 
+data class BattleResolutionRules(
+    val observationsPerTick: Int,
+) {
+    init {
+        require(observationsPerTick in 1..MAX_OBSERVATIONS_PER_TICK) {
+            "gameplay.war.resolution-observations-per-tick must be between 1 and " +
+                MAX_OBSERVATIONS_PER_TICK
+        }
+    }
+
+    companion object {
+        const val MAX_OBSERVATIONS_PER_TICK = 4_000
+    }
+}
+
 data class CivilizationsConfiguration(
     val databasePath: Path,
     val claimRules: ClaimRules,
     val phaseRules: GameplayPhaseRules,
     val warRules: WarRulesSnapshot,
+    val battleResolutionRules: BattleResolutionRules,
     val economyRules: EconomyRules,
     val repairRunnerRules: RepairRunnerRules,
 ) {
@@ -101,6 +117,11 @@ data class CivilizationsConfiguration(
                                 WarService.MAX_BATTLE_DURATION_SECONDS
                         }
                     },
+                ),
+                battleResolutionRules = BattleResolutionRules(
+                    observationsPerTick = config.requiredInt(
+                        "gameplay.war.resolution-observations-per-tick",
+                    ),
                 ),
                 economyRules = EconomyRules(
                     currencyScale = currencyScale,

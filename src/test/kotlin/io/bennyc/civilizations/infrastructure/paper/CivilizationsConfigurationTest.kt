@@ -39,6 +39,7 @@ class CivilizationsConfigurationTest {
                 loaded.phaseRules.memberLandActionsAllowedIn,
             )
             assertEquals(1_800, loaded.warRules.battleDurationSeconds)
+            assertEquals(200, loaded.battleResolutionRules.observationsPerTick)
             assertEquals(CurrencyScale(2), loaded.economyRules.currencyScale)
             assertEquals(MoneyAmount.ZERO, loaded.economyRules.openingCivilizationBalance)
             assertEquals(MoneyAmount(100), loaded.economyRules.repair.restoreOriginalUnitPrice)
@@ -118,6 +119,30 @@ class CivilizationsConfigurationTest {
     }
 
     @Test
+    fun `battle resolution observation budget is path-validated`() {
+        val override = load(
+            validYaml.replace(
+                "resolution-observations-per-tick: 200",
+                "resolution-observations-per-tick: 37",
+            ),
+        )
+        assertEquals(37, override.battleResolutionRules.observationsPerTick)
+
+        val failure = assertFailsWith<IllegalArgumentException> {
+            load(
+                validYaml.replace(
+                    "resolution-observations-per-tick: 200",
+                    "resolution-observations-per-tick: 0",
+                ),
+            )
+        }
+        assertContains(
+            failure.message.orEmpty(),
+            "gameplay.war.resolution-observations-per-tick",
+        )
+    }
+
+    @Test
     fun `economy scale and exact amounts are path-validated`() {
         val scaleFailure = assertFailsWith<IllegalArgumentException> {
             load(validYaml.replace("currency-scale: 2", "currency-scale: 9"))
@@ -193,6 +218,7 @@ class CivilizationsConfigurationTest {
                 member-land-actions: [SETUP, PEACE, WAR]
               war:
                 battle-duration-seconds: 1800
+                resolution-observations-per-tick: 200
             economy:
               currency-scale: 2
               opening-civilization-balance: "0.00"

@@ -6,6 +6,8 @@ import io.bennyc.civilizations.application.civilization.ProvisionCivilization
 import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.claim.ClaimService
 import io.bennyc.civilizations.application.claim.PlaceClaim
+import io.bennyc.civilizations.application.damage.DamageReportService
+import io.bennyc.civilizations.application.damage.GenerateDamageReport
 import io.bennyc.civilizations.application.season.SeasonService
 import io.bennyc.civilizations.application.support.SequentialIdGenerator
 import io.bennyc.civilizations.application.support.appliedValue
@@ -196,7 +198,7 @@ class WarServiceTest {
     }
 
     @Test
-    fun `force resolution is explicit idempotent admin recovery`() {
+    fun `battle closure requires a sealed report and is idempotent`() {
         SqliteTestDatabase().use { database ->
             val fixture = fixture(database)
             val battle = fixture.wars.startBattleFromEntry(
@@ -205,14 +207,68 @@ class WarServiceTest {
                 fixture.southClaim.id,
             ).appliedValue().battle
 
-            val closed = fixture.wars.forceResolve(battle.id, BattleOutcome.DRAW).appliedValue()
+            fixture.wars.beginResolution(battle.id, force = true).appliedValue()
+            assertIs<BattleDamageReportRequired>(
+                fixture.wars.resolve(battle.id, BattleOutcome.DRAW).rejection(),
+            )
+            DamageReportService(database.repository, fixture.clock).generate(
+                GenerateDamageReport(battle.id, emptyList()),
+            ).appliedValue()
+            val closed = fixture.wars.resolve(battle.id, BattleOutcome.DRAW).appliedValue()
 
             assertEquals(BattleStatus.CLOSED, closed.status)
             assertEquals(BattleOutcome.DRAW, closed.outcome)
             assertNull(closed.winnerCivilizationId)
             assertEquals(
                 closed,
-                fixture.wars.forceResolve(battle.id, BattleOutcome.DRAW).unchangedValue(),
+                fixture.wars.resolve(battle.id, BattleOutcome.DRAW).unchangedValue(),
+            )
+        }
+    }
+
+    @Test
+    fun `legacy reportless closure reopens only for its recorded outcome`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database)
+            val battle = fixture.wars.startBattleFromEntry(
+                fixture.wars.declare(fixture.declaration()).appliedValue().id,
+                playerId(2),
+                fixture.southClaim.id,
+            ).appliedValue().battle
+            val resolving = fixture.wars.beginResolution(battle.id, force = true).appliedValue()
+            val legacyClosed = resolving.copy(
+                status = BattleStatus.CLOSED,
+                endedAt = fixture.clock.instant(),
+                outcome = BattleOutcome.DRAW,
+                winnerCivilizationId = null,
+                updatedAt = fixture.clock.instant(),
+            )
+            database.repository.transaction { updateBattle(legacyClosed) }
+
+            assertIs<InvalidReportlessBattleRecovery>(
+                fixture.wars.reopenReportlessClosure(
+                    battle.id,
+                    BattleOutcome.ATTACKER_VICTORY,
+                ).rejection(),
+            )
+            val reopened = fixture.wars.reopenReportlessClosure(
+                battle.id,
+                BattleOutcome.DRAW,
+            ).appliedValue()
+            assertEquals(BattleStatus.RESOLVING, reopened.status)
+            assertNull(reopened.outcome)
+            assertNull(reopened.endedAt)
+
+            DamageReportService(database.repository, fixture.clock).generate(
+                GenerateDamageReport(battle.id, emptyList()),
+            ).appliedValue()
+            val closed = fixture.wars.resolve(battle.id, BattleOutcome.DRAW).appliedValue()
+            assertEquals(
+                closed,
+                fixture.wars.reopenReportlessClosure(
+                    battle.id,
+                    BattleOutcome.DRAW,
+                ).unchangedValue(),
             )
         }
     }
@@ -272,6 +328,10 @@ class WarServiceTest {
             assertEquals(BattleStatus.RESOLVING, recovered.status)
             assertEquals(battle.endsAt, recovered.resolvingAt)
             assertTrue(fixture.wars.recoverExpiredBattles(fixture.seasonId).isEmpty())
+
+            DamageReportService(database.repository, fixture.clock).generate(
+                GenerateDamageReport(battle.id, emptyList()),
+            ).appliedValue()
 
             val closedBattle = fixture.wars.resolve(
                 battle.id,

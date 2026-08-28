@@ -28,6 +28,9 @@ gameplay:
   war:
     # Snapshotted into each declaration; changes affect future wars after restart.
     battle-duration-seconds: 1800
+    # Performance budget only: maximum journal coordinates observed in one server
+    # tick while sealing a resolving battle's immutable damage report.
+    resolution-observations-per-tick: 200
 economy:
   # Fixed-point precision for civilization treasuries and the Vault player bridge.
   # It is snapshotted per season and cannot change after that season opens accounts.

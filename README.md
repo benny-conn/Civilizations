@@ -4,7 +4,7 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The architecture rework is complete. See [TODO.md](TODO.md) for the prioritized product roadmap, [docs/architecture.md](docs/architecture.md) for the stable dependency and persistence boundaries, and [docs/worktree-roadmap.md](docs/worktree-roadmap.md) for the dependency-aware multi-worktree queue for net-new MVP work.
 
-The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, a first-write-wins battle damage journal, immutable resolution-time damage reports, exact civilization treasury accounts backed by an immutable idempotent ledger, and persisted resumable repair plans with atomic payments.
+The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, a first-write-wins battle damage journal, bounded live-world resolution into immutable damage reports, exact civilization treasury accounts backed by an immutable idempotent ledger, and persisted resumable repair plans with atomic payments.
 
 The incomplete pre-rework commands, mutable model graph, menus, scheduled tasks, adapters, and JSON-blob datastores have been deleted. Paper listeners protect claims through the application policy. During an active battle in the global `WAR` phase, snapshotted participants may break or place simple single blocks in either side's claimed land. The listener cancels the original event, commits its first-write-wins journal record off-thread, then revalidates and applies the mutation on the server thread. Block entities, multi-place operations, entities, explosions, and unsafe cascading blocks remain protected.
 
@@ -47,6 +47,22 @@ A3 adds schema 8 repair jobs/items, deterministic absolute completion targets, f
 
 B3 passed a real Paper 26.2 restart checkpoint with a 1,000-coordinate report: status found 999 repairable blocks and one later-edit conflict, the 99.9% sponsored job was stopped and recovered as `PAUSED` at its durable cursor, admin resume completed all 999 selected items, and direct world checks confirmed both ends of the repaired span were stone while the conflicted granite block remained untouched. The final run needed only two asynchronous chunk loads while completing the remaining 935 items; aggregate shutdown metrics exposed the configured budgets and actual work.
 
+B4 connects an explicit surrender or admin outcome to that reconstruction path. It first
+moves the battle to `RESOLVING`, removes destructive eligibility, observes journaled
+coordinates on the Paper thread in bounded batches, seals the immutable report, and only
+then closes the battle. Expired battles follow the same safe observation path with zero
+players online, but remain `RESOLVING` after the report is sealed until the ordinary
+timeout outcome rule is approved or an admin supplies an explicit recovery outcome.
+
+B4 passed an isolated real Paper 26.2 checkpoint with a three-coordinate active battle.
+A missing, ungenerated chunk left the battle safely in `RESOLVING`; after the fixture
+chunk existed, an audited admin retry observed all three coordinates, sealed two eligible
+changes, closed as a draw, and exposed the expected two-block repair quote. A simulated
+restart after report sealing but before surrendered-battle closure reused the immutable
+report without another world scan and closed with the persisted defender-victory outcome.
+The audited command also reopened a legacy report-less closed battle only for its recorded
+outcome, failed safely on its missing chunk, and completed after an explicit retry.
+
 ## Administration
 
 The native Paper `/civadmin` command requires `civilizations.admin`, which defaults to operators. Run `/civadmin` for help. The current commands support:
@@ -56,7 +72,7 @@ The native Paper `/civadmin` command requires `civilizations.admin`, which defau
 - landless drafts and idempotent offline-UUID provisioning;
 - membership assignment, leadership transfer, and activation;
 - civilization listing and rectangular admin claim creation;
-- war/battle listing and inspection, war activation/closure/cancellation, and battle force-resolution/cancellation with required audit reasons;
+- war/battle listing and inspection, war activation/closure/cancellation, and bounded report-sealing battle force-resolution/cancellation with required audit reasons;
 - explicit roster moves that preserve immutable participant sides in already-started battles.
 - civilization treasury balance inspection, audited adjustments, and explicit reconciliation of ambiguous player-wallet transfers.
 - repair status/job inspection, payment-free audited sponsorship, and pause/resume/cancel recovery controls.

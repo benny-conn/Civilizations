@@ -56,6 +56,7 @@ class PaperRepairCoordinator(
     private var activeJobId: RepairJobId? = null
     private var activeBatch: RepairWorkBatch? = null
     private var storageBusy = false
+    private var battleResolutionSuspended = false
     private var closed = false
     private var heldChunk: HeldChunk? = null
     private var pendingChunkLoad: PendingChunkLoad? = null
@@ -73,6 +74,23 @@ class PaperRepairCoordinator(
 
     val configuredBlocksPerSecond: Int
         get() = Math.multiplyExact(rules.blocksPerTick, SERVER_TICKS_PER_SECOND)
+
+    /**
+     * Serializes plugin chunk-ticket ownership with the battle-resolution scanner.
+     * Existing repair work stays durable and simply waits while final damage is observed.
+     */
+    internal fun suspendForBattleResolution() {
+        check(server.isPrimaryThread) { "Paper world work must be suspended on the server thread" }
+        if (battleResolutionSuspended) return
+        battleResolutionSuspended = true
+        pendingChunkLoad = null
+        releaseChunk()
+    }
+
+    internal fun resumeAfterBattleResolution() {
+        check(server.isPrimaryThread) { "Paper world work must resume on the server thread" }
+        battleResolutionSuspended = false
+    }
 
     fun status(
         battleId: BattleId,
@@ -310,7 +328,7 @@ class PaperRepairCoordinator(
     }
 
     private fun tick() {
-        if (closed) return
+        if (closed || battleResolutionSuspended) return
         try {
             if (activeScan != null || scanQueue.isNotEmpty()) {
                 tickScan()
@@ -709,8 +727,9 @@ class PaperRepairCoordinator(
     }
 
     private fun isChunkOwnerActive(owner: Any): Boolean = when (owner) {
-        is RepairJobId -> owner in runnerQueue && owner !in suppressedJobs
-        else -> activeScan?.token === owner
+        is RepairJobId -> !battleResolutionSuspended &&
+            owner in runnerQueue && owner !in suppressedJobs
+        else -> !battleResolutionSuspended && activeScan?.token === owner
     }
 
     private fun world(worldId: WorldId): World? =

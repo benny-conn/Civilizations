@@ -20,6 +20,7 @@ currently no `/reload` integration or partial live-reload behavior.
 | `gameplay.phase-gates.claim-creation` | `[SETUP, PEACE]` | Phases in which new claims may be created. May contain only `SETUP` and `PEACE`; `[]` disables claiming. |
 | `gameplay.phase-gates.member-land-actions` | `[SETUP, PEACE, WAR]` | Phases in which members may ordinarily interact with their own claimed land. May contain only `SETUP`, `PEACE`, and `WAR`; `[]` freezes ordinary member actions in every phase. Explicit conflict capabilities and admin bypass remain separately authorized. |
 | `gameplay.war.battle-duration-seconds` | `1800` | Duration snapshotted into a new war and used for each hostile-entry battle in that war. Must be from `1` through `31536000`; changes require restart and affect only later declarations. |
+| `gameplay.war.resolution-observations-per-tick` | `200` | Maximum journaled block coordinates observed on the Paper thread in one tick while sealing a battle's damage report. Must be from `1` through `4000`. This is a performance budget, not snapshotted gameplay meaning. |
 | `economy.currency-scale` | `2` | Decimal places used by exact Civilizations money, from `0` through `6`. It is snapshotted per season and cannot change for an initialized season. |
 | `economy.opening-civilization-balance` | `0.00` | Non-negative opening treasury balance assigned through one idempotent ledger transaction when a civilization account is initialized. |
 | `economy.repair.restore-original-unit-price` | `1.00` | Non-negative price for each selected `RESTORE_ORIGINAL_BLOCK` repair unit. |
@@ -74,6 +75,11 @@ ticket at a time. It releases that lease when moving to another chunk/job, uses
 non-generating asynchronous chunk loads, defers solid restoration while a player
 intersects the block, and pauses at the unchanged cursor if a world or existing chunk is
 unavailable.
+
+The battle-resolution observation budget is also operational rather than historical.
+Resolution and repair serialize their Paper chunk-ticket ownership, so report scanning
+temporarily waits existing repair world work instead of allowing two plugin-owned chunk
+leases to race. SQL work remains on the runtime worker and no missing chunk is generated.
 
 ## Configuration boundary
 

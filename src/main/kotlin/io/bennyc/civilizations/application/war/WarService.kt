@@ -414,6 +414,11 @@ class WarService(
                 InvalidBattleTransition(battleId, current.status, BattleStatus.CLOSED),
             )
         }
+        if (findDamageReport(battleId) == null) {
+            return@transaction ApplicationResult.Rejected(
+                BattleDamageReportRequired(battleId),
+            )
+        }
         val winner = when (outcome) {
             BattleOutcome.ATTACKER_VICTORY -> current.attackingCivilizationId
             BattleOutcome.DEFENDER_VICTORY -> current.defendingCivilizationId
@@ -431,37 +436,51 @@ class WarService(
         ApplicationResult.Applied(closed)
     }
 
-    /** Audited adapter-only recovery path for an active or resolving battle. */
-    fun forceResolve(
+    /**
+     * Repairs the only unsafe terminal state older adapters could create: a CLOSED battle
+     * without a damage report. The original explicit outcome must be repeated, and the
+     * battle cannot be reopened over another live engagement for either civilization.
+     */
+    fun reopenReportlessClosure(
         battleId: BattleId,
-        outcome: BattleOutcome,
+        expectedOutcome: BattleOutcome,
     ): ApplicationResult<Battle> = repository.transaction {
         val current = findBattle(battleId)
             ?: return@transaction ApplicationResult.Rejected(BattleNotFound(battleId))
-        if (current.status == BattleStatus.CLOSED && current.outcome == outcome) {
-            return@transaction ApplicationResult.Unchanged(current)
-        }
-        if (current.status != BattleStatus.ACTIVE && current.status != BattleStatus.RESOLVING) {
+        if (current.status != BattleStatus.CLOSED || current.outcome != expectedOutcome) {
             return@transaction ApplicationResult.Rejected(
-                InvalidBattleTransition(battleId, current.status, BattleStatus.CLOSED),
+                InvalidReportlessBattleRecovery(
+                    battleId,
+                    current.status,
+                    current.outcome,
+                    expectedOutcome,
+                ),
             )
         }
-        val winner = when (outcome) {
-            BattleOutcome.ATTACKER_VICTORY -> current.attackingCivilizationId
-            BattleOutcome.DEFENDER_VICTORY -> current.defendingCivilizationId
-            BattleOutcome.DRAW -> null
+        if (findDamageReport(battleId) != null) {
+            return@transaction ApplicationResult.Unchanged(current)
+        }
+        for (civilizationId in setOf(
+            current.attackingCivilizationId,
+            current.defendingCivilizationId,
+        )) {
+            listOpenBattlesForCivilization(civilizationId).firstOrNull()?.let { open ->
+                return@transaction ApplicationResult.Rejected(
+                    CivilizationAlreadyInOpenBattle(civilizationId, open.id),
+                )
+            }
         }
         val now = clock.instant()
-        val closed = current.copy(
-            status = BattleStatus.CLOSED,
+        val resolving = current.copy(
+            status = BattleStatus.RESOLVING,
             resolvingAt = current.resolvingAt ?: now,
-            endedAt = now,
-            outcome = outcome,
-            winnerCivilizationId = winner,
+            endedAt = null,
+            outcome = null,
+            winnerCivilizationId = null,
             updatedAt = now,
         )
-        updateBattle(closed)
-        ApplicationResult.Applied(closed)
+        updateBattle(resolving)
+        ApplicationResult.Applied(resolving)
     }
 
     fun cancelBattle(battleId: BattleId): ApplicationResult<Battle> = repository.transaction {
@@ -728,6 +747,23 @@ data class BattleHasNotExpired(
     val endsAt: java.time.Instant,
 ) : ApplicationFailure {
     override val description: String = "Battle $battleId does not end until $endsAt"
+}
+
+data class BattleDamageReportRequired(
+    val battleId: BattleId,
+) : ApplicationFailure {
+    override val description: String =
+        "Battle $battleId cannot close until its immutable damage report is sealed"
+}
+
+data class InvalidReportlessBattleRecovery(
+    val battleId: BattleId,
+    val status: BattleStatus,
+    val actualOutcome: BattleOutcome?,
+    val expectedOutcome: BattleOutcome,
+) : ApplicationFailure {
+    override val description: String =
+        "Battle $battleId is $status with $actualOutcome and cannot recover as $expectedOutcome"
 }
 
 data class SurrendererMustLeadBattleCivilization(

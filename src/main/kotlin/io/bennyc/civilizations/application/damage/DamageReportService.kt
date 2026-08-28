@@ -13,6 +13,7 @@ import io.bennyc.civilizations.domain.damage.DamageCostCategory
 import io.bennyc.civilizations.domain.damage.DamageReportEligibility
 import io.bennyc.civilizations.domain.damage.ReportedBattleBlockChange
 import io.bennyc.civilizations.domain.damage.SimpleBlockSnapshot
+import io.bennyc.civilizations.domain.war.Battle
 import io.bennyc.civilizations.domain.war.BattleId
 import io.bennyc.civilizations.domain.war.BattleStatus
 import java.time.Clock
@@ -30,6 +31,36 @@ class DamageReportService(
     private val repository: CivilizationsRepository,
     private val clock: Clock,
 ) {
+    /**
+     * Loads the immutable application-owned input for a bounded Paper observation pass.
+     * SQL is read in cursor pages even though the Paper adapter must ultimately retain the
+     * complete observation set required by [generate]. A report already sealed before a
+     * restart is returned without re-reading live world state.
+     */
+    fun loadResolutionBasis(
+        battleId: BattleId,
+    ): ApplicationResult<DamageResolutionBasis> = repository.read {
+        val battle = findBattle(battleId)
+            ?: return@read ApplicationResult.Rejected(BattleNotFound(battleId))
+        findDamageReport(battleId)?.let { report ->
+            return@read ApplicationResult.Unchanged(
+                DamageResolutionBasis(battle, emptyList(), report),
+            )
+        }
+        if (battle.status != BattleStatus.RESOLVING) {
+            return@read ApplicationResult.Rejected(
+                DamageReportUnavailable(battle.id, battle.status),
+            )
+        }
+        ApplicationResult.Applied(
+            DamageResolutionBasis(
+                battle = battle,
+                journal = loadJournal(battle.id),
+                sealedReport = null,
+            ),
+        )
+    }
+
     fun generate(request: GenerateDamageReport): ApplicationResult<BattleDamageReport> {
         val duplicateIds = request.observations
             .groupingBy(FinalBlockObservation::blockChangeId)
@@ -167,6 +198,12 @@ class DamageReportService(
         const val REPORT_PAGE_SIZE = 1_000
     }
 }
+
+data class DamageResolutionBasis(
+    val battle: Battle,
+    val journal: List<BattleBlockChange>,
+    val sealedReport: BattleDamageReport?,
+)
 
 data class GenerateDamageReport(
     val battleId: BattleId,

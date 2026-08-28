@@ -8,9 +8,8 @@ and participation behavior can be exercised as well as the basic two-player loop
 The guide deliberately records current limitations instead of treating unfinished
 features as passes. On the current build, civilization setup, claims, protection, war
 declaration, hostile-entry battle activation, simple battle block mutation, persistence,
-treasuries, and repair of an already sealed battle are live. A newly played battle cannot
-yet progress from live world damage through report sealing to paid repair using only
-commands. That missing Paper resolution coordinator is the next gameplay slice.
+bounded report sealing, treasuries, and paid repair are live. PVP, deaths, lives,
+elimination, and the ordinary timeout outcome are not implemented yet.
 
 ## Test record
 
@@ -201,29 +200,35 @@ capabilities must not change. A later battle should use the new membership.
 Use one of these paths:
 
 - Preferred surrender path: the current leader of either side runs `/civ surrender`.
-  The battle should enter `RESOLVING` immediately and the opposing side should be the
-  requested winner.
+  The battle should enter `RESOLVING` immediately, stop destructive eligibility, seal its
+  damage report in bounded batches, and close with the opposing side as winner.
+- Explicit admin path: run
+  `/civadmin battle force-resolve <BATTLE_ID> <attacker|defender|draw> <audit reason>`.
+  It must use the same resolving, observation, and report-sealing path; it may not skip
+  directly to a report-less closed battle.
 - Emergency-only path: run `/civadmin battle cancel <BATTLE_ID> <audit reason>` and verify
   the battle becomes `CANCELLED`.
 
-Do not use `/civadmin battle force-resolve` for an end-to-end repair test on the current
-build. It can close a battle with an explicit result, but the live adapter does not yet
-scan the journal and seal its world-state damage report first.
+After surrender or force-resolution, verify that battle block mutation stops immediately.
+Pass when `/civadmin battle inspect <BATTLE_ID>` eventually reports `CLOSED` with the
+requested outcome and repair status becomes available.
 
-After surrender, verify that battle block mutation stops immediately. Then stop and restart
-Paper. Pass when `/civadmin battle inspect <BATTLE_ID>` still reports `RESOLVING`, the
-requested surrender outcome is preserved in storage, and destructive eligibility remains
-off after restart.
+For the restart checkpoint, create enough damage that observation cannot finish instantly,
+then stop Paper while the battle is `RESOLVING`. After restart, a surrendered battle should
+reuse its durable requested outcome, resume report sealing, and close without re-enabling
+destruction or duplicating report rows.
 
-This is the current end of a from-scratch, commands-only battle run. Leave the IDs and
-world intact: they are the preferred fixture for validating the upcoming resolution
-coordinator.
+To test ordinary expiry, let a battle reach its configured deadline with nobody issuing a
+command. It should enter `RESOLVING`, remove destructive eligibility, and seal its damage
+report even with zero players online. It should deliberately remain `RESOLVING` without a
+winner because the Season One timeout outcome is not settled. Use the explicit admin path
+above to supply an outcome and continue the repair test.
 
 ## 8. Repair path for a battle that already has a sealed report
 
-Use this section only with a seeded fixture or, once implemented, after the resolution
-coordinator has sealed the damage report and closed the battle. A report-less closed or
-resolving battle should be rejected clearly rather than charged.
+Continue here after surrender or admin force-resolution has sealed the damage report and
+closed the battle. A report-less or still-resolving battle should be rejected clearly
+rather than charged.
 
 As a player in the damaged civilization:
 

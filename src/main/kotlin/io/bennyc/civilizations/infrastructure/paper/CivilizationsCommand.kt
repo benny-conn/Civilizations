@@ -4,6 +4,7 @@ import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.repair.RepairTargetAlreadyReached
 import io.bennyc.civilizations.application.repair.RepairTargetUnreachable
 import io.bennyc.civilizations.application.war.DeclareWar
+import io.bennyc.civilizations.application.war.BattleSurrender
 import io.bennyc.civilizations.application.war.SurrenderBattle
 import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.economy.EconomyBridgeDirection
@@ -23,6 +24,8 @@ import io.bennyc.civilizations.infrastructure.paper.economy.PaperEconomyTransfer
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairOutcome
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairStatus
+import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionCoordinator
+import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionOutcome
 import io.papermc.paper.command.brigadier.BasicCommand
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import net.kyori.adventure.text.Component
@@ -44,6 +47,7 @@ class CivilizationsCommand(
     private val logger: Logger,
     private val economyBridge: PaperEconomyBridgeCoordinator,
     private val repairCoordinator: PaperRepairCoordinator,
+    private val battleResolutionCoordinator: PaperBattleResolutionCoordinator,
 ) : BasicCommand {
     override fun execute(source: CommandSourceStack, args: Array<out String>) {
         val sender = source.sender
@@ -349,30 +353,18 @@ class CivilizationsCommand(
             completion = { outcome ->
                 when (outcome) {
                     is RuntimeMutationOutcome.Completed -> when (val result = outcome.result) {
-                        is ApplicationResult.Applied -> {
-                            val surrender = result.value
-                            val message = prefixed(
-                                "Civilization ${surrender.surrenderedCivilizationId} surrendered " +
-                                    "battle ${surrender.battle.id}; destruction is closed and " +
-                                    "${surrender.requestedOutcome} was requested.",
-                                NamedTextColor.RED,
-                            )
-                            val recipients = outcome.state.activeSeason
-                                ?.battleParticipants
-                                ?.get(surrender.battle.id)
-                                .orEmpty()
-                                .mapTo(linkedSetOf()) { it.playerId.value }
-                                .apply { add(player.uniqueId) }
-                            recipients.forEach { playerId ->
-                                server.getPlayer(playerId)?.sendMessage(message)
-                            }
-                            logger.info(
-                                "Battle ${surrender.battle.id} surrendered by ${player.uniqueId}; " +
-                                    "civilization=${surrender.surrenderedCivilizationId}; " +
-                                    "requestedOutcome=${surrender.requestedOutcome}",
-                            )
-                        }
-                        is ApplicationResult.Unchanged -> Unit
+                        is ApplicationResult.Applied -> continueSurrenderResolution(
+                            sender,
+                            player,
+                            result.value,
+                            outcome.state,
+                        )
+                        is ApplicationResult.Unchanged -> continueSurrenderResolution(
+                            sender,
+                            player,
+                            result.value,
+                            outcome.state,
+                        )
                         is ApplicationResult.Rejected -> error(sender, result.failure.description)
                     }
                     is RuntimeMutationOutcome.NotReady ->
@@ -382,6 +374,52 @@ class CivilizationsCommand(
                 }
             },
         )
+    }
+
+    private fun continueSurrenderResolution(
+        sender: CommandSender,
+        player: Player,
+        surrender: BattleSurrender,
+        state: CivilizationsRuntimeState.Ready,
+    ) {
+        val message = prefixed(
+            "Civilization ${surrender.surrenderedCivilizationId} surrendered " +
+                "battle ${surrender.battle.id}; destruction is closed and " +
+                "the damage report is being sealed.",
+            NamedTextColor.RED,
+        )
+        val recipients = state.activeSeason
+            ?.battleParticipants
+            ?.get(surrender.battle.id)
+            .orEmpty()
+            .mapTo(linkedSetOf()) { it.playerId.value }
+            .apply { add(player.uniqueId) }
+        recipients.forEach { playerId ->
+            server.getPlayer(playerId)?.sendMessage(message)
+        }
+        logger.info(
+            "Battle ${surrender.battle.id} surrendered by ${player.uniqueId}; " +
+                "civilization=${surrender.surrenderedCivilizationId}; " +
+                "requestedOutcome=${surrender.requestedOutcome}",
+        )
+        battleResolutionCoordinator.continueSurrender(
+            surrender.battle.id,
+            surrender.requestedOutcome,
+        ) { resolution ->
+            when (resolution) {
+                is PaperBattleResolutionOutcome.Completed -> Unit
+                is PaperBattleResolutionOutcome.Rejected ->
+                    error(sender, resolution.description)
+                is PaperBattleResolutionOutcome.Unavailable -> error(
+                    sender,
+                    "Battle remains resolving: ${resolution.description}",
+                )
+                is PaperBattleResolutionOutcome.Failed -> error(
+                    sender,
+                    "Battle resolution failed: ${resolution.failure.message}",
+                )
+            }
+        }
     }
 
     private fun showStatus(sender: CommandSender) {

@@ -8,6 +8,7 @@ import io.bennyc.civilizations.infrastructure.paper.economy.VaultEconomyBootstra
 import io.bennyc.civilizations.infrastructure.paper.protection.PaperProtectionListener
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
+import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionCoordinator
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeStartOutcome
 import org.bukkit.Bukkit
@@ -19,6 +20,7 @@ class CivilizationsPlugin : JavaPlugin() {
     private lateinit var runtime: CivilizationsRuntime
     private lateinit var protectionListener: PaperProtectionListener
     private lateinit var battleEntryListener: PaperBattleEntryListener
+    private lateinit var battleResolutionCoordinator: PaperBattleResolutionCoordinator
     private lateinit var repairCoordinator: PaperRepairCoordinator
 
     override fun onEnable() {
@@ -66,12 +68,25 @@ class CivilizationsPlugin : JavaPlugin() {
             rules = runtimeConfiguration.repairRunnerRules,
             logger = logger,
         )
+        battleResolutionCoordinator = PaperBattleResolutionCoordinator(
+            plugin = this,
+            runtime = runtime,
+            server = server,
+            rules = runtimeConfiguration.battleResolutionRules,
+            logger = logger,
+            repairCoordinator = repairCoordinator,
+        )
 
         registerCommand(
             "civadmin",
             "Administer Civilizations",
             listOf("civilizationsadmin"),
-            CivilizationsAdminCommand(runtime, logger, repairCoordinator),
+            CivilizationsAdminCommand(
+                runtime,
+                logger,
+                repairCoordinator,
+                battleResolutionCoordinator,
+            ),
         )
         registerCommand(
             "civilizations",
@@ -84,6 +99,7 @@ class CivilizationsPlugin : JavaPlugin() {
                 logger = logger,
                 economyBridge = economyBridge,
                 repairCoordinator = repairCoordinator,
+                battleResolutionCoordinator = battleResolutionCoordinator,
             ),
         )
         protectionListener = PaperProtectionListener(runtime, server, logger)
@@ -93,6 +109,7 @@ class CivilizationsPlugin : JavaPlugin() {
         runtime.start { outcome ->
             when (outcome) {
                 is RuntimeStartOutcome.Ready -> {
+                    battleResolutionCoordinator.recover(outcome.state)
                     val active = outcome.state.activeSeason
                     logger.info(
                         if (active == null) {
@@ -110,6 +127,12 @@ class CivilizationsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::battleResolutionCoordinator.isInitialized) {
+            logger.info(
+                "Battle resolution metrics: ${battleResolutionCoordinator.metricsSummary()}",
+            )
+            battleResolutionCoordinator.close()
+        }
         if (::repairCoordinator.isInitialized) {
             logger.info("Repair runner metrics: ${repairCoordinator.metricsSummary()}")
             repairCoordinator.close()

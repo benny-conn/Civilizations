@@ -202,6 +202,38 @@ class DamageReportServiceTest {
         }
     }
 
+    @Test
+    fun `resolution basis resumes from a sealed report without observing the world again`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database)
+            val change = fixture.prepare(40, "minecraft:stone", BlockMutationCause.PLAYER_BREAK)
+
+            assertIs<DamageReportUnavailable>(
+                fixture.reports.loadResolutionBasis(fixture.battle.id).rejection(),
+            )
+            fixture.wars.beginResolution(fixture.battle.id, force = true).appliedValue()
+            val basis = fixture.reports.loadResolutionBasis(fixture.battle.id).appliedValue()
+            assertEquals(fixture.battle.id, basis.battle.id)
+            assertEquals(listOf(change), basis.journal)
+            assertNull(basis.sealedReport)
+
+            val report = fixture.reports.generate(
+                GenerateDamageReport(
+                    fixture.battle.id,
+                    listOf(change.observation("minecraft:air")),
+                ),
+            ).appliedValue()
+            val restarted = DamageReportService(
+                JdbcCivilizationsRepository(database.connectionFactory),
+                fixture.clock,
+            )
+            val resumed = restarted.loadResolutionBasis(fixture.battle.id).unchangedValue()
+
+            assertEquals(report, resumed.sealedReport)
+            assertEquals(emptyList(), resumed.journal)
+        }
+    }
+
     private fun fixture(database: SqliteTestDatabase): Fixture {
         database.migrator.migrate()
         val clock = MutableClock(Instant.parse("2026-08-18T12:00:00Z"))

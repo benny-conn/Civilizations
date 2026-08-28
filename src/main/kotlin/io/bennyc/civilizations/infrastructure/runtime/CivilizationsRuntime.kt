@@ -6,6 +6,7 @@ import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.claim.ClaimService
 import io.bennyc.civilizations.application.claim.ClaimSpatialIndex
 import io.bennyc.civilizations.application.damage.DamageJournalService
+import io.bennyc.civilizations.application.damage.DamageReportService
 import io.bennyc.civilizations.application.damage.PrepareBlockMutation
 import io.bennyc.civilizations.application.damage.PreparedBlockMutation
 import io.bennyc.civilizations.application.economy.EconomyRules
@@ -86,6 +87,7 @@ class CivilizationsRuntime private constructor(
         claims = ClaimService(repository, idGenerator, claimRules, phaseRules),
         wars = WarService(repository, idGenerator, clock),
         damageJournal = DamageJournalService(repository, idGenerator, clock),
+        damageReports = DamageReportService(repository, clock),
         economy = EconomyService(repository, idGenerator, clock, economyRules),
         repairs = RepairJobService(repository, idGenerator, clock, economyRules),
     )
@@ -214,6 +216,48 @@ class CivilizationsRuntime private constructor(
             worker.execute {
                 try {
                     val result = mutationScope.damageJournal.prepare(request)
+                    dispatchToServer {
+                        val ready = state as? CivilizationsRuntimeState.Ready
+                        if (ready == null) {
+                            completion(RuntimeMutationOutcome.NotReady(state))
+                        } else {
+                            completion(RuntimeMutationOutcome.Completed(result, ready))
+                        }
+                    }
+                } catch (failure: Throwable) {
+                    publishFatal(failure) {
+                        completion(RuntimeMutationOutcome.Failed(failure))
+                    }
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            dispatchToServer {
+                completion(RuntimeMutationOutcome.NotReady(state))
+            }
+        }
+    }
+
+    /**
+     * Serializes damage-report reads/sealing without rebuilding the published gameplay
+     * snapshot. The closing battle transition still uses [submitMutation] so active
+     * eligibility is replaced before completion is announced.
+     */
+    fun <T> submitDamageReportOperation(
+        operation: DamageReportService.() -> ApplicationResult<T>,
+        completion: (RuntimeMutationOutcome<T>) -> Unit,
+    ) {
+        val current = state
+        if (closed.get() || current !is CivilizationsRuntimeState.Ready) {
+            dispatchToServer {
+                completion(RuntimeMutationOutcome.NotReady(state))
+            }
+            return
+        }
+
+        try {
+            worker.execute {
+                try {
+                    val result = mutationScope.damageReports.operation()
                     dispatchToServer {
                         val ready = state as? CivilizationsRuntimeState.Ready
                         if (ready == null) {
@@ -597,6 +641,7 @@ class RuntimeMutationScope internal constructor(
     val claims: ClaimService,
     val wars: WarService,
     val damageJournal: DamageJournalService,
+    val damageReports: DamageReportService,
     val economy: EconomyService,
     val repairs: RepairJobService,
 ) {

@@ -166,6 +166,13 @@ force-resolution is an explicit audited recovery operation, not an ordinary vict
 - “Battlefield” is not a separate region type. All claim lookup continues through the normal chunk index; the active read model maps each civilization to the opposing civilization's ordinary claim IDs.
 - Both civilization rosters are snapshotted as battle participants when the battle starts. Later membership changes cannot rewrite the historical roster.
 - Absolute timestamps, not decrementing task counters, drive expiry. Startup and every runtime refresh idempotently move expired `ACTIVE` battles to `RESOLVING`, which immediately removes their eligibility from live memory.
+- The Paper resolution coordinator also checks those absolute deadlines while the server
+  remains online. It bounds live block observations per tick, loads existing chunks
+  asynchronously without generation, and serializes its single chunk lease with repair
+  world work. A surrender's requested outcome is already durable, so restart recovery can
+  seal and close it automatically. A timeout has no invented winner: its report is sealed
+  while the battle remains `RESOLVING` until an approved ordinary rule or audited admin
+  outcome completes it.
 - The runtime precomputes membership, open-war-pair, open-battle, and active-battle lookups. The Paper entry listener uses only those published values and the claim index on movement/teleport paths, coalesces per-player attempts behind a bounded gate, and submits durable battle start work off-thread. PVP or other destructive capabilities remain disconnected until their own slices define and enforce them.
 
 ## Damage journal
@@ -181,6 +188,15 @@ force-resolution is an explicit audited recovery operation, not an ordinary vict
 - `SimpleBlockSnapshot` deliberately excludes block-entity payloads. Season One conflict mutation permits only simple, independently mutable building blocks whose relevant state it fully represents. Containers, signs, banners, lecterns, spawners, beds, every other block entity, and cascading/multi-block mutations remain protected. Entity damage is not part of block destruction and requires its own targeted participant-PVP capability.
 
 `DamageReportService` owns the resolution-time readout of that journal. It accepts a complete set of final `SimpleBlockSnapshot` observations only while a battle is `RESOLVING`; it never reads Paper state itself. Each journal row is frozen as already restored or repair-eligible. Eligible rows are categorized as restoring an original block or removing a block placed over an air-like original, producing stable one-coordinate repair units without choosing monetary rates.
+
+Application battle closure requires that immutable report to exist. The admin
+force-resolution adapter may force the transition into `RESOLVING`, but it cannot bypass
+the report: it uses the same bounded Paper observation and sealing coordinator as
+surrender. If a restart occurs after report sealing and before closure, recovery uses the
+sealed report without reinterpreting later world changes.
+An audited retry may reopen the report-less `CLOSED` state produced by the older admin
+adapter, but only for that battle's already-recorded outcome and only when neither party
+has another open battle. It then follows the ordinary report-sealing path.
 
 Schema migration 5 stores one sealed report per battle plus its final-state entries. Entries are staged and the summary row atomically seals the complete set; SQL triggers verify exact journal coverage, category/count consistency, battle state, and immutability. An identical retry returns the stored report, while changed observations fail as an explicit conflict. Repository reads page the joined report and journal rows in stable journal order so later repair work can resume without loading an unbounded report.
 
