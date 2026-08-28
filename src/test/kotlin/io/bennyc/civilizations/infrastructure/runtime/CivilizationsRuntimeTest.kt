@@ -63,7 +63,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(7, started.migration.currentVersion)
+            assertEquals(8, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -441,7 +441,6 @@ class CivilizationsRuntimeTest {
                 restoreOriginalUnitPrice = MoneyAmount(100),
                 removePlacementUnitPrice = MoneyAmount(100),
                 victorShareBasisPoints = 2_500,
-                allowDebt = false,
                 ordinaryInitiatorRoles = setOf(MembershipRole.LEADER),
             ),
         ),

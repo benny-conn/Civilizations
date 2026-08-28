@@ -7,6 +7,7 @@ import io.bennyc.civilizations.domain.economy.EconomyBridgeTransferId
 import io.bennyc.civilizations.domain.economy.LedgerTransactionId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
+import io.bennyc.civilizations.domain.repair.RepairJobId
 import io.bennyc.civilizations.domain.war.BattleId
 import io.bennyc.civilizations.domain.war.WarId
 import java.util.UUID
@@ -29,4 +30,6 @@ class UuidCivilizationsIdGenerator : CivilizationsIdGenerator {
 
     override fun newEconomyBridgeTransferId(): EconomyBridgeTransferId =
         EconomyBridgeTransferId(UUID.randomUUID())
+
+    override fun newRepairJobId(): RepairJobId = RepairJobId(UUID.randomUUID())
 }

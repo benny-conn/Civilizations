@@ -25,8 +25,7 @@ currently no `/reload` integration or partial live-reload behavior.
 | `economy.repair.restore-original-unit-price` | `1.00` | Non-negative price for each selected `RESTORE_ORIGINAL_BLOCK` repair unit. |
 | `economy.repair.remove-placement-unit-price` | `1.00` | Non-negative price for each selected `REMOVE_PLACED_BLOCK` repair unit. |
 | `economy.repair.victor-share-percent` | `25.00` | Percentage from `0` through `100`, with at most two decimal places, of an ordinary repair payment assigned to the battle victor. |
-| `economy.repair.allow-debt` | `false` | Whether a future ordinary repair job may take its paying civilization treasury below zero. It does not relax withdrawals or admin adjustments. |
-| `economy.repair.ordinary-initiator-roles` | `[LEADER]` | Non-empty civilization roles allowed to initiate a future ordinary paid repair. |
+| `economy.repair.ordinary-initiator-roles` | `[LEADER]` | Non-empty civilization roles allowed to initiate an ordinary paid repair. |
 
 Phase names are case-insensitive when loaded, but the shipped file uses uppercase names
 to match the durable season statuses. Duplicate or unknown phase names are rejected.
@@ -49,9 +48,18 @@ is recorded and compensated where necessary. A server stop, thrown provider call
 unknown result is never retried automatically; `/civadmin economy pending` exposes it and
 `/civadmin economy reconcile <id> <succeeded|failed> <reason>` records the admin decision.
 
-The repair keys are validated and available to A3. A3 must snapshot their effective
-values into each durable repair job; until repair jobs exist, those keys do not by
-themselves charge a treasury.
+Every repair job snapshots these effective values. A later configuration change affects
+only new jobs. An ordinary job is created atomically with its ledger payment and is
+rejected when the paying civilization lacks the full cost; treasury balances never go
+below zero. The configured victor percentage may be `0`. Any amount not credited to the
+battle victor is removed from circulation as a currency sink.
+
+Repair percentages are absolute completion targets rather than percentages of whatever
+remains. Before quoting or creating a job, current blocks are reassessed. Blocks already
+restored exactly to their pre-battle state count toward completion and are not charged.
+For example, completing 50% through a job and then 3% manually makes the current status
+53%, so a request to reach 100% selects and charges 47%. Later alterations that match
+neither the original nor sealed damaged state are shown as conflicts and are not selected.
 
 There will be no `admin-waives-cost` setting. A privileged admin repair command will name
 the target civilization and execute the same repair operation with an audited

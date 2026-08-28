@@ -257,7 +257,6 @@ class CivilizationsAdminCommand(
                         referenceId = civilization.id.toString(),
                         actorPlayerId = actor,
                         description = "Admin adjustment: $reason".take(512),
-                        allowDebt = false,
                     ),
                 )
             },

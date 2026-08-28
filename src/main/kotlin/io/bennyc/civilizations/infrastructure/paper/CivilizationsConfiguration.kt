@@ -99,7 +99,6 @@ data class CivilizationsConfiguration(
                         victorShareBasisPoints = config.requiredPercentageBasisPoints(
                             "economy.repair.victor-share-percent",
                         ),
-                        allowDebt = config.requiredBoolean("economy.repair.allow-debt"),
                         ordinaryInitiatorRoles = config.requiredMembershipRoles(
                             "economy.repair.ordinary-initiator-roles",
                         ),

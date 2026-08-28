@@ -55,10 +55,10 @@ reference is [configuration.md](configuration.md).
 
 Season One repair economics follow this same boundary. YAML controls the initial
 civilization balance, the prices for restore-original and remove-placement repair units,
-the victor share, whether balances may enter debt, and which ordinary civilization roles
-may initiate repair. The shipped defaults are `0`, `1`, `1`, `25%`, `false`, and
-leader-only. A repair job snapshots the effective economic rules when it is created so a
-later restart or configuration edit cannot change its price or proceeds.
+the victor share, and which ordinary civilization roles may initiate repair. The shipped
+defaults are `0`, `1`, `1`, `25%`, and leader-only. A repair job snapshots the effective
+economic rules when it is created so a later restart or configuration edit cannot change
+its price or proceeds.
 
 Civilizations owns civilization money as exact fixed-point SQL balances. Schema migration
 7 creates one account per civilization, immutable ledger transaction headers and postings,
@@ -66,6 +66,8 @@ and balance-application triggers inside the same database transaction. Caller-su
 idempotency keys make opening balances, transfers, repair payments, rewards, reversals,
 and admin adjustments safe to repeat without applying money twice. The season's currency
 scale and opening balance are snapshotted when its accounts initialize.
+Every debit is checked against the current treasury balance in the same transaction;
+no operation may take a civilization balance below zero.
 
 Player wallets remain owned by the server's external economy plugin. The optional Vault
 adapter translates only at the Paper boundary: a deposit durably prepares, withdraws the
@@ -184,7 +186,25 @@ Schema migration 5 stores one sealed report per battle plus its final-state entr
 
 Schema migration 6 replaces the former leader-only war-declarer trigger with a same-season civilization-member check and adds immutable battle-surrender records. A surrender preserves its leader, civilization, time, and requested opponent victory while the battle remains `RESOLVING` for damage-report sealing. Application validation still requires global declaration permission and an allowed gameplay phase; the database preserves the durable membership and surrender invariants independently of Paper commands.
 
-Damage does not lock a coordinate against manual rebuilding. A future repair runner uses
+`RepairJobService` accepts a complete current-world observation set for one closed
+battle and one party's claimed damage. It classifies each eligible coordinate as exactly
+restored to its original state, still equal to the sealed damaged state and therefore
+repairable, or altered/conflicted. A target percentage is an absolute completion target,
+rounded up to whole blocks. For example, after a 50% job and 3% exact manual rebuilding,
+a 100% request selects and charges only the remaining 47%. Conflicted coordinates are
+reported but cannot be selected or overwritten.
+
+Schema migration 8 persists the repair target, observation counts, deterministic selected
+change IDs and order, economic snapshot, atomic payment/victor proceeds, lifecycle, result
+counts, and durable cursor. Ordinary payments debit the damaged civilization, credit the
+other party only when that party won the battle, and leave the remainder as a currency
+sink. The configurable victor share may be zero. Admin-sponsored jobs record their actor
+and target but have zero cost and proceeds. One open job is allowed per battle and damaged
+civilization; idempotency keys prevent duplicate jobs or payments. On startup, a `RUNNING`
+job becomes `PAUSED` without advancing its cursor because world completion cannot be
+inferred across a stop.
+
+Damage does not lock a coordinate against manual rebuilding. The Paper repair runner uses
 the report's sealed final snapshot as an optimistic compare value: it restores only when
 the live state still matches, records a conflict/skip otherwise, and never overwrites a
 player's later manual change. Falling-block or block-display reconstruction effects may

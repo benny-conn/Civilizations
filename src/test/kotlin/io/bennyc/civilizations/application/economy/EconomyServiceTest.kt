@@ -51,7 +51,6 @@ class EconomyServiceTest {
                 referenceId = "one",
                 actorPlayerId = playerId(1),
                 description = "Test civilization transfer",
-                allowDebt = false,
             )
 
             fixture.economy.post(request).appliedValue()
@@ -249,6 +248,51 @@ class EconomyServiceTest {
         }
     }
 
+    @Test
+    fun `database rejects any posting that would make a treasury negative`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database)
+            fixture.economy.ensureSeasonAccounts(fixture.seasonId).appliedValue()
+
+            database.connectionFactory.open().use { connection ->
+                connection.prepareStatement(
+                    """
+                    INSERT INTO economy_ledger_transactions(
+                        id, season_id, idempotency_key, kind, reference_type, reference_id,
+                        actor_player_id, description, currency_scale, posting_count,
+                        created_at_ms
+                    ) VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, 1, ?)
+                    """.trimIndent(),
+                ).use { statement ->
+                    statement.setString(1, "00000000-0000-0000-0000-000000009999")
+                    statement.setString(2, fixture.seasonId.toString())
+                    statement.setString(3, "test:negative-account")
+                    statement.setString(4, LedgerTransactionKind.ADMIN_ADJUSTMENT.name)
+                    statement.setString(5, "Attempted invalid negative balance")
+                    statement.setInt(6, 2)
+                    statement.setLong(7, clock.instant().toEpochMilli())
+                    statement.executeUpdate()
+                }
+                assertFailsWith<java.sql.SQLException> {
+                    connection.prepareStatement(
+                        """
+                        INSERT INTO economy_ledger_postings(
+                            transaction_id, season_id, civilization_id, amount_minor
+                        ) VALUES (?, ?, ?, ?)
+                        """.trimIndent(),
+                    ).use { statement ->
+                        statement.setString(1, "00000000-0000-0000-0000-000000009999")
+                        statement.setString(2, fixture.seasonId.toString())
+                        statement.setString(3, fixture.northId.toString())
+                        statement.setLong(4, -501)
+                        statement.executeUpdate()
+                    }
+                }
+            }
+            assertEquals(MoneyAmount(500), fixture.balance(fixture.northId))
+        }
+    }
+
     private fun fixture(database: SqliteTestDatabase): Fixture {
         database.migrator.migrate()
         val ids = SequentialIdGenerator()
@@ -273,7 +317,6 @@ class EconomyServiceTest {
                         restoreOriginalUnitPrice = MoneyAmount(100),
                         removePlacementUnitPrice = MoneyAmount(100),
                         victorShareBasisPoints = 2_500,
-                        allowDebt = false,
                         ordinaryInitiatorRoles = setOf(MembershipRole.LEADER),
                     ),
                 ),

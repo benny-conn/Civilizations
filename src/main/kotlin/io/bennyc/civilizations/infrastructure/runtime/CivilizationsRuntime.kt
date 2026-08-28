@@ -19,6 +19,7 @@ import io.bennyc.civilizations.application.protection.PlayerProtectionRequest
 import io.bennyc.civilizations.application.protection.ProtectionDecision
 import io.bennyc.civilizations.application.protection.ProtectionReason
 import io.bennyc.civilizations.application.protection.ProtectionService
+import io.bennyc.civilizations.application.repair.RepairJobService
 import io.bennyc.civilizations.application.season.SeasonService
 import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.application.war.WarService
@@ -86,6 +87,7 @@ class CivilizationsRuntime private constructor(
         wars = WarService(repository, idGenerator, clock),
         damageJournal = DamageJournalService(repository, idGenerator, clock),
         economy = EconomyService(repository, idGenerator, clock, economyRules),
+        repairs = RepairJobService(repository, idGenerator, clock, economyRules),
     )
 
     @Volatile
@@ -101,6 +103,7 @@ class CivilizationsRuntime private constructor(
             try {
                 val migration = migrator.migrate()
                 mutationScope.economy.recoverInterruptedBridgeTransfers()
+                mutationScope.repairs.recoverInterruptedJobs()
                 val ready = loadReadyState()
                 dispatchToServer {
                     state = ready
@@ -552,6 +555,7 @@ class RuntimeMutationScope internal constructor(
     val wars: WarService,
     val damageJournal: DamageJournalService,
     val economy: EconomyService,
+    val repairs: RepairJobService,
 ) {
     fun activeSeasonId(): SeasonId? = repository.read { findActiveSeasonId() }
 

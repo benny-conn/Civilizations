@@ -20,7 +20,6 @@ data class RepairEconomyRules(
     val restoreOriginalUnitPrice: MoneyAmount,
     val removePlacementUnitPrice: MoneyAmount,
     val victorShareBasisPoints: Int,
-    val allowDebt: Boolean,
     val ordinaryInitiatorRoles: Set<MembershipRole>,
 ) {
     init {

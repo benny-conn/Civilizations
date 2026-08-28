@@ -31,15 +31,16 @@ Branches in different lanes may proceed together when their port contract alread
 | C1 | `operations/ci-build` | Operations | Current `main` | GitHub Actions clean build/test using the wrapper and Java toolchain; no gameplay files. | Ready |
 | C2 | `operations/paper-smoke-fixture` | Operations | B1 | Explicit test-fixture reset/checkpoint scripts and an MVP Paper checklist. Destructive scripts must only target the resolved worktree `server/` directory. | Ready |
 | A2 | `benny/economy-ledger` | Durable feature + narrow Paper bridge | A1, B2 migration 6 | Exact civilization accounts, immutable idempotency-keyed ledger transfers, typed repair-economics YAML, and a durable optional Vault player-wallet bridge. Civilizations SQL remains treasury-authoritative; ambiguous external results require explicit reconciliation. | Complete |
-| A3 | `feature/repair-jobs` | Durable feature | A1, A2 | Persisted repair jobs, deterministic partial selection, cursors, lifecycle, and restart/idempotency tests. No Paper world mutation. | Ready after A2 merges |
+| A3 | `benny/repair-jobs` | Durable feature | A1, A2 | Persisted repair jobs, fresh-world assessment inputs, deterministic absolute-target selection, atomic payment/victor proceeds, cursors, lifecycle, and restart/idempotency tests. No Paper world mutation. | Complete |
 | B2 | `benny/battle-entry-adapter` | Paper integration | B1 | Hostile-claim-entry trigger, throttled movement lookup, immediate boundary feedback, declaration during `SETUP`/`PEACE`/`WAR`, leader surrender, `WAR`-gated battle activation, a safely widened `WAR` roster-mutation gate, and admin recovery/inspection commands over `WarService`. Preserve immutable active-battle sides when political-war rosters change. Migration 6 widens durable declaration authorization from leader to member. | Complete |
-| B3 | `feature/paper-repair-runner` | Paper integration | A3, B1 | Bounded server-thread repair batches, compare-before-repair conflict skips that preserve manual rebuilding, pause/resume, optional cosmetic animation hooks, and real-Paper restart verification. | Blocked by A3 |
+| B3 | `feature/paper-repair-runner` | Paper integration | A3, B1 | Repair status/start and admin lifecycle commands; bounded server-thread repair batches; compare-before-repair conflict skips that preserve manual rebuilding; pause/resume; optional cosmetic hooks; real-Paper restart verification. | Ready after A3 merges |
+| D1 | `feature/repair-inventory-gui` | Paper integration | B3 | Inventory GUI over the same repair status/start services, showing actual completion, remaining repairable work, conflicts, price, and victor share. No menu-owned policy. | Later UX follow-up |
 
 ### Work that can start now
 
-A3, C1, and C2 are the next items after A2 is integrated. Keep A2 → A3 sequential in the durable-core lane. The operations items may proceed independently. B3 remains blocked until A3 supplies persisted repair jobs and cursors.
+B3, C1, and C2 are the next items after A3 is integrated. The operations items may proceed independently. B3 consumes A3's persisted plans and cursors and owns the live Paper observation/mutation boundary.
 
-A3 must snapshot A2's validated repair-economics values into each new durable repair job and use the ledger's idempotency keys for payment/proceeds. Do not start B3 until repair jobs have a durable cursor. The removed legacy frameworks and object graph are not available as implementation shortcuts.
+A3 snapshots A2's validated repair-economics values into each durable job and uses one idempotent ledger transaction for payment and proceeds. B3 must preserve that application boundary: it supplies bounded current-world observations and executes persisted items, but does not recalculate price or select work in Paper code. The removed legacy frameworks and object graph are not available as implementation shortcuts.
 
 ## Settled product decisions
 
@@ -47,6 +48,7 @@ A3 must snapshot A2's validated repair-economics values into each new durable re
 - Political-war rosters remain mutable. Active battle participant/side snapshots remain immutable, so switching civilizations affects only future battles.
 - Wars have no winner or loser. A battle may have an outcome, a current civilization leader may surrender its side, and admin force-resolution is an audited recovery action.
 - Manual rebuilding is allowed before repair. The repair runner compares the live block with the damage report's sealed final state and skips rather than overwrites any later change.
+- Repair percentages are absolute completion targets. Exact manual restoration counts toward completion, so 50% paid plus 3% rebuilt manually leaves 47% selectable for a 100% target. A civilization can pay only from its available treasury. The configurable victor share defaults to 25% and may be 0%.
 - MVP battle destruction is limited to simple, independently mutable, non-block-entity building blocks. Containers, all other block entities, non-player entities, and cascading changes remain protected.
 - Disconnected land is modeled as explicit claim groups with configurable limits, establishment costs, and progression thresholds rather than a connectivity bypass.
 - External economy plugins remain authoritative for player wallets through Vault; Civilizations SQL is authoritative for civilization treasuries. Deposits withdraw a player only after a durable prepare record, withdrawals reserve the treasury before player credit, and any indeterminate result is reconciled rather than automatically retried.
@@ -57,7 +59,7 @@ These are deliberately decisions, not invitations for an implementation agent to
 
 - the first ordinary battle victory calculation, timeout result, and force-resolution inputs;
 - lives/elimination, reconnect grace, participant enrollment, and teammate-locked spectating behavior;
-- the exact economic relationship among casualty charges, battle outcome, spoils, and repair payments;
+- the exact economic relationship among casualty charges, battle outcome, and any future spoils outside the settled repair-payment share;
 - Season One defaults for claim-group limits, founding costs, and progression thresholds;
 - the initial set of global LuckPerms-gated player commands; civilization-scoped custom roles remain a post-MVP plugin-owned feature.
 
@@ -65,4 +67,4 @@ An agent may model a neutral mechanism behind a port, but must not choose these 
 
 ## Later parallel tracks
 
-After the MVP loop is complete, separate worktrees can take player-facing roster/claim UX, season reset/history, scarcity experiments, assassination, or occupation. Assassination must be its own persisted conflict context with targeted PVP eligibility and atomic succession; it is not a special case hidden inside ordinary claim protection.
+After the MVP loop is complete, separate worktrees can take the D1 repair inventory GUI, player-facing roster/claim UX, season reset/history, scarcity experiments, assassination, or occupation. Assassination must be its own persisted conflict context with targeted PVP eligibility and atomic succession; it is not a special case hidden inside ordinary claim protection.

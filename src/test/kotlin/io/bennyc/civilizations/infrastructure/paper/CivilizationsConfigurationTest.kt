@@ -172,7 +172,6 @@ class CivilizationsConfigurationTest {
                 restore-original-unit-price: "1.00"
                 remove-placement-unit-price: "1.00"
                 victor-share-percent: "25.00"
-                allow-debt: false
                 ordinary-initiator-roles: [LEADER]
         """.trimIndent()
     }

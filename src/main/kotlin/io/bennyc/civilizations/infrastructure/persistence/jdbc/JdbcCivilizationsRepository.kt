@@ -39,6 +39,12 @@ import io.bennyc.civilizations.domain.economy.SeasonEconomySettings
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
+import io.bennyc.civilizations.domain.repair.RepairFundingMode
+import io.bennyc.civilizations.domain.repair.RepairJob
+import io.bennyc.civilizations.domain.repair.RepairJobId
+import io.bennyc.civilizations.domain.repair.RepairJobItem
+import io.bennyc.civilizations.domain.repair.RepairJobItemStatus
+import io.bennyc.civilizations.domain.repair.RepairJobStatus
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.Battle
@@ -374,6 +380,122 @@ private open class JdbcReadContext(
         )
     }
 
+    override fun findRepairJob(id: RepairJobId): RepairJob? = queryOne(
+        sql = "$REPAIR_JOB_SELECT WHERE id = ?",
+        bind = { setString(1, id.toString()) },
+        map = ResultSet::toRepairJob,
+    )
+
+    override fun findRepairJobByIdempotencyKey(idempotencyKey: String): RepairJob? = queryOne(
+        sql = "$REPAIR_JOB_SELECT WHERE idempotency_key = ?",
+        bind = { setString(1, idempotencyKey) },
+        map = ResultSet::toRepairJob,
+    )
+
+    override fun findOpenRepairJob(
+        battleId: BattleId,
+        civilizationId: CivilizationId,
+    ): RepairJob? = queryOne(
+        sql = """
+            $REPAIR_JOB_SELECT
+            WHERE battle_id = ? AND civilization_id = ?
+              AND status IN ('QUEUED', 'RUNNING', 'PAUSED')
+        """.trimIndent(),
+        bind = {
+            setString(1, battleId.toString())
+            setString(2, civilizationId.toString())
+        },
+        map = ResultSet::toRepairJob,
+    )
+
+    override fun listRepairJobsForBattle(battleId: BattleId, limit: Int): List<RepairJob> {
+        requireRepairPageSize(limit)
+        return queryMany(
+            sql = """
+                $REPAIR_JOB_SELECT
+                WHERE battle_id = ?
+                ORDER BY created_at_ms DESC, id DESC
+                LIMIT ?
+            """.trimIndent(),
+            bind = {
+                setString(1, battleId.toString())
+                setInt(2, limit)
+            },
+            map = ResultSet::toRepairJob,
+        )
+    }
+
+    override fun listRepairJobsForCivilization(
+        civilizationId: CivilizationId,
+        limit: Int,
+    ): List<RepairJob> {
+        requireRepairPageSize(limit)
+        return queryMany(
+            sql = """
+                $REPAIR_JOB_SELECT
+                WHERE civilization_id = ?
+                ORDER BY created_at_ms DESC, id DESC
+                LIMIT ?
+            """.trimIndent(),
+            bind = {
+                setString(1, civilizationId.toString())
+                setInt(2, limit)
+            },
+            map = ResultSet::toRepairJob,
+        )
+    }
+
+    override fun listRepairJobsByStatus(
+        statuses: Set<RepairJobStatus>,
+        limit: Int,
+    ): List<RepairJob> {
+        require(statuses.isNotEmpty()) { "At least one repair status is required" }
+        requireRepairPageSize(limit)
+        val ordered = statuses.sortedBy(RepairJobStatus::name)
+        val placeholders = ordered.joinToString(",") { "?" }
+        return queryMany(
+            sql = """
+                $REPAIR_JOB_SELECT
+                WHERE status IN ($placeholders)
+                ORDER BY created_at_ms, id
+                LIMIT ?
+            """.trimIndent(),
+            bind = {
+                ordered.forEachIndexed { index, status -> setString(index + 1, status.name) }
+                setInt(ordered.size + 1, limit)
+            },
+            map = ResultSet::toRepairJob,
+        )
+    }
+
+    override fun listRepairJobItems(
+        repairJobId: RepairJobId,
+        afterOrdinal: Long?,
+        limit: Int,
+    ): List<RepairJobItem> {
+        requireRepairPageSize(limit)
+        return queryMany(
+            sql = """
+                $REPAIR_JOB_ITEM_SELECT
+                WHERE repair_job_id = ? AND (? IS NULL OR ordinal > ?)
+                ORDER BY ordinal
+                LIMIT ?
+            """.trimIndent(),
+            bind = {
+                setString(1, repairJobId.toString())
+                if (afterOrdinal == null) {
+                    setNull(2, Types.BIGINT)
+                    setNull(3, Types.BIGINT)
+                } else {
+                    setLong(2, afterOrdinal)
+                    setLong(3, afterOrdinal)
+                }
+                setInt(4, limit)
+            },
+            map = ResultSet::toRepairJobItem,
+        )
+    }
+
     override fun findBlockChange(
         battleId: BattleId,
         position: BlockPosition3D,
@@ -449,6 +571,21 @@ private open class JdbcReadContext(
         sql = "$DAMAGE_REPORT_SELECT WHERE battle_id = ?",
         bind = { setString(1, battleId.toString()) },
         map = ResultSet::toBattleDamageReport,
+    )
+
+    override fun findReportedBlockChange(
+        battleId: BattleId,
+        blockChangeId: BlockChangeId,
+    ): ReportedBattleBlockChange? = queryOne(
+        sql = """
+            $REPORTED_BLOCK_CHANGE_SELECT
+            WHERE journal.battle_id = ? AND journal.id = ?
+        """.trimIndent(),
+        bind = {
+            setString(1, battleId.toString())
+            setString(2, blockChangeId.toString())
+        },
+        map = ResultSet::toReportedBattleBlockChange,
     )
 
     override fun listReportedBlockChanges(
@@ -535,6 +672,12 @@ private open class JdbcReadContext(
         }
     }
 
+    private fun requireRepairPageSize(limit: Int) {
+        require(limit in 1..MAX_REPAIR_PAGE_SIZE) {
+            "Repair page size must be between 1 and $MAX_REPAIR_PAGE_SIZE"
+        }
+    }
+
     private fun LedgerTransactionHeader.withPostings(): LedgerTransaction {
         val postings = queryMany(
             sql = """
@@ -564,6 +707,7 @@ private open class JdbcReadContext(
         const val MAX_BLOCK_CHANGE_PAGE_SIZE = 1_000
         const val MAX_ECONOMY_BRIDGE_PAGE_SIZE = 1_000
         const val MAX_LEDGER_PAGE_SIZE = 1_000
+        const val MAX_REPAIR_PAGE_SIZE = 1_000
 
         const val CIVILIZATION_SELECT = """
             SELECT id, season_id, name, normalized_name, status, created_at_ms, updated_at_ms
@@ -623,6 +767,24 @@ private open class JdbcReadContext(
                    ledger_transaction_id, reversal_transaction_id, failure_message,
                    created_at_ms, updated_at_ms, completed_at_ms
             FROM economy_bridge_transfers
+        """
+        const val REPAIR_JOB_SELECT = """
+            SELECT id, season_id, battle_id, civilization_id, initiated_by_player_id,
+                   funding_mode, idempotency_key, target_completion_basis_points,
+                   total_eligible_count, observed_restored_count,
+                   observed_repairable_count, observed_conflict_count,
+                   selected_restore_original_count, selected_remove_placement_count,
+                   restore_original_unit_price_minor, remove_placement_unit_price_minor,
+                   gross_cost_minor, victor_share_basis_points, victor_civilization_id,
+                   victor_proceeds_minor, payment_ledger_transaction_id, status,
+                   next_item_ordinal, restored_count, skipped_conflict_count, failed_count,
+                   created_at_ms, updated_at_ms, completed_at_ms, failure_message
+            FROM repair_jobs
+        """
+        const val REPAIR_JOB_ITEM_SELECT = """
+            SELECT repair_job_id, battle_id, block_change_id, ordinal, unit_price_minor,
+                   status, processed_at_ms, failure_message
+            FROM repair_job_items
         """
         const val BLOCK_CHANGE_SELECT = """
             SELECT id, season_id, battle_id, claim_id, world_id,
@@ -1047,6 +1209,134 @@ private class JdbcWriteContext(
         requireUpdated(updated, "Economy bridge transfer ${transfer.id}")
     }
 
+    override fun insertRepairJob(job: RepairJob) {
+        executeUpdate(
+            sql = """
+                INSERT INTO repair_jobs(
+                    id, season_id, battle_id, civilization_id, initiated_by_player_id,
+                    funding_mode, idempotency_key, target_completion_basis_points,
+                    total_eligible_count, observed_restored_count,
+                    observed_repairable_count, observed_conflict_count,
+                    selected_restore_original_count, selected_remove_placement_count,
+                    restore_original_unit_price_minor, remove_placement_unit_price_minor,
+                    gross_cost_minor, victor_share_basis_points, victor_civilization_id,
+                    victor_proceeds_minor, payment_ledger_transaction_id, status,
+                    next_item_ordinal, restored_count, skipped_conflict_count, failed_count,
+                    created_at_ms, updated_at_ms, completed_at_ms, failure_message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                          ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            bindRepairJob(job, includeId = true)
+        }
+    }
+
+    override fun updateRepairJob(job: RepairJob) {
+        val updated = executeUpdate(
+            sql = """
+                UPDATE repair_jobs
+                SET season_id = ?, battle_id = ?, civilization_id = ?,
+                    initiated_by_player_id = ?, funding_mode = ?, idempotency_key = ?,
+                    target_completion_basis_points = ?, total_eligible_count = ?,
+                    observed_restored_count = ?, observed_repairable_count = ?,
+                    observed_conflict_count = ?, selected_restore_original_count = ?,
+                    selected_remove_placement_count = ?,
+                    restore_original_unit_price_minor = ?,
+                    remove_placement_unit_price_minor = ?, gross_cost_minor = ?,
+                    victor_share_basis_points = ?, victor_civilization_id = ?,
+                    victor_proceeds_minor = ?, payment_ledger_transaction_id = ?, status = ?,
+                    next_item_ordinal = ?, restored_count = ?, skipped_conflict_count = ?,
+                    failed_count = ?, created_at_ms = ?, updated_at_ms = ?,
+                    completed_at_ms = ?, failure_message = ?
+                WHERE id = ?
+            """.trimIndent(),
+        ) {
+            bindRepairJob(job, includeId = false)
+            setString(30, job.id.toString())
+        }
+        requireUpdated(updated, "Repair job ${job.id}")
+    }
+
+    override fun insertRepairJobItem(item: RepairJobItem) {
+        executeUpdate(
+            sql = """
+                INSERT INTO repair_job_items(
+                    repair_job_id, battle_id, block_change_id, ordinal, unit_price_minor,
+                    status, processed_at_ms, failure_message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            bindRepairJobItem(item)
+        }
+    }
+
+    override fun updateRepairJobItem(item: RepairJobItem) {
+        val updated = executeUpdate(
+            sql = """
+                UPDATE repair_job_items
+                SET battle_id = ?, block_change_id = ?, ordinal = ?, unit_price_minor = ?,
+                    status = ?, processed_at_ms = ?, failure_message = ?
+                WHERE repair_job_id = ? AND block_change_id = ?
+            """.trimIndent(),
+        ) {
+            setString(1, item.battleId.toString())
+            setString(2, item.blockChangeId.toString())
+            setLong(3, item.ordinal)
+            setLong(4, item.unitPrice.minorUnits)
+            setString(5, item.status.name)
+            setInstantOrNull(6, item.processedAt)
+            setString(7, item.failureMessage)
+            setString(8, item.repairJobId.toString())
+            setString(9, item.blockChangeId.toString())
+        }
+        requireUpdated(updated, "Repair item ${item.repairJobId}/${item.blockChangeId}")
+    }
+
+    private fun PreparedStatement.bindRepairJob(job: RepairJob, includeId: Boolean) {
+        var index = 1
+        if (includeId) setString(index++, job.id.toString())
+        setString(index++, job.seasonId.toString())
+        setString(index++, job.battleId.toString())
+        setString(index++, job.civilizationId.toString())
+        setString(index++, job.initiatedByPlayerId?.toString())
+        setString(index++, job.fundingMode.name)
+        setString(index++, job.idempotencyKey)
+        setInt(index++, job.targetCompletionBasisPoints)
+        setLong(index++, job.totalEligibleCount)
+        setLong(index++, job.observedRestoredCount)
+        setLong(index++, job.observedRepairableCount)
+        setLong(index++, job.observedConflictCount)
+        setLong(index++, job.selectedRestoreOriginalCount)
+        setLong(index++, job.selectedRemovePlacementCount)
+        setLong(index++, job.restoreOriginalUnitPrice.minorUnits)
+        setLong(index++, job.removePlacementUnitPrice.minorUnits)
+        setLong(index++, job.grossCost.minorUnits)
+        setInt(index++, job.victorShareBasisPoints)
+        setString(index++, job.victorCivilizationId?.toString())
+        setLong(index++, job.victorProceeds.minorUnits)
+        setString(index++, job.paymentLedgerTransactionId?.toString())
+        setString(index++, job.status.name)
+        setLong(index++, job.nextItemOrdinal)
+        setLong(index++, job.restoredCount)
+        setLong(index++, job.skippedConflictCount)
+        setLong(index++, job.failedCount)
+        setLong(index++, job.createdAt.toEpochMilli())
+        setLong(index++, job.updatedAt.toEpochMilli())
+        setInstantOrNull(index++, job.completedAt)
+        setString(index, job.failureMessage)
+    }
+
+    private fun PreparedStatement.bindRepairJobItem(item: RepairJobItem) {
+        setString(1, item.repairJobId.toString())
+        setString(2, item.battleId.toString())
+        setString(3, item.blockChangeId.toString())
+        setLong(4, item.ordinal)
+        setLong(5, item.unitPrice.minorUnits)
+        setString(6, item.status.name)
+        setInstantOrNull(7, item.processedAt)
+        setString(8, item.failureMessage)
+    }
+
     private fun PreparedStatement.bindEconomyBridgeTransfer(transfer: EconomyBridgeTransfer) {
         setString(1, transfer.id.toString())
         setString(2, transfer.seasonId.toString())
@@ -1313,6 +1603,56 @@ private fun ResultSet.toEconomyBridgeTransfer(): EconomyBridgeTransfer = Economy
     createdAt = instant("created_at_ms"),
     updatedAt = instant("updated_at_ms"),
     completedAt = nullableInstant("completed_at_ms"),
+)
+
+private fun ResultSet.toRepairJob(): RepairJob = RepairJob(
+    id = RepairJobId(uuid("id")),
+    seasonId = SeasonId(uuid("season_id")),
+    battleId = BattleId(uuid("battle_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    initiatedByPlayerId = getString("initiated_by_player_id")?.let {
+        PlayerId(UUID.fromString(it))
+    },
+    fundingMode = RepairFundingMode.valueOf(getString("funding_mode")),
+    idempotencyKey = getString("idempotency_key"),
+    targetCompletionBasisPoints = getInt("target_completion_basis_points"),
+    totalEligibleCount = getLong("total_eligible_count"),
+    observedRestoredCount = getLong("observed_restored_count"),
+    observedRepairableCount = getLong("observed_repairable_count"),
+    observedConflictCount = getLong("observed_conflict_count"),
+    selectedRestoreOriginalCount = getLong("selected_restore_original_count"),
+    selectedRemovePlacementCount = getLong("selected_remove_placement_count"),
+    restoreOriginalUnitPrice = MoneyAmount(getLong("restore_original_unit_price_minor")),
+    removePlacementUnitPrice = MoneyAmount(getLong("remove_placement_unit_price_minor")),
+    grossCost = MoneyAmount(getLong("gross_cost_minor")),
+    victorShareBasisPoints = getInt("victor_share_basis_points"),
+    victorCivilizationId = getString("victor_civilization_id")?.let {
+        CivilizationId(UUID.fromString(it))
+    },
+    victorProceeds = MoneyAmount(getLong("victor_proceeds_minor")),
+    paymentLedgerTransactionId = getString("payment_ledger_transaction_id")?.let {
+        LedgerTransactionId(UUID.fromString(it))
+    },
+    status = RepairJobStatus.valueOf(getString("status")),
+    nextItemOrdinal = getLong("next_item_ordinal"),
+    restoredCount = getLong("restored_count"),
+    skippedConflictCount = getLong("skipped_conflict_count"),
+    failedCount = getLong("failed_count"),
+    createdAt = instant("created_at_ms"),
+    updatedAt = instant("updated_at_ms"),
+    completedAt = nullableInstant("completed_at_ms"),
+    failureMessage = getString("failure_message"),
+)
+
+private fun ResultSet.toRepairJobItem(): RepairJobItem = RepairJobItem(
+    repairJobId = RepairJobId(uuid("repair_job_id")),
+    battleId = BattleId(uuid("battle_id")),
+    blockChangeId = BlockChangeId(uuid("block_change_id")),
+    ordinal = getLong("ordinal"),
+    unitPrice = MoneyAmount(getLong("unit_price_minor")),
+    status = RepairJobItemStatus.valueOf(getString("status")),
+    processedAt = nullableInstant("processed_at_ms"),
+    failureMessage = getString("failure_message"),
 )
 
 private fun ResultSet.toBattleBlockChange(): BattleBlockChange = BattleBlockChange(

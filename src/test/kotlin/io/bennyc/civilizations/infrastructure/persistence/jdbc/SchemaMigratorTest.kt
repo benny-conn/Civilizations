@@ -13,10 +13,10 @@ class SchemaMigratorTest {
             val second = database.migrator.migrate()
 
             assertEquals(0, first.previousVersion)
-            assertEquals(7, first.currentVersion)
-            assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), first.appliedVersions)
-            assertEquals(7, second.previousVersion)
-            assertEquals(7, second.currentVersion)
+            assertEquals(8, first.currentVersion)
+            assertEquals(listOf(1, 2, 3, 4, 5, 6, 7, 8), first.appliedVersions)
+            assertEquals(8, second.previousVersion)
+            assertEquals(8, second.currentVersion)
             assertTrue(second.appliedVersions.isEmpty())
 
             database.connectionFactory.open().use { connection ->
@@ -31,7 +31,8 @@ class SchemaMigratorTest {
                         'battle_block_changes', 'battle_damage_reports',
                         'battle_damage_report_entries', 'season_economy_settings',
                         'civilization_accounts', 'economy_ledger_transactions',
-                        'economy_ledger_postings', 'economy_bridge_transfers'
+                        'economy_ledger_postings', 'economy_bridge_transfers',
+                        'repair_jobs', 'repair_job_items'
                     )
                     """.trimIndent(),
                 ).use { statement ->
@@ -61,6 +62,8 @@ class SchemaMigratorTest {
                                 "economy_ledger_transactions",
                                 "economy_ledger_postings",
                                 "economy_bridge_transfers",
+                                "repair_jobs",
+                                "repair_job_items",
                             ),
                             tables,
                         )
@@ -82,8 +85,8 @@ class SchemaMigratorTest {
             val upgraded = database.migrator.migrate()
 
             assertEquals(4, upgraded.previousVersion)
-            assertEquals(7, upgraded.currentVersion)
-            assertEquals(listOf(5, 6, 7), upgraded.appliedVersions)
+            assertEquals(8, upgraded.currentVersion)
+            assertEquals(listOf(5, 6, 7, 8), upgraded.appliedVersions)
             database.connectionFactory.open().use { connection ->
                 connection.prepareStatement(
                     "SELECT COUNT(*) FROM battle_damage_reports",

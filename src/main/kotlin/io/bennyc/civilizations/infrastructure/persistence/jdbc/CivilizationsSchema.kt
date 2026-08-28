@@ -977,5 +977,409 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        SchemaMigration(
+            version = 8,
+            name = "persisted_resumable_repair_jobs",
+            statements = listOf(
+                """
+                CREATE TRIGGER civilization_accounts_reject_negative_insert
+                BEFORE INSERT ON civilization_accounts
+                WHEN NEW.balance_minor < 0
+                BEGIN
+                    SELECT RAISE(ABORT, 'civilization account balance cannot be negative');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER civilization_accounts_reject_negative_update
+                BEFORE UPDATE OF balance_minor ON civilization_accounts
+                WHEN NEW.balance_minor < 0
+                BEGIN
+                    SELECT RAISE(ABORT, 'civilization account balance cannot be negative');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE repair_jobs (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    initiated_by_player_id TEXT,
+                    funding_mode TEXT NOT NULL CHECK (
+                        funding_mode IN ('ORDINARY', 'ADMIN_SPONSORED')
+                    ),
+                    idempotency_key TEXT NOT NULL UNIQUE,
+                    target_completion_basis_points INTEGER NOT NULL CHECK (
+                        target_completion_basis_points BETWEEN 1 AND 10000
+                    ),
+                    total_eligible_count INTEGER NOT NULL CHECK (total_eligible_count > 0),
+                    observed_restored_count INTEGER NOT NULL CHECK (
+                        observed_restored_count >= 0
+                    ),
+                    observed_repairable_count INTEGER NOT NULL CHECK (
+                        observed_repairable_count >= 0
+                    ),
+                    observed_conflict_count INTEGER NOT NULL CHECK (
+                        observed_conflict_count >= 0
+                    ),
+                    selected_restore_original_count INTEGER NOT NULL CHECK (
+                        selected_restore_original_count >= 0
+                    ),
+                    selected_remove_placement_count INTEGER NOT NULL CHECK (
+                        selected_remove_placement_count >= 0
+                    ),
+                    restore_original_unit_price_minor INTEGER NOT NULL CHECK (
+                        restore_original_unit_price_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    remove_placement_unit_price_minor INTEGER NOT NULL CHECK (
+                        remove_placement_unit_price_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    gross_cost_minor INTEGER NOT NULL CHECK (
+                        gross_cost_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    victor_share_basis_points INTEGER NOT NULL CHECK (
+                        victor_share_basis_points BETWEEN 0 AND 10000
+                    ),
+                    victor_civilization_id TEXT,
+                    victor_proceeds_minor INTEGER NOT NULL CHECK (
+                        victor_proceeds_minor BETWEEN 0 AND gross_cost_minor
+                    ),
+                    payment_ledger_transaction_id TEXT,
+                    status TEXT NOT NULL CHECK (status IN (
+                        'QUEUED', 'RUNNING', 'PAUSED', 'COMPLETED', 'CANCELLED', 'FAILED'
+                    )),
+                    next_item_ordinal INTEGER NOT NULL CHECK (next_item_ordinal >= 0),
+                    restored_count INTEGER NOT NULL CHECK (restored_count >= 0),
+                    skipped_conflict_count INTEGER NOT NULL CHECK (skipped_conflict_count >= 0),
+                    failed_count INTEGER NOT NULL CHECK (failed_count >= 0),
+                    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
+                    updated_at_ms INTEGER NOT NULL CHECK (updated_at_ms >= created_at_ms),
+                    completed_at_ms INTEGER,
+                    failure_message TEXT,
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    CHECK (
+                        initiated_by_player_id IS NULL OR length(initiated_by_player_id) = 36
+                    ),
+                    CHECK (length(idempotency_key) BETWEEN 1 AND 160),
+                    CHECK (
+                        victor_civilization_id IS NULL OR length(victor_civilization_id) = 36
+                    ),
+                    CHECK (
+                        failure_message IS NULL OR
+                        (status = 'FAILED' AND length(failure_message) <= 512)
+                    ),
+                    CHECK (
+                        total_eligible_count = observed_restored_count +
+                            observed_repairable_count + observed_conflict_count
+                    ),
+                    CHECK (
+                        selected_restore_original_count + selected_remove_placement_count
+                            BETWEEN 1 AND observed_repairable_count
+                    ),
+                    CHECK (
+                        next_item_ordinal <=
+                            selected_restore_original_count + selected_remove_placement_count
+                    ),
+                    CHECK (
+                        next_item_ordinal = restored_count + skipped_conflict_count + failed_count
+                    ),
+                    CHECK (
+                        (victor_civilization_id IS NULL AND victor_proceeds_minor = 0) OR
+                        (victor_civilization_id IS NOT NULL AND
+                         victor_civilization_id <> civilization_id)
+                    ),
+                    CHECK (
+                        (funding_mode = 'ORDINARY' AND
+                         payment_ledger_transaction_id IS NOT NULL) OR
+                        (funding_mode = 'ADMIN_SPONSORED' AND
+                         payment_ledger_transaction_id IS NULL AND gross_cost_minor = 0 AND
+                         victor_proceeds_minor = 0)
+                    ),
+                    CHECK (
+                        (status = 'COMPLETED' AND completed_at_ms IS NOT NULL AND
+                         next_item_ordinal =
+                            selected_restore_original_count + selected_remove_placement_count) OR
+                        (status IN ('CANCELLED', 'FAILED') AND completed_at_ms IS NOT NULL) OR
+                        (status IN ('QUEUED', 'RUNNING', 'PAUSED') AND completed_at_ms IS NULL)
+                    ),
+                    UNIQUE (season_id, id),
+                    FOREIGN KEY (season_id, battle_id)
+                        REFERENCES battle_damage_reports(season_id, battle_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, civilization_id)
+                        REFERENCES civilization_accounts(season_id, civilization_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, victor_civilization_id)
+                        REFERENCES civilization_accounts(season_id, civilization_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, payment_ledger_transaction_id)
+                        REFERENCES economy_ledger_transactions(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE UNIQUE INDEX repair_jobs_one_open_per_battle_civilization
+                ON repair_jobs(battle_id, civilization_id)
+                WHERE status IN ('QUEUED', 'RUNNING', 'PAUSED')
+                """.trimIndent(),
+                """
+                CREATE INDEX repair_jobs_by_battle
+                ON repair_jobs(battle_id, created_at_ms, id)
+                """.trimIndent(),
+                """
+                CREATE INDEX repair_jobs_by_civilization
+                ON repair_jobs(civilization_id, created_at_ms, id)
+                """.trimIndent(),
+                """
+                CREATE TABLE repair_job_items (
+                    repair_job_id TEXT NOT NULL,
+                    battle_id TEXT NOT NULL,
+                    block_change_id TEXT NOT NULL,
+                    ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+                    unit_price_minor INTEGER NOT NULL CHECK (
+                        unit_price_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    status TEXT NOT NULL CHECK (
+                        status IN ('PENDING', 'RESTORED', 'SKIPPED_CONFLICT', 'FAILED')
+                    ),
+                    processed_at_ms INTEGER,
+                    failure_message TEXT,
+                    CHECK (length(repair_job_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(block_change_id) = 36),
+                    CHECK (
+                        failure_message IS NULL OR
+                        (status = 'FAILED' AND length(failure_message) <= 512)
+                    ),
+                    CHECK (
+                        (status = 'PENDING' AND processed_at_ms IS NULL AND
+                         failure_message IS NULL) OR
+                        (status <> 'PENDING' AND processed_at_ms IS NOT NULL)
+                    ),
+                    PRIMARY KEY (repair_job_id, block_change_id),
+                    UNIQUE (repair_job_id, ordinal),
+                    FOREIGN KEY (repair_job_id)
+                        REFERENCES repair_jobs(id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (battle_id, block_change_id)
+                        REFERENCES battle_damage_report_entries(battle_id, block_change_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX repair_job_items_pending
+                ON repair_job_items(repair_job_id, status, ordinal)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER repair_jobs_validate_insert
+                BEFORE INSERT ON repair_jobs
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM battles battle
+                    WHERE battle.id = NEW.battle_id
+                      AND battle.season_id = NEW.season_id
+                      AND battle.status = 'CLOSED'
+                      AND NEW.civilization_id IN (
+                          battle.attacking_civilization_id,
+                          battle.defending_civilization_id
+                      )
+                      AND (
+                          (battle.winner_civilization_id IS NULL AND
+                           NEW.victor_civilization_id IS NULL) OR
+                          (battle.winner_civilization_id = NEW.civilization_id AND
+                           NEW.victor_civilization_id IS NULL) OR
+                          (battle.winner_civilization_id <> NEW.civilization_id AND
+                           NEW.victor_civilization_id = battle.winner_civilization_id)
+                      )
+                ) OR NEW.total_eligible_count <> (
+                    SELECT COUNT(*)
+                    FROM battle_damage_report_entries entry
+                    JOIN battle_block_changes change ON change.id = entry.block_change_id
+                    JOIN claims claim ON claim.id = change.claim_id
+                    WHERE entry.battle_id = NEW.battle_id
+                      AND entry.eligibility = 'ELIGIBLE'
+                      AND claim.civilization_id = NEW.civilization_id
+                ) OR (
+                    NEW.funding_mode = 'ORDINARY' AND NOT EXISTS (
+                        SELECT 1
+                        FROM economy_ledger_transactions transaction_header
+                        JOIN economy_ledger_postings payer
+                          ON payer.transaction_id = transaction_header.id
+                         AND payer.civilization_id = NEW.civilization_id
+                         AND payer.amount_minor = -NEW.gross_cost_minor
+                        WHERE transaction_header.id = NEW.payment_ledger_transaction_id
+                          AND transaction_header.season_id = NEW.season_id
+                          AND transaction_header.kind = 'REPAIR_PAYMENT'
+                          AND transaction_header.reference_type = 'REPAIR_JOB'
+                          AND transaction_header.reference_id = NEW.id
+                          AND transaction_header.actor_player_id IS
+                              NEW.initiated_by_player_id
+                          AND transaction_header.posting_count = CASE
+                              WHEN NEW.victor_proceeds_minor > 0 THEN 2
+                              ELSE 1
+                          END
+                          AND (
+                              (NEW.victor_proceeds_minor = 0) OR EXISTS (
+                                  SELECT 1
+                                  FROM economy_ledger_postings victor
+                                  WHERE victor.transaction_id = transaction_header.id
+                                    AND victor.civilization_id =
+                                        NEW.victor_civilization_id
+                                    AND victor.amount_minor = NEW.victor_proceeds_minor
+                              )
+                          )
+                    )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid repair job basis');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER repair_job_items_validate_insert
+                BEFORE INSERT ON repair_job_items
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM repair_jobs job
+                    JOIN battle_damage_report_entries entry
+                      ON entry.battle_id = NEW.battle_id
+                     AND entry.block_change_id = NEW.block_change_id
+                    JOIN battle_block_changes change ON change.id = entry.block_change_id
+                    JOIN claims claim ON claim.id = change.claim_id
+                    WHERE job.id = NEW.repair_job_id
+                      AND job.battle_id = NEW.battle_id
+                      AND job.status = 'QUEUED'
+                      AND entry.eligibility = 'ELIGIBLE'
+                      AND claim.civilization_id = job.civilization_id
+                      AND NEW.ordinal <
+                          job.selected_restore_original_count +
+                          job.selected_remove_placement_count
+                      AND NEW.unit_price_minor = CASE entry.cost_category
+                          WHEN 'RESTORE_ORIGINAL_BLOCK'
+                              THEN job.restore_original_unit_price_minor
+                          WHEN 'REMOVE_PLACED_BLOCK'
+                              THEN job.remove_placement_unit_price_minor
+                      END
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid repair job item');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER repair_jobs_validate_update
+                BEFORE UPDATE ON repair_jobs
+                WHEN NEW.id <> OLD.id OR
+                     NEW.season_id <> OLD.season_id OR
+                     NEW.battle_id <> OLD.battle_id OR
+                     NEW.civilization_id <> OLD.civilization_id OR
+                     NEW.initiated_by_player_id IS NOT OLD.initiated_by_player_id OR
+                     NEW.funding_mode <> OLD.funding_mode OR
+                     NEW.idempotency_key <> OLD.idempotency_key OR
+                     NEW.target_completion_basis_points <>
+                        OLD.target_completion_basis_points OR
+                     NEW.total_eligible_count <> OLD.total_eligible_count OR
+                     NEW.observed_restored_count <> OLD.observed_restored_count OR
+                     NEW.observed_repairable_count <> OLD.observed_repairable_count OR
+                     NEW.observed_conflict_count <> OLD.observed_conflict_count OR
+                     NEW.selected_restore_original_count <>
+                        OLD.selected_restore_original_count OR
+                     NEW.selected_remove_placement_count <>
+                        OLD.selected_remove_placement_count OR
+                     NEW.restore_original_unit_price_minor <>
+                        OLD.restore_original_unit_price_minor OR
+                     NEW.remove_placement_unit_price_minor <>
+                        OLD.remove_placement_unit_price_minor OR
+                     NEW.gross_cost_minor <> OLD.gross_cost_minor OR
+                     NEW.victor_share_basis_points <> OLD.victor_share_basis_points OR
+                     NEW.victor_civilization_id IS NOT OLD.victor_civilization_id OR
+                     NEW.victor_proceeds_minor <> OLD.victor_proceeds_minor OR
+                     NEW.payment_ledger_transaction_id IS NOT
+                        OLD.payment_ledger_transaction_id OR
+                     NEW.created_at_ms <> OLD.created_at_ms OR
+                     NEW.next_item_ordinal < OLD.next_item_ordinal OR
+                     NEW.restored_count < OLD.restored_count OR
+                     NEW.skipped_conflict_count < OLD.skipped_conflict_count OR
+                     NEW.failed_count < OLD.failed_count OR
+                     NOT (
+                        (OLD.status = NEW.status AND OLD.status IN (
+                            'QUEUED', 'RUNNING', 'PAUSED'
+                        )) OR
+                        (OLD.status = 'QUEUED' AND NEW.status IN (
+                            'RUNNING', 'PAUSED', 'CANCELLED'
+                        )) OR
+                        (OLD.status = 'RUNNING' AND NEW.status IN (
+                            'PAUSED', 'COMPLETED', 'CANCELLED', 'FAILED'
+                        )) OR
+                        (OLD.status = 'PAUSED' AND NEW.status IN (
+                            'QUEUED', 'RUNNING', 'CANCELLED', 'FAILED'
+                        ))
+                     )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid repair job transition');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER repair_jobs_validate_selection_before_execution
+                BEFORE UPDATE ON repair_jobs
+                WHEN OLD.status = 'QUEUED' AND NEW.status IN ('RUNNING', 'PAUSED') AND (
+                    (SELECT COUNT(*) FROM repair_job_items item
+                     WHERE item.repair_job_id = OLD.id) <>
+                        OLD.selected_restore_original_count +
+                            OLD.selected_remove_placement_count OR
+                    (SELECT COUNT(*)
+                     FROM repair_job_items item
+                     JOIN battle_damage_report_entries entry
+                       ON entry.battle_id = item.battle_id
+                      AND entry.block_change_id = item.block_change_id
+                     WHERE item.repair_job_id = OLD.id
+                       AND entry.cost_category = 'RESTORE_ORIGINAL_BLOCK') <>
+                        OLD.selected_restore_original_count OR
+                    (SELECT COUNT(*)
+                     FROM repair_job_items item
+                     JOIN battle_damage_report_entries entry
+                       ON entry.battle_id = item.battle_id
+                      AND entry.block_change_id = item.block_change_id
+                     WHERE item.repair_job_id = OLD.id
+                       AND entry.cost_category = 'REMOVE_PLACED_BLOCK') <>
+                        OLD.selected_remove_placement_count OR
+                    (OLD.funding_mode = 'ORDINARY' AND
+                     (SELECT COALESCE(SUM(item.unit_price_minor), 0)
+                      FROM repair_job_items item
+                      WHERE item.repair_job_id = OLD.id) <> OLD.gross_cost_minor)
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'repair job selection is incomplete');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER repair_jobs_cannot_be_deleted
+                BEFORE DELETE ON repair_jobs
+                BEGIN
+                    SELECT RAISE(ABORT, 'repair jobs cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER repair_job_items_validate_update
+                BEFORE UPDATE ON repair_job_items
+                WHEN NEW.repair_job_id <> OLD.repair_job_id OR
+                     NEW.battle_id <> OLD.battle_id OR
+                     NEW.block_change_id <> OLD.block_change_id OR
+                     NEW.ordinal <> OLD.ordinal OR
+                     NEW.unit_price_minor <> OLD.unit_price_minor OR
+                     OLD.status <> 'PENDING' OR NEW.status = 'PENDING'
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid repair item transition');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER repair_job_items_cannot_be_deleted
+                BEFORE DELETE ON repair_job_items
+                BEGIN
+                    SELECT RAISE(ABORT, 'repair job items cannot be deleted');
+                END
+                """.trimIndent(),
+            ),
+        ),
     )
 }

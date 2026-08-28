@@ -9,6 +9,7 @@ import io.bennyc.civilizations.domain.damage.BattleBlockChange
 import io.bennyc.civilizations.domain.damage.BattleDamageReport
 import io.bennyc.civilizations.domain.damage.BattleDamageReportEntry
 import io.bennyc.civilizations.domain.damage.BlockPosition3D
+import io.bennyc.civilizations.domain.damage.BlockChangeId
 import io.bennyc.civilizations.domain.damage.BlockChangeCursor
 import io.bennyc.civilizations.domain.damage.ReportedBattleBlockChange
 import io.bennyc.civilizations.domain.economy.CivilizationAccount
@@ -21,6 +22,10 @@ import io.bennyc.civilizations.domain.economy.SeasonEconomySettings
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
+import io.bennyc.civilizations.domain.repair.RepairJob
+import io.bennyc.civilizations.domain.repair.RepairJobId
+import io.bennyc.civilizations.domain.repair.RepairJobItem
+import io.bennyc.civilizations.domain.repair.RepairJobStatus
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.war.Battle
 import io.bennyc.civilizations.domain.war.BattleId
@@ -112,6 +117,30 @@ interface CivilizationsReadContext {
         limit: Int,
     ): List<EconomyBridgeTransfer>
 
+    fun findRepairJob(id: RepairJobId): RepairJob?
+
+    fun findRepairJobByIdempotencyKey(idempotencyKey: String): RepairJob?
+
+    fun findOpenRepairJob(battleId: BattleId, civilizationId: CivilizationId): RepairJob?
+
+    fun listRepairJobsForBattle(battleId: BattleId, limit: Int): List<RepairJob>
+
+    fun listRepairJobsForCivilization(
+        civilizationId: CivilizationId,
+        limit: Int,
+    ): List<RepairJob>
+
+    fun listRepairJobsByStatus(
+        statuses: Set<RepairJobStatus>,
+        limit: Int,
+    ): List<RepairJob>
+
+    fun listRepairJobItems(
+        repairJobId: RepairJobId,
+        afterOrdinal: Long?,
+        limit: Int,
+    ): List<RepairJobItem>
+
     fun findBlockChange(battleId: BattleId, position: BlockPosition3D): BattleBlockChange?
 
     fun countBlockChanges(battleId: BattleId): Long
@@ -123,6 +152,11 @@ interface CivilizationsReadContext {
     ): List<BattleBlockChange>
 
     fun findDamageReport(battleId: BattleId): BattleDamageReport?
+
+    fun findReportedBlockChange(
+        battleId: BattleId,
+        blockChangeId: BlockChangeId,
+    ): ReportedBattleBlockChange?
 
     fun listReportedBlockChanges(
         battleId: BattleId,
@@ -173,6 +207,14 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
     fun insertEconomyBridgeTransfer(transfer: EconomyBridgeTransfer)
 
     fun updateEconomyBridgeTransfer(transfer: EconomyBridgeTransfer)
+
+    fun insertRepairJob(job: RepairJob)
+
+    fun updateRepairJob(job: RepairJob)
+
+    fun insertRepairJobItem(item: RepairJobItem)
+
+    fun updateRepairJobItem(item: RepairJobItem)
 
     /** Returns false only when this battle/coordinate was already journaled. */
     fun insertBlockChangeIfAbsent(blockChange: BattleBlockChange): Boolean

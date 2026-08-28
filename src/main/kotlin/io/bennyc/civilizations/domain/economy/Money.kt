@@ -14,6 +14,8 @@ value class MoneyAmount(val minorUnits: Long) {
 
     fun plus(other: MoneyAmount): MoneyAmount = MoneyAmount(Math.addExact(minorUnits, other.minorUnits))
 
+    fun times(multiplier: Long): MoneyAmount = MoneyAmount(Math.multiplyExact(minorUnits, multiplier))
+
     fun negate(): MoneyAmount = MoneyAmount(Math.negateExact(minorUnits))
 
     companion object {

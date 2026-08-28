@@ -35,6 +35,7 @@ data class CivilizationAccount(
     val updatedAt: Instant,
 ) {
     init {
+        require(balance.minorUnits >= 0) { "Civilization account balance cannot be negative" }
         require(updatedAt >= createdAt) { "Account updatedAt cannot precede createdAt" }
     }
 }

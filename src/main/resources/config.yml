@@ -34,10 +34,9 @@ economy:
   currency-scale: 2
   opening-civilization-balance: "0.00"
   repair:
-    # A3 snapshots these prices into each future repair job.
+    # Snapshotted into each new repair job; changes affect future jobs after restart.
     restore-original-unit-price: "1.00"
     remove-placement-unit-price: "1.00"
     victor-share-percent: "25.00"
-    allow-debt: false
     ordinary-initiator-roles:
       - LEADER

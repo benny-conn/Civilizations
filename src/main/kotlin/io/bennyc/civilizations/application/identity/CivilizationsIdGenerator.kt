@@ -6,6 +6,7 @@ import io.bennyc.civilizations.domain.economy.EconomyBridgeTransferId
 import io.bennyc.civilizations.domain.economy.LedgerTransactionId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
+import io.bennyc.civilizations.domain.repair.RepairJobId
 import io.bennyc.civilizations.domain.war.BattleId
 import io.bennyc.civilizations.domain.war.WarId
 
@@ -25,4 +26,6 @@ interface CivilizationsIdGenerator {
     fun newLedgerTransactionId(): LedgerTransactionId
 
     fun newEconomyBridgeTransferId(): EconomyBridgeTransferId
+
+    fun newRepairJobId(): RepairJobId
 }

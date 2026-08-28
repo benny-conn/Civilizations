@@ -8,6 +8,7 @@ import io.bennyc.civilizations.domain.economy.EconomyBridgeTransferId
 import io.bennyc.civilizations.domain.economy.LedgerTransactionId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
+import io.bennyc.civilizations.domain.repair.RepairJobId
 import io.bennyc.civilizations.domain.war.BattleId
 import io.bennyc.civilizations.domain.war.WarId
 import java.util.UUID
@@ -22,6 +23,7 @@ internal class SequentialIdGenerator : CivilizationsIdGenerator {
     private var blockChange = 500L
     private var ledgerTransaction = 600L
     private var economyBridgeTransfer = 700L
+    private var repairJob = 800L
 
     override fun newSeasonId(): SeasonId = SeasonId(UUID(0, ++season))
 
@@ -40,6 +42,8 @@ internal class SequentialIdGenerator : CivilizationsIdGenerator {
 
     override fun newEconomyBridgeTransferId(): EconomyBridgeTransferId =
         EconomyBridgeTransferId(UUID(0, ++economyBridgeTransfer))
+
+    override fun newRepairJobId(): RepairJobId = RepairJobId(UUID(0, ++repairJob))
 }
 
 internal fun playerId(value: Long) = io.bennyc.civilizations.domain.identity.PlayerId(UUID(1, value))
