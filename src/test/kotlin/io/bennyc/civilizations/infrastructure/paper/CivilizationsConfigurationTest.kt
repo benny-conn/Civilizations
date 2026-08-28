@@ -1,6 +1,8 @@
 package io.bennyc.civilizations.infrastructure.paper
 
 import io.bennyc.civilizations.domain.season.SeasonStatus
+import io.bennyc.civilizations.domain.economy.CurrencyScale
+import io.bennyc.civilizations.domain.economy.MoneyAmount
 import org.bukkit.configuration.file.YamlConfiguration
 import java.nio.file.Files
 import kotlin.test.Test
@@ -37,6 +39,10 @@ class CivilizationsConfigurationTest {
                 loaded.phaseRules.memberLandActionsAllowedIn,
             )
             assertEquals(1_800, loaded.warRules.battleDurationSeconds)
+            assertEquals(CurrencyScale(2), loaded.economyRules.currencyScale)
+            assertEquals(MoneyAmount.ZERO, loaded.economyRules.openingCivilizationBalance)
+            assertEquals(MoneyAmount(100), loaded.economyRules.repair.restoreOriginalUnitPrice)
+            assertEquals(2_500, loaded.economyRules.repair.victorShareBasisPoints)
         } finally {
             dataFolder.toFile().deleteRecursively()
         }
@@ -109,6 +115,24 @@ class CivilizationsConfigurationTest {
         assertContains(failure.message.orEmpty(), "gameplay.war.battle-duration-seconds")
     }
 
+    @Test
+    fun `economy scale and exact amounts are path-validated`() {
+        val scaleFailure = assertFailsWith<IllegalArgumentException> {
+            load(validYaml.replace("currency-scale: 2", "currency-scale: 9"))
+        }
+        assertContains(scaleFailure.message.orEmpty(), "economy.currency-scale")
+
+        val amountFailure = assertFailsWith<IllegalArgumentException> {
+            load(
+                validYaml.replace(
+                    "opening-civilization-balance: \"0.00\"",
+                    "opening-civilization-balance: \"0.001\"",
+                ),
+            )
+        }
+        assertContains(amountFailure.message.orEmpty(), "economy.opening-civilization-balance")
+    }
+
     private fun load(yaml: String): CivilizationsConfiguration {
         val dataFolder = Files.createTempDirectory("civilizations-config-test")
         return try {
@@ -141,6 +165,15 @@ class CivilizationsConfigurationTest {
                 member-land-actions: [SETUP, PEACE, WAR]
               war:
                 battle-duration-seconds: 1800
+            economy:
+              currency-scale: 2
+              opening-civilization-balance: "0.00"
+              repair:
+                restore-original-unit-price: "1.00"
+                remove-placement-unit-price: "1.00"
+                victor-share-percent: "25.00"
+                allow-debt: false
+                ordinary-initiator-roles: [LEADER]
         """.trimIndent()
     }
 }

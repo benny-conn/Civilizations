@@ -4,7 +4,7 @@ This document is the product and architecture backlog for turning the current pl
 
 Audit date: 2026-08-18
 
-Product decision update: 2026-08-26
+Product decision update: 2026-08-28
 
 ## Legend
 
@@ -30,7 +30,7 @@ There are no remaining architecture-rework slices. Everything below is net-new g
 - [x] A1: add immutable damage reports and a deterministic final-state/cost basis.
 - [x] B1: connect the performant cancel → journal → revalidate → apply Paper mutation path for simple battle block changes, with in-memory authorization, bounded backpressure, and no event-thread SQL or chunk loading.
 - [x] B2: connect hostile-claim-entry activation, player declaration/surrender, safely mutable political-war rosters, and focused admin war/battle recovery operations.
-- [ ] A2: add the idempotent economy ledger, civilization accounts, and validated YAML for the settled configurable repair economics.
+- [x] A2: add exact civilization accounts, an immutable idempotency-keyed ledger, validated repair-economics YAML, and a durable Vault player-wallet bridge whose ambiguous operations require reconciliation instead of retry.
 - [ ] A3: add persisted repair jobs, deterministic partial selection, and restart-safe cursors.
 - [ ] B3: connect the bounded Paper repair runner.
 
@@ -61,10 +61,10 @@ The project compiles and starts on Paper 26.2. The architecture is covered by do
 | Battles | Durable war relationship plus timed hostile-entry battle, roster snapshot, terminal result, and expiry recovery | Hostile-entry activation, leader surrender, admin force-resolution, and simple battle block mutation are live; PVP, deaths, elimination, and ordinary victory/timeout outcomes remain |
 | Damage | Immutable per-battle/3D-coordinate rows preserve the first simple block state, actor, cause, claim, and time; sealed resolution reports freeze final states, eligibility, and neutral repair-cost categories | Durable/restart-safe reporting core plus bounded simple break/place interception; explosions, block entities, repair jobs, and repair status remain |
 | Reconstruction | None | Must be implemented as persisted repair jobs and a bounded Paper runner |
-| Economy | None | Configurable repair rules are settled; the authoritative idempotent ledger and typed YAML settings remain to implement, with no Vault/Foundation fallback |
+| Economy | Exact fixed-point civilization accounts, immutable idempotent ledger postings, opening balances, player deposit/leader withdrawal commands, and durable reconciliation state | Civilizations SQL is authoritative for civilization treasuries; Vault is an optional narrow bridge to an external plugin authoritative for player wallets. Repair-job charging and casualty economics remain |
 | Permissions | Central leader/member/outsider/admin protection policy | Live for claims; richer ranks/plots are intentionally absent from the MVP |
 | Player utilities | None beyond focused administration | Homes, player claim UX, chat, signs, warps, and menus are net-new only if product-prioritized |
-| Persistence | Versioned relational SQLite with prepared statements, transactions, constraints, WAL, and startup integrity checks | Live for seasons/civilizations/memberships/claims/wars/battles/participants/block changes/damage reports; repair jobs, ledger, and backup tooling remain |
+| Persistence | Versioned relational SQLite with prepared statements, transactions, constraints, WAL, and startup integrity checks | Live through schema 7 for seasons/civilizations/memberships/claims/wars/battles/participants/block changes/damage reports/accounts/ledger/player-wallet bridge; repair jobs and backup tooling remain |
 | Seasons/scarcity | Durable active-season selection and `SETUP/PEACE/WAR/FINALE/ARCHIVED` phase controls | Phase gate is live; reset and scarcity systems are not implemented |
 | Assassination/occupation/annexation | None | Not implemented |
 
@@ -182,7 +182,7 @@ The former `Region`, plot, visualization, all-civilization scan, and raid-ratio 
 - [ ] **[P1][M] Persist battle casualties and apply idempotent economic consequences.** Death records need stable identities so restart/retry cannot charge twice. If the proposed Season One model is approved, use separately configurable attacker and defender death costs, charge the dead player's civilization, and treat the charge as a currency sink. Keep casualty economics separate from physical repair pricing and battle victory.
 - [ ] **[P1][M] Complete admin recovery commands.** B2 provides war/battle list and inspection, explicit war activation/closure/cancellation, battle force-resolution/cancellation, and required logged audit reasons. Pause/resume, participant detail, rollback, durable structured audit records, repair controls, and a complete stuck-state workflow remain.
 - [ ] **[P1][M] Add war restart tests at every transition.** Restart in declaration, preparation, active combat, resolution, and repairable states and assert the same eventual result.
-- [ ] **[P1][S] Make balance/power rewards idempotent ledger entries.** A restarted resolution must not pay twice.
+- [x] **[P1][S] Provide idempotent ledger primitives for balance/reward effects.** Exact immutable postings and caller-owned idempotency keys are live; A3/battle orchestration still must invoke them for each concrete repair or reward policy.
 - [x] **[P1][S] Retire old war settings.** The unused `Raid.Buy_In`, `Attacker_Teleport`, and their legacy settings framework were deleted; new controls require implemented behavior and validation.
 
 The former in-memory raid, ratio, countdown, lives, and civilization-level damage implementations were deleted. Missing result, report, ledger, and repair behavior is net-new work in the current war/damage model.
@@ -217,7 +217,7 @@ The unsafe legacy repair command/task and falling-block helper were deleted. The
 ## Milestone 5 — playtest quality and operations
 
 - [ ] **[P1][L] Add pure unit tests for domain rules and state transitions.** Geometry, memberships, permissions, war eligibility, state transitions, pricing, ledger idempotency, and repair selection should not require a running server.
-- [x] **[P1][L] Add repository integration tests against the selected database.** Real SQLite tests cover ordered migrations, constraints, rollback, restart recovery, and idempotent current operations; ledger/repair cases belong to their slices.
+- [x] **[P1][L] Add repository integration tests against the selected database.** Real SQLite tests cover ordered migrations, constraints, rollback, restart recovery, and idempotent current operations, including ledger/bridge cases; repair-job cases belong to A3.
 - [ ] **[P1][M] Select a maintained Paper-compatible event test approach.** Use it for basic listener/policy wiring, but keep a real local Paper server suite for behaviors mocks cannot represent.
 - [ ] **[P1][M] Turn the ignored root `server/` into a repeatable gameplay test fixture.** Add documented seed/setup steps, test operators/players, reset scripts that only target the explicit server test directory, and a checklist for the MVP scenario.
 - [ ] **[P1][M] Add scripted smoke/restart checkpoints.** Build/deploy, start, provision, claim, begin war, stop/restart, resolve, repair, restart, and verify database/world state.
@@ -225,7 +225,7 @@ The unsafe legacy repair command/task and falling-block helper were deleted. The
 - [ ] **[P1][M] Add timings/metrics around spatial queries, event-policy decisions, explosion recording, database queues, and repair batches.** Avoid logging every block at normal verbosity.
 - [ ] **[P1][S] Add a CI workflow for clean build and tests on every push to `main`.** Keep the full Paper gameplay suite optional/nightly if it is too slow for every commit.
 - [ ] **[P1][S] Generate the configuration reference from declared settings metadata.** Current storage, claim, and phase-gate keys have typed, path-specific startup validation and a maintained reference; future pricing/economy settings must receive the same validation before this item is complete.
-- [ ] **[P1][S] Enable economy-backed gameplay only after the built-in ledger exists and its configuration validates.** Any future external economy bridge must be optional and must not replace the authoritative ledger.
+- [x] **[P1][S] Enable economy-backed gameplay only after the built-in ledger exists and its configuration validates.** Civilizations SQL is authoritative for civilization treasuries. The optional Vault adapter touches only player wallets and uses durable prepare/result/reconciliation records; it does not create or trust an external organization bank.
 - [ ] **[P1][S] Add a pre-playtest backup/restore drill.** Verify both database and world restoration, not merely backup creation.
 
 ## Retired implementation — complete
@@ -234,7 +234,7 @@ The unsafe legacy repair command/task and falling-block helper were deleted. The
 - [x] Delete the legacy datastore, serializers, settings/localization framework, commands, menus, conversations, listeners, tasks, and custom events.
 - [x] Delete Towny/Factions adapters, unsafe repair/TNT helpers, upkeep/tax logic, mob-removal logic, and production test commands.
 - [x] Replace the remaining plugin lifecycle and command registration with native Paper APIs.
-- [x] Remove Foundation, Vault hooks, JitPack, and the unstructured coroutine helper/dependency.
+- [x] Remove Foundation, the legacy Vault hooks, unrestricted JitPack use, and the unstructured coroutine helper/dependency. A2 later reintroduced only compile-only VaultAPI and a group-restricted JitPack source under the explicit player-wallet bridge decision.
 - [x] Ship focused native `/civadmin` and `/civ` surfaces with explicit admin, war, phase-control, participation, and bypass permissions.
 - [x] Add an architecture regression test that rejects retired source imports and build dependencies.
 

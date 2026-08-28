@@ -13,10 +13,10 @@ class SchemaMigratorTest {
             val second = database.migrator.migrate()
 
             assertEquals(0, first.previousVersion)
-            assertEquals(6, first.currentVersion)
-            assertEquals(listOf(1, 2, 3, 4, 5, 6), first.appliedVersions)
-            assertEquals(6, second.previousVersion)
-            assertEquals(6, second.currentVersion)
+            assertEquals(7, first.currentVersion)
+            assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), first.appliedVersions)
+            assertEquals(7, second.previousVersion)
+            assertEquals(7, second.currentVersion)
             assertTrue(second.appliedVersions.isEmpty())
 
             database.connectionFactory.open().use { connection ->
@@ -29,7 +29,9 @@ class SchemaMigratorTest {
                         'runtime_state', 'wars', 'battles', 'battle_participants',
                         'battle_surrenders',
                         'battle_block_changes', 'battle_damage_reports',
-                        'battle_damage_report_entries'
+                        'battle_damage_report_entries', 'season_economy_settings',
+                        'civilization_accounts', 'economy_ledger_transactions',
+                        'economy_ledger_postings', 'economy_bridge_transfers'
                     )
                     """.trimIndent(),
                 ).use { statement ->
@@ -54,6 +56,11 @@ class SchemaMigratorTest {
                                 "battle_block_changes",
                                 "battle_damage_reports",
                                 "battle_damage_report_entries",
+                                "season_economy_settings",
+                                "civilization_accounts",
+                                "economy_ledger_transactions",
+                                "economy_ledger_postings",
+                                "economy_bridge_transfers",
                             ),
                             tables,
                         )
@@ -75,8 +82,8 @@ class SchemaMigratorTest {
             val upgraded = database.migrator.migrate()
 
             assertEquals(4, upgraded.previousVersion)
-            assertEquals(6, upgraded.currentVersion)
-            assertEquals(listOf(5, 6), upgraded.appliedVersions)
+            assertEquals(7, upgraded.currentVersion)
+            assertEquals(listOf(5, 6, 7), upgraded.appliedVersions)
             database.connectionFactory.open().use { connection ->
                 connection.prepareStatement(
                     "SELECT COUNT(*) FROM battle_damage_reports",

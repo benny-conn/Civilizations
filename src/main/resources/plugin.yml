@@ -5,7 +5,16 @@ api-version: '26.2'
 author: Tolmikarc
 description: Civilization, territory, economy, and warfare gameplay for Paper.
 website: https://github.com/benny-conn/Civilizations
+softdepend: [Vault]
 permissions:
+  civilizations.use:
+    description: Use player-facing Civilizations commands.
+    default: true
+    children:
+      civilizations.war: true
+      civilizations.economy.balance: true
+      civilizations.economy.deposit: true
+      civilizations.economy.withdraw: true
   civilizations.war:
     description: Use player-facing Civilizations war commands.
     default: true
@@ -21,6 +30,15 @@ permissions:
     default: true
   civilizations.war.participate:
     description: Trigger and use participant capabilities in active battles.
+    default: true
+  civilizations.economy.balance:
+    description: View the player's civilization treasury balance.
+    default: true
+  civilizations.economy.deposit:
+    description: Deposit player-wallet money into the civilization treasury.
+    default: true
+  civilizations.economy.withdraw:
+    description: Withdraw civilization treasury money as its leader.
     default: true
   civilizations.admin:
     description: Administer Civilizations.

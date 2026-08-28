@@ -4,8 +4,13 @@ import io.bennyc.civilizations.application.ApplicationFailure
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.civilization.ProvisionCivilization
 import io.bennyc.civilizations.application.claim.PlaceClaim
+import io.bennyc.civilizations.application.economy.LedgerTransactionRequest
+import io.bennyc.civilizations.application.economy.ReconcileEconomyBridgeTransfer
 import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.WorldId
+import io.bennyc.civilizations.domain.economy.EconomyBridgeTransferId
+import io.bennyc.civilizations.domain.economy.LedgerPosting
+import io.bennyc.civilizations.domain.economy.LedgerTransactionKind
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.BattleId
@@ -43,6 +48,7 @@ class CivilizationsAdminCommand(
             "claim" -> handleClaim(sender, args)
             "war" -> handleWar(sender, args)
             "battle" -> handleBattle(sender, args)
+            "economy" -> handleEconomy(sender, args)
             else -> showHelp(sender)
         }
     }
@@ -53,7 +59,7 @@ class CivilizationsAdminCommand(
     ): Collection<String> {
         val choices = when {
             args.size <= 1 ->
-                listOf("status", "season", "civilization", "claim", "war", "battle")
+                listOf("status", "season", "civilization", "claim", "war", "battle", "economy")
             args[0].equals("season", true) && args.size == 2 ->
                 listOf("create", "select", "phase")
             args[0].equals("season", true) && args.getOrNull(1).equals("phase", true) ->
@@ -80,6 +86,17 @@ class CivilizationsAdminCommand(
             args[0].equals("battle", true) &&
                 args.getOrNull(1).equals("force-resolve", true) && args.size == 4 ->
                 listOf("attacker", "defender", "draw")
+            args[0].equals("economy", true) && args.size == 2 ->
+                listOf("balances", "ledger", "adjust", "pending", "reconcile")
+            args[0].equals("economy", true) &&
+                args.getOrNull(1).equals("adjust", true) && args.size == 3 ->
+                civilizationReferences()
+            args[0].equals("economy", true) &&
+                args.getOrNull(1).equals("ledger", true) && args.size == 3 ->
+                civilizationReferences()
+            args[0].equals("economy", true) &&
+                args.getOrNull(1).equals("reconcile", true) && args.size == 4 ->
+                listOf("succeeded", "failed")
             else -> emptyList()
         }
         val partial = args.lastOrNull()?.lowercase(Locale.ROOT).orEmpty()
@@ -87,6 +104,205 @@ class CivilizationsAdminCommand(
     }
 
     override fun permission(): String = ADMIN_PERMISSION
+
+    private fun handleEconomy(sender: CommandSender, args: Array<out String>) {
+        when (args.getOrNull(1)?.lowercase(Locale.ROOT)) {
+            "balances" -> listEconomyBalances(sender)
+            "ledger" -> listEconomyLedger(sender, args)
+            "pending" -> listPendingEconomyTransfers(sender)
+            "adjust" -> adjustEconomyBalance(sender, args)
+            "reconcile" -> reconcileEconomyTransfer(sender, args)
+            else -> usage(
+                sender,
+                "/civadmin economy <balances|ledger|adjust|pending|reconcile> ...",
+            )
+        }
+    }
+
+    private fun listEconomyLedger(sender: CommandSender, args: Array<out String>) {
+        if (args.size !in 3..4) {
+            return usage(sender, "/civadmin economy ledger <civilization> [limit]")
+        }
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+            ?: return error(sender, "No active season is loaded")
+        val civilization = active.findCivilizationForCommand(args[2])
+            ?: return error(sender, "Civilization '${args[2]}' does not exist")
+        val limit = args.getOrNull(3)?.let { configured ->
+            configured.toIntOrNull()
+                ?: return error(sender, "Ledger limit must be an integer")
+        } ?: 20
+        if (limit !in 1..100) {
+            return error(sender, "Ledger limit must be between 1 and 100")
+        }
+        info(sender, "Loading '${civilization.name.value}' treasury ledger…")
+        runtime.submitMutation(
+            operation = { ApplicationResult.Unchanged(economy.listLedger(civilization.id, limit)) },
+        ) { outcome ->
+            when (outcome) {
+                is RuntimeMutationOutcome.Completed -> {
+                    val transactions = when (val result = outcome.result) {
+                        is ApplicationResult.Applied -> result.value
+                        is ApplicationResult.Unchanged -> result.value
+                        is ApplicationResult.Rejected -> return@submitMutation error(
+                            sender,
+                            result.failure.description,
+                        )
+                    }
+                    if (transactions.isEmpty()) {
+                        return@submitMutation info(sender, "That treasury has no ledger entries")
+                    }
+                    transactions.forEach { transaction ->
+                        val posting = transaction.postings.single { posting ->
+                            posting.civilizationId == civilization.id
+                        }
+                        sender.sendMessage(
+                            Component.text(
+                                "- ${transaction.id}: ${transaction.kind} " +
+                                    active.economySettings.currencyScale.format(posting.amount) +
+                                    " — ${transaction.description}",
+                                NamedTextColor.GRAY,
+                            ),
+                        )
+                    }
+                }
+                is RuntimeMutationOutcome.NotReady -> error(sender, "Civilizations is not ready")
+                is RuntimeMutationOutcome.Failed ->
+                    error(sender, "Storage failed: ${outcome.failure.message}")
+            }
+        }
+    }
+
+    private fun listEconomyBalances(sender: CommandSender) {
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+            ?: return error(sender, "No active season is loaded")
+        info(sender, "Civilization treasury balances:")
+        active.civilizations.forEach { civilization ->
+            val balance = active.civilizationAccounts[civilization.id]?.balance ?: return@forEach
+            sender.sendMessage(
+                Component.text(
+                    "- ${civilization.name.value}: " +
+                        active.economySettings.currencyScale.format(balance),
+                    NamedTextColor.GRAY,
+                ),
+            )
+        }
+    }
+
+    private fun listPendingEconomyTransfers(sender: CommandSender) {
+        info(sender, "Loading transfers that need reconciliation…")
+        runtime.submitMutation(
+            operation = { ApplicationResult.Unchanged(economy.listReconciliationRequired()) },
+        ) { outcome ->
+            when (outcome) {
+                is RuntimeMutationOutcome.Completed -> {
+                    val transfers = when (val result = outcome.result) {
+                        is ApplicationResult.Applied -> result.value
+                        is ApplicationResult.Unchanged -> result.value
+                        is ApplicationResult.Rejected -> return@submitMutation error(
+                            sender,
+                            result.failure.description,
+                        )
+                    }
+                    if (transfers.isEmpty()) {
+                        info(sender, "No economy transfers need reconciliation")
+                    } else {
+                        info(sender, "Economy transfers requiring a decision:")
+                        transfers.forEach { transfer ->
+                            sender.sendMessage(
+                                Component.text(
+                                    "- ${transfer.id}: ${transfer.direction}, player=${transfer.playerId}, " +
+                                        "civ=${transfer.civilizationId}, amount=" +
+                                        transfer.currencyScale.format(transfer.amount),
+                                    NamedTextColor.GRAY,
+                                ),
+                            )
+                        }
+                    }
+                }
+                is RuntimeMutationOutcome.NotReady -> error(sender, "Civilizations is not ready")
+                is RuntimeMutationOutcome.Failed ->
+                    error(sender, "Storage failed: ${outcome.failure.message}")
+            }
+        }
+    }
+
+    private fun adjustEconomyBalance(sender: CommandSender, args: Array<out String>) {
+        if (args.size < 5) {
+            return usage(sender, "/civadmin economy adjust <civilization> <signed-amount> <reason>")
+        }
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+            ?: return error(sender, "No active season is loaded")
+        val civilization = active.findCivilizationForCommand(args[2])
+            ?: return error(sender, "Civilization '${args[2]}' does not exist")
+        val amount = try {
+            active.economySettings.currencyScale.parse(args[3])
+        } catch (failure: IllegalArgumentException) {
+            return error(sender, failure.message ?: "Invalid money amount")
+        }
+        if (amount.minorUnits == 0L) {
+            return error(sender, "Adjustment cannot be zero")
+        }
+        val reason = args.drop(4).joinToString(" ").trim()
+        val actor = (sender as? org.bukkit.entity.Player)?.let { PlayerId(it.uniqueId) }
+        mutate(
+            sender = sender,
+            operation = {
+                economy.post(
+                    LedgerTransactionRequest(
+                        seasonId = active.season.id,
+                        idempotencyKey = "admin-adjustment:${UUID.randomUUID()}",
+                        kind = LedgerTransactionKind.ADMIN_ADJUSTMENT,
+                        postings = listOf(LedgerPosting(civilization.id, amount)),
+                        referenceType = "CIVILIZATION",
+                        referenceId = civilization.id.toString(),
+                        actorPlayerId = actor,
+                        description = "Admin adjustment: $reason".take(512),
+                        allowDebt = false,
+                    ),
+                )
+            },
+            describe = {
+                "Adjusted '${civilization.name.value}' by " +
+                    active.economySettings.currencyScale.format(amount)
+            },
+            afterApplied = {
+                audit(sender, "economy.adjust", civilization.id.toString(), reason)
+            },
+        )
+    }
+
+    private fun reconcileEconomyTransfer(sender: CommandSender, args: Array<out String>) {
+        if (args.size < 5) {
+            return usage(
+                sender,
+                "/civadmin economy reconcile <transfer-id> <succeeded|failed> <reason>",
+            )
+        }
+        val transferId = try {
+            EconomyBridgeTransferId(UUID.fromString(args[2]))
+        } catch (_: IllegalArgumentException) {
+            return error(sender, "'${args[2]}' is not a valid economy transfer ID")
+        }
+        val succeeded = when (args[3].lowercase(Locale.ROOT)) {
+            "succeeded" -> true
+            "failed" -> false
+            else -> return usage(sender, "External result must be 'succeeded' or 'failed'")
+        }
+        val reason = args.drop(4).joinToString(" ").trim()
+        val actor = (sender as? org.bukkit.entity.Player)?.let { PlayerId(it.uniqueId) }
+        mutate(
+            sender = sender,
+            operation = {
+                economy.reconcileBridgeTransfer(
+                    ReconcileEconomyBridgeTransfer(transferId, succeeded, actor, reason),
+                )
+            },
+            describe = { transfer -> "Economy transfer ${transfer.id} is ${transfer.status}" },
+            afterApplied = {
+                audit(sender, "economy.reconcile", transferId.toString(), reason)
+            },
+        )
+    }
 
     private fun handleSeason(
         sender: CommandSender,
@@ -580,7 +796,20 @@ class CivilizationsAdminCommand(
                 NamedTextColor.GRAY,
             ),
         )
+        sender.sendMessage(
+            Component.text(
+                "/civadmin economy <balances|ledger|adjust|pending|reconcile> ...",
+                NamedTextColor.GRAY,
+            ),
+        )
     }
+
+    private fun io.bennyc.civilizations.infrastructure.runtime.ActiveSeasonRuntimeState
+        .findCivilizationForCommand(reference: String) =
+        runCatching { io.bennyc.civilizations.domain.identity.CivilizationId(UUID.fromString(reference)) }
+            .getOrNull()
+            ?.let { id -> civilizations.singleOrNull { it.id == id } }
+            ?: civilizations.singleOrNull { it.name.value.equals(reference, ignoreCase = true) }
 
     private fun civilizationReferences(): List<String> =
         (runtime.state as? CivilizationsRuntimeState.Ready)

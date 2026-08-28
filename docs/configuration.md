@@ -20,28 +20,38 @@ currently no `/reload` integration or partial live-reload behavior.
 | `gameplay.phase-gates.claim-creation` | `[SETUP, PEACE]` | Phases in which new claims may be created. May contain only `SETUP` and `PEACE`; `[]` disables claiming. |
 | `gameplay.phase-gates.member-land-actions` | `[SETUP, PEACE, WAR]` | Phases in which members may ordinarily interact with their own claimed land. May contain only `SETUP`, `PEACE`, and `WAR`; `[]` freezes ordinary member actions in every phase. Explicit conflict capabilities and admin bypass remain separately authorized. |
 | `gameplay.war.battle-duration-seconds` | `1800` | Duration snapshotted into a new war and used for each hostile-entry battle in that war. Must be from `1` through `31536000`; changes require restart and affect only later declarations. |
+| `economy.currency-scale` | `2` | Decimal places used by exact Civilizations money, from `0` through `6`. It is snapshotted per season and cannot change for an initialized season. |
+| `economy.opening-civilization-balance` | `0.00` | Non-negative opening treasury balance assigned through one idempotent ledger transaction when a civilization account is initialized. |
+| `economy.repair.restore-original-unit-price` | `1.00` | Non-negative price for each selected `RESTORE_ORIGINAL_BLOCK` repair unit. |
+| `economy.repair.remove-placement-unit-price` | `1.00` | Non-negative price for each selected `REMOVE_PLACED_BLOCK` repair unit. |
+| `economy.repair.victor-share-percent` | `25.00` | Percentage from `0` through `100`, with at most two decimal places, of an ordinary repair payment assigned to the battle victor. |
+| `economy.repair.allow-debt` | `false` | Whether a future ordinary repair job may take its paying civilization treasury below zero. It does not relax withdrawals or admin adjustments. |
+| `economy.repair.ordinary-initiator-roles` | `[LEADER]` | Non-empty civilization roles allowed to initiate a future ordinary paid repair. |
 
 Phase names are case-insensitive when loaded, but the shipped file uses uppercase names
 to match the durable season statuses. Duplicate or unknown phase names are rejected.
 
-## Planned repair and economy keys
+## Economy ownership and snapshots
 
-The economy ledger and repair-job slices will add validated settings for the following
-settled Season One policy. These keys are documented here as planned behavior and are not
-accepted by the current build yet.
+Money is stored as signed integer minor units, never floating point. For example, scale
+`2` stores `12.34` as `1234`. Values that require rounding are rejected. A season's
+currency scale and opening balance are written to SQL when that season first initializes;
+changing the configured scale afterward fails startup instead of reinterpreting balances.
 
-| Setting | Planned default | Validation and meaning |
-| --- | --- | --- |
-| Initial civilization balance | `0` | Non-negative integral credits assigned through an idempotent opening ledger entry. |
-| Restore-original unit price | `1` | Non-negative integral credits for each eligible `RESTORE_ORIGINAL_BLOCK` report entry. |
-| Remove-placement unit price | `1` | Non-negative integral credits for each eligible `REMOVE_PLACED_BLOCK` report entry. |
-| Victor share | `25%` | Percentage from `0%` through `100%` of an ordinary repair payment transferred to the victor. |
-| Allow debt | `false` | When false, an ordinary repair cannot charge beyond the civilization's available balance. |
-| Ordinary initiator roles | leader only | Valid civilization roles allowed to request a paid repair. Admin authorization remains separate. |
+Civilizations SQL owns civilization treasury balances and their immutable ledger history.
+An external economy plugin owns player balances. If Vault and an economy provider are
+installed, `/civ deposit` withdraws from that player wallet and credits the SQL treasury;
+leader-only `/civ withdraw` reserves/debits SQL before crediting the player. No Vault bank
+or organization account is used.
 
-The implementation slice will choose and document the final YAML paths, parse them into
-an immutable application-owned rules value, and snapshot the effective values into each
-durable repair job. Changes will require a restart and will apply only to future jobs.
+Every player-wallet operation has a durable prepare record. A clean provider rejection
+is recorded and compensated where necessary. A server stop, thrown provider call, or
+unknown result is never retried automatically; `/civadmin economy pending` exposes it and
+`/civadmin economy reconcile <id> <succeeded|failed> <reason>` records the admin decision.
+
+The repair keys are validated and available to A3. A3 must snapshot their effective
+values into each durable repair job; until repair jobs exist, those keys do not by
+themselves charge a treasury.
 
 There will be no `admin-waives-cost` setting. A privileged admin repair command will name
 the target civilization and execute the same repair operation with an audited

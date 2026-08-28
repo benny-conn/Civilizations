@@ -11,6 +11,7 @@ version = "0.0.16-BETA"
 val paperVersion = providers.gradleProperty("paperVersion").get()
 val sqliteJdbcVersion = "3.53.2.1"
 val mockitoVersion = "5.23.0"
+val vaultApiVersion = "1.7"
 val pluginMainClass = "io.bennyc.civilizations.CivilizationsPlugin"
 
 repositories {
@@ -18,10 +19,17 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/") {
         name = "papermc"
     }
+    maven("https://jitpack.io") {
+        name = "jitpack-vault-only"
+        content { includeGroup("com.github.MilkBowl") }
+    }
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperVersion")
+    compileOnly("com.github.MilkBowl:VaultAPI:$vaultApiVersion") {
+        isTransitive = false
+    }
 
     implementation(kotlin("stdlib"))
 
@@ -31,6 +39,9 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("io.papermc.paper:paper-api:$paperVersion")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
+    testImplementation("com.github.MilkBowl:VaultAPI:$vaultApiVersion") {
+        isTransitive = false
+    }
 }
 
 java {

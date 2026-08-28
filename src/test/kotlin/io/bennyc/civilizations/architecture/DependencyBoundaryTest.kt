@@ -58,6 +58,31 @@ class DependencyBoundaryTest {
         }
     }
 
+    @Test
+    fun `Vault remains a narrow Paper economy adapter`() {
+        val sourceRoot = Path.of("src/main/kotlin/io/bennyc/civilizations")
+        val allowedRoot = sourceRoot.resolve("infrastructure/paper/economy").normalize()
+        val violations = buildList {
+            Files.walk(sourceRoot).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.extension == "kt" }
+                    .filter { source ->
+                        source.readLines().any { it.startsWith("import net.milkbowl.vault.") } &&
+                            !source.normalize().startsWith(allowedRoot)
+                    }
+                    .forEach { add(it.toString()) }
+            }
+        }
+        assertTrue(
+            violations.isEmpty(),
+            "Vault imports escaped the Paper economy adapter: ${violations.joinToString()}",
+        )
+
+        val build = Path.of("build.gradle.kts").readText()
+        assertTrue("compileOnly(\"com.github.MilkBowl:VaultAPI:" in build)
+        assertFalse("implementation(\"com.github.MilkBowl:VaultAPI:" in build)
+        assertTrue("content { includeGroup(\"com.github.MilkBowl\") }" in build)
+    }
+
     private companion object {
         val forbiddenImports = listOf(
             "import io.bennyc.civilizations.command.",
@@ -75,12 +100,10 @@ class DependencyBoundaryTest {
         )
         val retiredImports = listOf(
             "import kotlinx.coroutines.",
-            "import net.milkbowl.vault.",
             "import org.mineacademy.",
         )
         val retiredBuildMarkers = listOf(
             "Foundation",
-            "jitpack.io",
             "kotlinx-coroutines",
             "org.mineacademy",
         )

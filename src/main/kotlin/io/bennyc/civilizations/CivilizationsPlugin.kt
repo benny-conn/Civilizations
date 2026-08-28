@@ -2,7 +2,9 @@ package io.bennyc.civilizations
 
 import io.bennyc.civilizations.infrastructure.paper.CivilizationsAdminCommand
 import io.bennyc.civilizations.infrastructure.paper.CivilizationsConfiguration
-import io.bennyc.civilizations.infrastructure.paper.CivilizationsWarCommand
+import io.bennyc.civilizations.infrastructure.paper.CivilizationsCommand
+import io.bennyc.civilizations.infrastructure.paper.economy.PaperEconomyBridgeCoordinator
+import io.bennyc.civilizations.infrastructure.paper.economy.VaultEconomyBootstrap
 import io.bennyc.civilizations.infrastructure.paper.protection.PaperProtectionListener
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
@@ -32,6 +34,7 @@ class CivilizationsPlugin : JavaPlugin() {
             databasePath = runtimeConfiguration.databasePath,
             claimRules = runtimeConfiguration.claimRules,
             phaseRules = runtimeConfiguration.phaseRules,
+            economyRules = runtimeConfiguration.economyRules,
             serverThread = serverThread,
             fatalFailureHandler = { failure ->
                 logger.log(Level.SEVERE, "Civilizations failed closed", failure)
@@ -40,6 +43,20 @@ class CivilizationsPlugin : JavaPlugin() {
                 }
             },
         )
+        val playerEconomy = if (server.pluginManager.isPluginEnabled("Vault")) {
+            VaultEconomyBootstrap.discover(server)
+        } else {
+            null
+        }
+        if (playerEconomy == null) {
+            logger.warning(
+                "No Vault economy provider found; civilization treasuries work, but player " +
+                    "deposits and withdrawals are unavailable",
+            )
+        } else {
+            logger.info("Using ${playerEconomy.descriptor.providerName} for player wallets via Vault")
+        }
+        val economyBridge = PaperEconomyBridgeCoordinator(runtime, playerEconomy, logger)
 
         registerCommand(
             "civadmin",
@@ -49,13 +66,14 @@ class CivilizationsPlugin : JavaPlugin() {
         )
         registerCommand(
             "civilizations",
-            "Civilizations war operations",
+            "Civilizations player operations",
             listOf("civ"),
-            CivilizationsWarCommand(
+            CivilizationsCommand(
                 runtime = runtime,
                 rules = runtimeConfiguration.warRules,
                 server = server,
                 logger = logger,
+                economyBridge = economyBridge,
             ),
         )
         protectionListener = PaperProtectionListener(runtime, server, logger)

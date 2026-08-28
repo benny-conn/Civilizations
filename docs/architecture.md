@@ -20,7 +20,7 @@ Persistence, Paper world access, economy, configuration, and messaging implement
 
 The domain and application layers must not import Bukkit/Paper, Foundation, Vault, JDBC, configuration, command, or menu types. They should be testable with the ordinary JVM test task.
 
-Foundation, Vault, legacy serializers, global managers, and unstructured coroutine helpers are not part of the build. Paper and database implementations remain adapters around application-owned contracts.
+Foundation, legacy serializers, global managers, and unstructured coroutine helpers are not part of the build. VaultAPI is compile-only: Vault types are confined to the optional `infrastructure.paper.economy` player-wallet adapter, behind an application-owned port. Paper and database implementations remain adapters around application-owned contracts.
 
 ## Runtime ownership
 
@@ -59,6 +59,22 @@ the victor share, whether balances may enter debt, and which ordinary civilizati
 may initiate repair. The shipped defaults are `0`, `1`, `1`, `25%`, `false`, and
 leader-only. A repair job snapshots the effective economic rules when it is created so a
 later restart or configuration edit cannot change its price or proceeds.
+
+Civilizations owns civilization money as exact fixed-point SQL balances. Schema migration
+7 creates one account per civilization, immutable ledger transaction headers and postings,
+and balance-application triggers inside the same database transaction. Caller-supplied
+idempotency keys make opening balances, transfers, repair payments, rewards, reversals,
+and admin adjustments safe to repeat without applying money twice. The season's currency
+scale and opening balance are snapshotted when its accounts initialize.
+
+Player wallets remain owned by the server's external economy plugin. The optional Vault
+adapter translates only at the Paper boundary: a deposit durably prepares, withdraws the
+player through Vault once, then credits the civilization ledger; a withdrawal durably
+reserves the treasury, credits the player once, then completes or reverses on a definite
+failure. Vault banks are never civilization accounts. `PREPARED` operations surviving a
+restart and provider exceptions become `RECONCILIATION_REQUIRED`; they are never blindly
+retried. An audited admin decision records whether the external side succeeded and applies
+the corresponding ledger credit, retained debit, or compensating reversal.
 
 Admin repair is a command authorization path, not an economic setting. Admin commands
 name the civilization on whose behalf they act and invoke the same application operation
@@ -222,6 +238,6 @@ The architecture rework has no remaining slice. Net-new MVP work is split into a
 
 ## Retired architecture
 
-The 2026 architecture cleanup permanently removed the Foundation lifecycle, command framework, settings/localization framework, menus/conversations, Vault hooks, JitPack repository, coroutine helper, global managers, Towny/Factions adapters, mutable legacy civilization/claim/raid graph, JSON-blob datastore, and all legacy tasks/listeners/commands. `CivilizationsPlugin` is a native `JavaPlugin`; `/civadmin` and `/civ` are native Paper `BasicCommand` adapters; configuration uses Bukkit's configuration API at the Paper boundary; user-facing components use Adventure.
+The 2026 architecture cleanup permanently removed the Foundation lifecycle, command framework, settings/localization framework, menus/conversations, legacy Vault hooks, unrestricted JitPack repository use, coroutine helper, global managers, Towny/Factions adapters, mutable legacy civilization/claim/raid graph, JSON-blob datastore, and all legacy tasks/listeners/commands. A2 later introduced the deliberately narrow, compile-only Vault player-wallet adapter and group-restricted VaultAPI repository described above; it does not restore the legacy economy architecture. `CivilizationsPlugin` is a native `JavaPlugin`; `/civadmin` and `/civ` are native Paper `BasicCommand` adapters; configuration uses Bukkit's configuration API at the Paper boundary; user-facing components use Adventure.
 
 An architecture regression test scans all production sources and the build file for retired framework imports/dependencies. Reusing an old behavior means designing it against the current domain/services and persistence ports, not copying the deleted implementation back into production.

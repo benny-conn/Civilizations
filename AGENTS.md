@@ -26,7 +26,7 @@ Read these documents before making architectural or gameplay changes:
   validation, and tests for accepted and rejected values. Unless a feature explicitly
   implements atomic reload semantics, document that its settings require a restart.
 - The legacy serialized graph, datastore, commands, menus, and tasks were deleted. Do not restore them; use Git history only as product reference and implement accepted behavior through the current architecture.
-- Foundation, Vault, JitPack, and the legacy coroutine helper are retired. Do not reintroduce them without an explicit project-level decision.
+- Foundation, the legacy Vault hooks, unrestricted JitPack use, and the legacy coroutine helper are retired. The explicit A2 decision permits only the compile-only VaultAPI dependency, its group-restricted JitPack source, and Vault imports inside `infrastructure/paper/economy`; do not widen that exception without another project-level decision.
 - Paper world/entity access and live-state mutation stay on the server thread. Blocking I/O uses plugin-owned background execution.
 - SQL is durable state; purpose-built memory indexes serve hot gameplay paths. Never query SQL from block/movement event hot paths.
 - Update the roadmap or architecture documentation when a slice establishes or changes a project-wide decision.

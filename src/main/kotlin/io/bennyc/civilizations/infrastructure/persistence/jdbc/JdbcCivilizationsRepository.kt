@@ -24,6 +24,18 @@ import io.bennyc.civilizations.domain.damage.DamageCostCategory
 import io.bennyc.civilizations.domain.damage.DamageReportEligibility
 import io.bennyc.civilizations.domain.damage.ReportedBattleBlockChange
 import io.bennyc.civilizations.domain.damage.SimpleBlockSnapshot
+import io.bennyc.civilizations.domain.economy.CivilizationAccount
+import io.bennyc.civilizations.domain.economy.CurrencyScale
+import io.bennyc.civilizations.domain.economy.EconomyBridgeDirection
+import io.bennyc.civilizations.domain.economy.EconomyBridgeStatus
+import io.bennyc.civilizations.domain.economy.EconomyBridgeTransfer
+import io.bennyc.civilizations.domain.economy.EconomyBridgeTransferId
+import io.bennyc.civilizations.domain.economy.LedgerPosting
+import io.bennyc.civilizations.domain.economy.LedgerTransaction
+import io.bennyc.civilizations.domain.economy.LedgerTransactionId
+import io.bennyc.civilizations.domain.economy.LedgerTransactionKind
+import io.bennyc.civilizations.domain.economy.MoneyAmount
+import io.bennyc.civilizations.domain.economy.SeasonEconomySettings
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
@@ -246,6 +258,122 @@ private open class JdbcReadContext(
         map = ResultSet::toBattleSurrenderRecord,
     )
 
+    override fun findSeasonEconomySettings(seasonId: SeasonId): SeasonEconomySettings? = queryOne(
+        sql = "$SEASON_ECONOMY_SELECT WHERE season_id = ?",
+        bind = { setString(1, seasonId.toString()) },
+        map = ResultSet::toSeasonEconomySettings,
+    )
+
+    override fun findCivilizationAccount(
+        civilizationId: CivilizationId,
+    ): CivilizationAccount? = queryOne(
+        sql = "$CIVILIZATION_ACCOUNT_SELECT WHERE civilization_id = ?",
+        bind = { setString(1, civilizationId.toString()) },
+        map = ResultSet::toCivilizationAccount,
+    )
+
+    override fun listCivilizationAccounts(seasonId: SeasonId): List<CivilizationAccount> =
+        queryMany(
+            sql = "$CIVILIZATION_ACCOUNT_SELECT WHERE season_id = ? ORDER BY civilization_id",
+            bind = { setString(1, seasonId.toString()) },
+            map = ResultSet::toCivilizationAccount,
+        )
+
+    override fun findLedgerTransaction(id: LedgerTransactionId): LedgerTransaction? =
+        queryOne(
+            sql = "$LEDGER_TRANSACTION_SELECT WHERE id = ?",
+            bind = { setString(1, id.toString()) },
+            map = ResultSet::toLedgerTransactionHeader,
+        )?.withPostings()
+
+    override fun findLedgerTransactionByIdempotencyKey(
+        idempotencyKey: String,
+    ): LedgerTransaction? = queryOne(
+        sql = "$LEDGER_TRANSACTION_SELECT WHERE idempotency_key = ?",
+        bind = { setString(1, idempotencyKey) },
+        map = ResultSet::toLedgerTransactionHeader,
+    )?.withPostings()
+
+    override fun listLedgerTransactionsForCivilization(
+        civilizationId: CivilizationId,
+        limit: Int,
+    ): List<LedgerTransaction> {
+        require(limit in 1..MAX_LEDGER_PAGE_SIZE) {
+            "Ledger page size must be between 1 and $MAX_LEDGER_PAGE_SIZE"
+        }
+        return queryMany(
+            sql = """
+                $LEDGER_TRANSACTION_SELECT
+                WHERE id IN (
+                    SELECT transaction_id
+                    FROM economy_ledger_postings
+                    WHERE civilization_id = ?
+                )
+                ORDER BY created_at_ms DESC, id DESC
+                LIMIT ?
+            """.trimIndent(),
+            bind = {
+                setString(1, civilizationId.toString())
+                setInt(2, limit)
+            },
+            map = ResultSet::toLedgerTransactionHeader,
+        ).map { it.withPostings() }
+    }
+
+    override fun findEconomyBridgeTransfer(
+        id: EconomyBridgeTransferId,
+    ): EconomyBridgeTransfer? = queryOne(
+        sql = "$ECONOMY_BRIDGE_SELECT WHERE id = ?",
+        bind = { setString(1, id.toString()) },
+        map = ResultSet::toEconomyBridgeTransfer,
+    )
+
+    override fun findEconomyBridgeTransferByIdempotencyKey(
+        idempotencyKey: String,
+    ): EconomyBridgeTransfer? = queryOne(
+        sql = "$ECONOMY_BRIDGE_SELECT WHERE idempotency_key = ?",
+        bind = { setString(1, idempotencyKey) },
+        map = ResultSet::toEconomyBridgeTransfer,
+    )
+
+    override fun findOpenEconomyBridgeTransferForPlayer(
+        playerId: PlayerId,
+    ): EconomyBridgeTransfer? = queryOne(
+        sql = """
+            $ECONOMY_BRIDGE_SELECT
+            WHERE player_id = ? AND status IN ('PREPARED', 'RECONCILIATION_REQUIRED')
+        """.trimIndent(),
+        bind = { setString(1, playerId.toString()) },
+        map = ResultSet::toEconomyBridgeTransfer,
+    )
+
+    override fun listEconomyBridgeTransfers(
+        statuses: Set<EconomyBridgeStatus>,
+        limit: Int,
+    ): List<EconomyBridgeTransfer> {
+        require(statuses.isNotEmpty()) { "At least one economy bridge status is required" }
+        require(limit in 1..MAX_ECONOMY_BRIDGE_PAGE_SIZE) {
+            "Economy bridge page size must be between 1 and $MAX_ECONOMY_BRIDGE_PAGE_SIZE"
+        }
+        val orderedStatuses = statuses.sortedBy(EconomyBridgeStatus::name)
+        val placeholders = orderedStatuses.joinToString(",") { "?" }
+        return queryMany(
+            sql = """
+                $ECONOMY_BRIDGE_SELECT
+                WHERE status IN ($placeholders)
+                ORDER BY created_at_ms, id
+                LIMIT ?
+            """.trimIndent(),
+            bind = {
+                orderedStatuses.forEachIndexed { index, status ->
+                    setString(index + 1, status.name)
+                }
+                setInt(orderedStatuses.size + 1, limit)
+            },
+            map = ResultSet::toEconomyBridgeTransfer,
+        )
+    }
+
     override fun findBlockChange(
         battleId: BattleId,
         position: BlockPosition3D,
@@ -407,8 +535,35 @@ private open class JdbcReadContext(
         }
     }
 
+    private fun LedgerTransactionHeader.withPostings(): LedgerTransaction {
+        val postings = queryMany(
+            sql = """
+                $LEDGER_POSTING_SELECT
+                WHERE transaction_id = ?
+                ORDER BY civilization_id
+            """.trimIndent(),
+            bind = { setString(1, id.toString()) },
+            map = ResultSet::toLedgerPosting,
+        )
+        return LedgerTransaction(
+            id = id,
+            seasonId = seasonId,
+            idempotencyKey = idempotencyKey,
+            kind = kind,
+            referenceType = referenceType,
+            referenceId = referenceId,
+            actorPlayerId = actorPlayerId,
+            description = description,
+            currencyScale = currencyScale,
+            createdAt = createdAt,
+            postings = postings,
+        )
+    }
+
     private companion object {
         const val MAX_BLOCK_CHANGE_PAGE_SIZE = 1_000
+        const val MAX_ECONOMY_BRIDGE_PAGE_SIZE = 1_000
+        const val MAX_LEDGER_PAGE_SIZE = 1_000
 
         const val CIVILIZATION_SELECT = """
             SELECT id, season_id, name, normalized_name, status, created_at_ms, updated_at_ms
@@ -444,6 +599,30 @@ private open class JdbcReadContext(
             SELECT season_id, battle_id, surrendered_civilization_id,
                    surrendered_by_player_id, requested_outcome, surrendered_at_ms
             FROM battle_surrenders
+        """
+        const val SEASON_ECONOMY_SELECT = """
+            SELECT season_id, currency_scale, opening_balance_minor, created_at_ms
+            FROM season_economy_settings
+        """
+        const val CIVILIZATION_ACCOUNT_SELECT = """
+            SELECT season_id, civilization_id, balance_minor, created_at_ms, updated_at_ms
+            FROM civilization_accounts
+        """
+        const val LEDGER_TRANSACTION_SELECT = """
+            SELECT id, season_id, idempotency_key, kind, reference_type, reference_id,
+                   actor_player_id, description, currency_scale, created_at_ms
+            FROM economy_ledger_transactions
+        """
+        const val LEDGER_POSTING_SELECT = """
+            SELECT civilization_id, amount_minor
+            FROM economy_ledger_postings
+        """
+        const val ECONOMY_BRIDGE_SELECT = """
+            SELECT id, season_id, civilization_id, player_id, direction, amount_minor,
+                   currency_scale, provider_name, idempotency_key, status,
+                   ledger_transaction_id, reversal_transaction_id, failure_message,
+                   created_at_ms, updated_at_ms, completed_at_ms
+            FROM economy_bridge_transfers
         """
         const val BLOCK_CHANGE_SELECT = """
             SELECT id, season_id, battle_id, claim_id, world_id,
@@ -753,6 +932,140 @@ private class JdbcWriteContext(
         }
     }
 
+    override fun insertSeasonEconomySettings(settings: SeasonEconomySettings) {
+        executeUpdate(
+            sql = """
+                INSERT INTO season_economy_settings(
+                    season_id, currency_scale, opening_balance_minor, created_at_ms
+                ) VALUES (?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, settings.seasonId.toString())
+            setInt(2, settings.currencyScale.decimalPlaces)
+            setLong(3, settings.openingBalance.minorUnits)
+            setLong(4, settings.createdAt.toEpochMilli())
+        }
+    }
+
+    override fun insertCivilizationAccount(account: CivilizationAccount) {
+        executeUpdate(
+            sql = """
+                INSERT INTO civilization_accounts(
+                    season_id, civilization_id, balance_minor, created_at_ms, updated_at_ms
+                ) VALUES (?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, account.seasonId.toString())
+            setString(2, account.civilizationId.toString())
+            setLong(3, account.balance.minorUnits)
+            setLong(4, account.createdAt.toEpochMilli())
+            setLong(5, account.updatedAt.toEpochMilli())
+        }
+    }
+
+    override fun insertLedgerTransaction(transaction: LedgerTransaction) {
+        executeUpdate(
+            sql = """
+                INSERT INTO economy_ledger_transactions(
+                    id, season_id, idempotency_key, kind, reference_type, reference_id,
+                    actor_player_id, description, currency_scale, posting_count, created_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, transaction.id.toString())
+            setString(2, transaction.seasonId.toString())
+            setString(3, transaction.idempotencyKey)
+            setString(4, transaction.kind.name)
+            setString(5, transaction.referenceType)
+            setString(6, transaction.referenceId)
+            setString(7, transaction.actorPlayerId?.toString())
+            setString(8, transaction.description)
+            setInt(9, transaction.currencyScale.decimalPlaces)
+            setInt(10, transaction.postings.size)
+            setLong(11, transaction.createdAt.toEpochMilli())
+        }
+        transaction.postings.forEach { posting ->
+            executeUpdate(
+                sql = """
+                    INSERT INTO economy_ledger_postings(
+                        transaction_id, season_id, civilization_id, amount_minor
+                    ) VALUES (?, ?, ?, ?)
+                """.trimIndent(),
+            ) {
+                setString(1, transaction.id.toString())
+                setString(2, transaction.seasonId.toString())
+                setString(3, posting.civilizationId.toString())
+                setLong(4, posting.amount.minorUnits)
+            }
+        }
+    }
+
+    override fun insertEconomyBridgeTransfer(transfer: EconomyBridgeTransfer) {
+        executeUpdate(
+            sql = """
+                INSERT INTO economy_bridge_transfers(
+                    id, season_id, civilization_id, player_id, direction, amount_minor,
+                    currency_scale, provider_name, idempotency_key, status,
+                    ledger_transaction_id, reversal_transaction_id, failure_message,
+                    created_at_ms, updated_at_ms, completed_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            bindEconomyBridgeTransfer(transfer)
+        }
+    }
+
+    override fun updateEconomyBridgeTransfer(transfer: EconomyBridgeTransfer) {
+        val updated = executeUpdate(
+            sql = """
+                UPDATE economy_bridge_transfers
+                SET season_id = ?, civilization_id = ?, player_id = ?, direction = ?,
+                    amount_minor = ?, currency_scale = ?, provider_name = ?,
+                    idempotency_key = ?, status = ?, ledger_transaction_id = ?,
+                    reversal_transaction_id = ?, failure_message = ?, created_at_ms = ?,
+                    updated_at_ms = ?, completed_at_ms = ?
+                WHERE id = ?
+            """.trimIndent(),
+        ) {
+            setString(1, transfer.seasonId.toString())
+            setString(2, transfer.civilizationId.toString())
+            setString(3, transfer.playerId.toString())
+            setString(4, transfer.direction.name)
+            setLong(5, transfer.amount.minorUnits)
+            setInt(6, transfer.currencyScale.decimalPlaces)
+            setString(7, transfer.providerName)
+            setString(8, transfer.idempotencyKey)
+            setString(9, transfer.status.name)
+            setString(10, transfer.ledgerTransactionId?.toString())
+            setString(11, transfer.reversalTransactionId?.toString())
+            setString(12, transfer.failureMessage)
+            setLong(13, transfer.createdAt.toEpochMilli())
+            setLong(14, transfer.updatedAt.toEpochMilli())
+            setInstantOrNull(15, transfer.completedAt)
+            setString(16, transfer.id.toString())
+        }
+        requireUpdated(updated, "Economy bridge transfer ${transfer.id}")
+    }
+
+    private fun PreparedStatement.bindEconomyBridgeTransfer(transfer: EconomyBridgeTransfer) {
+        setString(1, transfer.id.toString())
+        setString(2, transfer.seasonId.toString())
+        setString(3, transfer.civilizationId.toString())
+        setString(4, transfer.playerId.toString())
+        setString(5, transfer.direction.name)
+        setLong(6, transfer.amount.minorUnits)
+        setInt(7, transfer.currencyScale.decimalPlaces)
+        setString(8, transfer.providerName)
+        setString(9, transfer.idempotencyKey)
+        setString(10, transfer.status.name)
+        setString(11, transfer.ledgerTransactionId?.toString())
+        setString(12, transfer.reversalTransactionId?.toString())
+        setString(13, transfer.failureMessage)
+        setLong(14, transfer.createdAt.toEpochMilli())
+        setLong(15, transfer.updatedAt.toEpochMilli())
+        setInstantOrNull(16, transfer.completedAt)
+    }
+
     override fun insertBlockChangeIfAbsent(blockChange: BattleBlockChange): Boolean =
         executeUpdate(
             sql = """
@@ -930,6 +1243,76 @@ private fun ResultSet.toBattleSurrenderRecord(): BattleSurrenderRecord = BattleS
     surrenderedByPlayerId = PlayerId(uuid("surrendered_by_player_id")),
     requestedOutcome = BattleOutcome.valueOf(getString("requested_outcome")),
     surrenderedAt = instant("surrendered_at_ms"),
+)
+
+private fun ResultSet.toSeasonEconomySettings(): SeasonEconomySettings = SeasonEconomySettings(
+    seasonId = SeasonId(uuid("season_id")),
+    currencyScale = CurrencyScale(getInt("currency_scale")),
+    openingBalance = MoneyAmount(getLong("opening_balance_minor")),
+    createdAt = instant("created_at_ms"),
+)
+
+private fun ResultSet.toCivilizationAccount(): CivilizationAccount = CivilizationAccount(
+    seasonId = SeasonId(uuid("season_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    balance = MoneyAmount(getLong("balance_minor")),
+    createdAt = instant("created_at_ms"),
+    updatedAt = instant("updated_at_ms"),
+)
+
+private data class LedgerTransactionHeader(
+    val id: LedgerTransactionId,
+    val seasonId: SeasonId,
+    val idempotencyKey: String,
+    val kind: LedgerTransactionKind,
+    val referenceType: String?,
+    val referenceId: String?,
+    val actorPlayerId: PlayerId?,
+    val description: String,
+    val currencyScale: CurrencyScale,
+    val createdAt: Instant,
+)
+
+private fun ResultSet.toLedgerTransactionHeader(): LedgerTransactionHeader =
+    LedgerTransactionHeader(
+        id = LedgerTransactionId(uuid("id")),
+        seasonId = SeasonId(uuid("season_id")),
+        idempotencyKey = getString("idempotency_key"),
+        kind = LedgerTransactionKind.valueOf(getString("kind")),
+        referenceType = getString("reference_type"),
+        referenceId = getString("reference_id"),
+        actorPlayerId = getString("actor_player_id")?.let { PlayerId(UUID.fromString(it)) },
+        description = getString("description"),
+        currencyScale = CurrencyScale(getInt("currency_scale")),
+        createdAt = instant("created_at_ms"),
+    )
+
+private fun ResultSet.toLedgerPosting(): LedgerPosting = LedgerPosting(
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    amount = MoneyAmount(getLong("amount_minor")),
+)
+
+private fun ResultSet.toEconomyBridgeTransfer(): EconomyBridgeTransfer = EconomyBridgeTransfer(
+    id = EconomyBridgeTransferId(uuid("id")),
+    seasonId = SeasonId(uuid("season_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    playerId = PlayerId(uuid("player_id")),
+    direction = EconomyBridgeDirection.valueOf(getString("direction")),
+    amount = MoneyAmount(getLong("amount_minor")),
+    currencyScale = CurrencyScale(getInt("currency_scale")),
+    providerName = getString("provider_name"),
+    idempotencyKey = getString("idempotency_key"),
+    status = EconomyBridgeStatus.valueOf(getString("status")),
+    ledgerTransactionId = getString("ledger_transaction_id")?.let {
+        LedgerTransactionId(UUID.fromString(it))
+    },
+    reversalTransactionId = getString("reversal_transaction_id")?.let {
+        LedgerTransactionId(UUID.fromString(it))
+    },
+    failureMessage = getString("failure_message"),
+    createdAt = instant("created_at_ms"),
+    updatedAt = instant("updated_at_ms"),
+    completedAt = nullableInstant("completed_at_ms"),
 )
 
 private fun ResultSet.toBattleBlockChange(): BattleBlockChange = BattleBlockChange(

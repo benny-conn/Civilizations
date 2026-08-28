@@ -3,6 +3,8 @@ package io.bennyc.civilizations.infrastructure.runtime
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.civilization.ProvisionCivilization
 import io.bennyc.civilizations.application.claim.ClaimRules
+import io.bennyc.civilizations.application.economy.EconomyRules
+import io.bennyc.civilizations.application.economy.RepairEconomyRules
 import io.bennyc.civilizations.application.claim.PlaceClaim
 import io.bennyc.civilizations.application.damage.PrepareBlockMutation
 import io.bennyc.civilizations.application.damage.PreparedBlockMutation
@@ -18,6 +20,9 @@ import io.bennyc.civilizations.domain.civilization.CivilizationStatus
 import io.bennyc.civilizations.domain.claim.BlockPosition2D
 import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.WorldId
+import io.bennyc.civilizations.domain.economy.CurrencyScale
+import io.bennyc.civilizations.domain.economy.MoneyAmount
+import io.bennyc.civilizations.domain.civilization.MembershipRole
 import io.bennyc.civilizations.domain.damage.BlockMutationCause
 import io.bennyc.civilizations.domain.damage.BlockPosition3D
 import io.bennyc.civilizations.domain.damage.SimpleBlockSnapshot
@@ -58,7 +63,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(6, started.migration.currentVersion)
+            assertEquals(7, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -428,6 +433,17 @@ class CivilizationsRuntimeTest {
         claimRules = ClaimRules(
             maxArea = 256,
             maxClaimsPerCivilization = 4,
+        ),
+        economyRules = EconomyRules(
+            currencyScale = CurrencyScale(2),
+            openingCivilizationBalance = MoneyAmount.ZERO,
+            repair = RepairEconomyRules(
+                restoreOriginalUnitPrice = MoneyAmount(100),
+                removePlacementUnitPrice = MoneyAmount(100),
+                victorShareBasisPoints = 2_500,
+                allowDebt = false,
+                ordinaryInitiatorRoles = setOf(MembershipRole.LEADER),
+            ),
         ),
         serverThread = directExecutor,
         fatalFailureHandler = fatalFailureHandler,

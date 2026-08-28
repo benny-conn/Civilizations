@@ -8,6 +8,8 @@ import io.bennyc.civilizations.application.claim.ClaimSpatialIndex
 import io.bennyc.civilizations.application.damage.DamageJournalService
 import io.bennyc.civilizations.application.damage.PrepareBlockMutation
 import io.bennyc.civilizations.application.damage.PreparedBlockMutation
+import io.bennyc.civilizations.application.economy.EconomyRules
+import io.bennyc.civilizations.application.economy.EconomyService
 import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
 import io.bennyc.civilizations.application.protection.ConflictAuthorization
@@ -28,6 +30,8 @@ import io.bennyc.civilizations.domain.civilization.MembershipRole
 import io.bennyc.civilizations.domain.claim.BlockPosition2D
 import io.bennyc.civilizations.domain.claim.Claim
 import io.bennyc.civilizations.domain.claim.ClaimId
+import io.bennyc.civilizations.domain.economy.CivilizationAccount
+import io.bennyc.civilizations.domain.economy.SeasonEconomySettings
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
@@ -65,6 +69,7 @@ class CivilizationsRuntime private constructor(
     private val migrator: SchemaMigrator,
     claimRules: ClaimRules,
     private val phaseRules: GameplayPhaseRules,
+    economyRules: EconomyRules,
     idGenerator: CivilizationsIdGenerator,
     clock: Clock,
     private val serverThread: Executor,
@@ -80,6 +85,7 @@ class CivilizationsRuntime private constructor(
         claims = ClaimService(repository, idGenerator, claimRules, phaseRules),
         wars = WarService(repository, idGenerator, clock),
         damageJournal = DamageJournalService(repository, idGenerator, clock),
+        economy = EconomyService(repository, idGenerator, clock, economyRules),
     )
 
     @Volatile
@@ -94,6 +100,7 @@ class CivilizationsRuntime private constructor(
         worker.execute {
             try {
                 val migration = migrator.migrate()
+                mutationScope.economy.recoverInterruptedBridgeTransfers()
                 val ready = loadReadyState()
                 dispatchToServer {
                     state = ready
@@ -200,7 +207,17 @@ class CivilizationsRuntime private constructor(
     }
 
     private fun loadReadyState(): CivilizationsRuntimeState.Ready {
-        repository.read { findActiveSeasonId() }?.let(mutationScope.wars::recoverExpiredBattles)
+        repository.read { findActiveSeasonId() }?.let { activeSeasonId ->
+            mutationScope.wars.recoverExpiredBattles(activeSeasonId)
+            when (val economy = mutationScope.economy.ensureSeasonAccounts(activeSeasonId)) {
+                is ApplicationResult.Applied,
+                is ApplicationResult.Unchanged,
+                -> Unit
+                is ApplicationResult.Rejected -> throw RuntimeIntegrityException(
+                    economy.failure.description,
+                )
+            }
+        }
         val loaded = repository.read {
             val activeSeasonId = findActiveSeasonId()
                 ?: return@read LoadedActiveSeason.None
@@ -224,6 +241,12 @@ class CivilizationsRuntime private constructor(
                 },
                 battleSurrenders = listBattleSurrendersForSeason(activeSeasonId)
                     .associateBy(BattleSurrenderRecord::battleId),
+                economySettings = findSeasonEconomySettings(activeSeasonId)
+                    ?: throw RuntimeIntegrityException(
+                        "Active season $activeSeasonId has no economy settings",
+                    ),
+                civilizationAccounts = listCivilizationAccounts(activeSeasonId)
+                    .associateBy(CivilizationAccount::civilizationId),
             )
         }
 
@@ -251,6 +274,8 @@ class CivilizationsRuntime private constructor(
                         battles = loaded.battles,
                         battleParticipants = loaded.battleParticipants,
                         battleSurrenders = loaded.battleSurrenders,
+                        economySettings = loaded.economySettings,
+                        civilizationAccounts = loaded.civilizationAccounts,
                         activeBattleEligibility = buildActiveBattleEligibility(loaded),
                     ),
                 )
@@ -265,6 +290,18 @@ class CivilizationsRuntime private constructor(
             )
         }
         val civilizationsById = loaded.civilizations.associateBy { it.id }
+        if (loaded.civilizationAccounts.keys != civilizationsById.keys) {
+            throw RuntimeIntegrityException(
+                "Season ${loaded.season.id} treasury accounts do not match its civilizations",
+            )
+        }
+        loaded.civilizationAccounts.values.forEach { account ->
+            if (account.seasonId != loaded.season.id) {
+                throw RuntimeIntegrityException(
+                    "Treasury account ${account.civilizationId} belongs to ${account.seasonId}",
+                )
+            }
+        }
         for (civilization in loaded.civilizations) {
             val memberships = loaded.memberships.getValue(civilization.id)
             val leaderCount = memberships.count { it.role == MembershipRole.LEADER }
@@ -478,6 +515,7 @@ class CivilizationsRuntime private constructor(
             databasePath: Path,
             claimRules: ClaimRules,
             phaseRules: GameplayPhaseRules = GameplayPhaseRules(),
+            economyRules: EconomyRules,
             serverThread: Executor,
             fatalFailureHandler: (Throwable) -> Unit = {},
             idGenerator: CivilizationsIdGenerator = UuidCivilizationsIdGenerator(),
@@ -492,6 +530,7 @@ class CivilizationsRuntime private constructor(
                 migrator = SchemaMigrator(connectionFactory, clock = clock),
                 claimRules = claimRules,
                 phaseRules = phaseRules,
+                economyRules = economyRules,
                 idGenerator = idGenerator,
                 clock = clock,
                 serverThread = serverThread,
@@ -512,6 +551,7 @@ class RuntimeMutationScope internal constructor(
     val claims: ClaimService,
     val wars: WarService,
     val damageJournal: DamageJournalService,
+    val economy: EconomyService,
 ) {
     fun activeSeasonId(): SeasonId? = repository.read { findActiveSeasonId() }
 
@@ -567,6 +607,8 @@ data class ActiveSeasonRuntimeState(
     val battles: List<Battle>,
     val battleParticipants: Map<BattleId, List<BattleParticipant>>,
     val battleSurrenders: Map<BattleId, BattleSurrenderRecord>,
+    val economySettings: SeasonEconomySettings,
+    val civilizationAccounts: Map<CivilizationId, CivilizationAccount>,
     val activeBattleEligibility: List<ActiveBattleEligibilityRuntimeState>,
 ) {
     private val membershipByPlayer = buildMap {
@@ -789,5 +831,7 @@ private sealed interface LoadedActiveSeason {
         val battles: List<Battle>,
         val battleParticipants: Map<BattleId, List<BattleParticipant>>,
         val battleSurrenders: Map<BattleId, BattleSurrenderRecord>,
+        val economySettings: SeasonEconomySettings,
+        val civilizationAccounts: Map<CivilizationId, CivilizationAccount>,
     ) : LoadedActiveSeason
 }

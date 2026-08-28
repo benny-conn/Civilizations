@@ -720,5 +720,262 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        SchemaMigration(
+            version = 7,
+            name = "civilization_economy_ledger_and_player_bridge",
+            statements = listOf(
+                """
+                CREATE TABLE season_economy_settings (
+                    season_id TEXT PRIMARY KEY,
+                    currency_scale INTEGER NOT NULL CHECK (currency_scale BETWEEN 0 AND 6),
+                    opening_balance_minor INTEGER NOT NULL CHECK (
+                        opening_balance_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
+                    CHECK (length(season_id) = 36),
+                    FOREIGN KEY (season_id) REFERENCES seasons(id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE TABLE civilization_accounts (
+                    civilization_id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    balance_minor INTEGER NOT NULL CHECK (
+                        typeof(balance_minor) = 'integer' AND
+                        balance_minor BETWEEN -9000000000000000 AND 9000000000000000
+                    ),
+                    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
+                    updated_at_ms INTEGER NOT NULL CHECK (updated_at_ms >= created_at_ms),
+                    CHECK (length(civilization_id) = 36),
+                    CHECK (length(season_id) = 36),
+                    UNIQUE (season_id, civilization_id),
+                    FOREIGN KEY (season_id) REFERENCES season_economy_settings(season_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, civilization_id)
+                        REFERENCES civilizations(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX civilization_accounts_by_season
+                ON civilization_accounts(season_id, civilization_id)
+                """.trimIndent(),
+                """
+                CREATE TABLE economy_ledger_transactions (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL UNIQUE,
+                    kind TEXT NOT NULL CHECK (kind IN (
+                        'OPENING_BALANCE', 'PLAYER_DEPOSIT', 'PLAYER_WITHDRAWAL',
+                        'PLAYER_WITHDRAWAL_REVERSAL', 'CIVILIZATION_TRANSFER',
+                        'REPAIR_PAYMENT', 'VICTOR_SHARE', 'ADMIN_ADJUSTMENT'
+                    )),
+                    reference_type TEXT,
+                    reference_id TEXT,
+                    actor_player_id TEXT,
+                    description TEXT NOT NULL,
+                    currency_scale INTEGER NOT NULL CHECK (currency_scale BETWEEN 0 AND 6),
+                    posting_count INTEGER NOT NULL CHECK (posting_count >= 1),
+                    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(idempotency_key) BETWEEN 1 AND 160),
+                    CHECK (length(description) BETWEEN 1 AND 512),
+                    CHECK (actor_player_id IS NULL OR length(actor_player_id) = 36),
+                    CHECK (
+                        (reference_type IS NULL AND reference_id IS NULL) OR
+                        (length(reference_type) BETWEEN 1 AND 64 AND
+                         length(reference_id) BETWEEN 1 AND 160)
+                    ),
+                    UNIQUE (season_id, id),
+                    FOREIGN KEY (season_id) REFERENCES season_economy_settings(season_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX economy_ledger_transactions_by_season
+                ON economy_ledger_transactions(season_id, created_at_ms, id)
+                """.trimIndent(),
+                """
+                CREATE TABLE economy_ledger_postings (
+                    transaction_id TEXT NOT NULL,
+                    season_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    amount_minor INTEGER NOT NULL CHECK (
+                        typeof(amount_minor) = 'integer' AND
+                        amount_minor BETWEEN -9000000000000000 AND 9000000000000000
+                    ),
+                    PRIMARY KEY (transaction_id, civilization_id),
+                    FOREIGN KEY (season_id, transaction_id)
+                        REFERENCES economy_ledger_transactions(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, civilization_id)
+                        REFERENCES civilization_accounts(season_id, civilization_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX economy_ledger_postings_by_civilization
+                ON economy_ledger_postings(civilization_id, transaction_id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER economy_ledger_postings_respect_declared_count
+                BEFORE INSERT ON economy_ledger_postings
+                WHEN (
+                    SELECT COUNT(*) FROM economy_ledger_postings
+                    WHERE transaction_id = NEW.transaction_id
+                ) >= (
+                    SELECT posting_count FROM economy_ledger_transactions
+                    WHERE id = NEW.transaction_id
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'economy ledger posting count exceeded');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER economy_ledger_postings_apply_balance
+                AFTER INSERT ON economy_ledger_postings
+                BEGIN
+                    UPDATE civilization_accounts
+                    SET balance_minor = balance_minor + NEW.amount_minor,
+                        updated_at_ms = (
+                            SELECT created_at_ms FROM economy_ledger_transactions
+                            WHERE id = NEW.transaction_id
+                        )
+                    WHERE season_id = NEW.season_id
+                      AND civilization_id = NEW.civilization_id;
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER economy_ledger_transactions_are_immutable
+                BEFORE UPDATE ON economy_ledger_transactions
+                BEGIN
+                    SELECT RAISE(ABORT, 'economy ledger transactions are immutable');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER economy_ledger_transactions_cannot_be_deleted
+                BEFORE DELETE ON economy_ledger_transactions
+                BEGIN
+                    SELECT RAISE(ABORT, 'economy ledger transactions cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER economy_ledger_postings_are_immutable
+                BEFORE UPDATE ON economy_ledger_postings
+                BEGIN
+                    SELECT RAISE(ABORT, 'economy ledger postings are immutable');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER economy_ledger_postings_cannot_be_deleted
+                BEFORE DELETE ON economy_ledger_postings
+                BEGIN
+                    SELECT RAISE(ABORT, 'economy ledger postings cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE economy_bridge_transfers (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    player_id TEXT NOT NULL,
+                    direction TEXT NOT NULL CHECK (
+                        direction IN ('DEPOSIT_TO_CIVILIZATION', 'WITHDRAW_TO_PLAYER')
+                    ),
+                    amount_minor INTEGER NOT NULL CHECK (
+                        amount_minor BETWEEN 1 AND 9000000000000000
+                    ),
+                    currency_scale INTEGER NOT NULL CHECK (currency_scale BETWEEN 0 AND 6),
+                    provider_name TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL UNIQUE,
+                    status TEXT NOT NULL CHECK (status IN (
+                        'PREPARED', 'COMPLETED', 'EXTERNAL_FAILED',
+                        'RECONCILIATION_REQUIRED', 'RECONCILED_CANCELLED'
+                    )),
+                    ledger_transaction_id TEXT,
+                    reversal_transaction_id TEXT,
+                    failure_message TEXT,
+                    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
+                    updated_at_ms INTEGER NOT NULL CHECK (updated_at_ms >= created_at_ms),
+                    completed_at_ms INTEGER,
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    CHECK (length(player_id) = 36),
+                    CHECK (length(provider_name) BETWEEN 1 AND 128),
+                    CHECK (length(idempotency_key) BETWEEN 1 AND 160),
+                    CHECK (failure_message IS NULL OR length(failure_message) <= 512),
+                    CHECK (completed_at_ms IS NULL OR completed_at_ms >= created_at_ms),
+                    CHECK (
+                        (status IN ('PREPARED', 'RECONCILIATION_REQUIRED') AND
+                         completed_at_ms IS NULL) OR
+                        (status IN ('COMPLETED', 'EXTERNAL_FAILED', 'RECONCILED_CANCELLED') AND
+                         completed_at_ms IS NOT NULL)
+                    ),
+                    CHECK (
+                        (direction = 'DEPOSIT_TO_CIVILIZATION' AND (
+                            (status = 'COMPLETED' AND ledger_transaction_id IS NOT NULL AND
+                             reversal_transaction_id IS NULL) OR
+                            (status <> 'COMPLETED' AND ledger_transaction_id IS NULL AND
+                             reversal_transaction_id IS NULL)
+                        )) OR
+                        (direction = 'WITHDRAW_TO_PLAYER' AND
+                         ledger_transaction_id IS NOT NULL AND (
+                            (status IN ('EXTERNAL_FAILED', 'RECONCILED_CANCELLED') AND
+                             reversal_transaction_id IS NOT NULL) OR
+                            (status NOT IN ('EXTERNAL_FAILED', 'RECONCILED_CANCELLED') AND
+                             reversal_transaction_id IS NULL)
+                         ))
+                    ),
+                    UNIQUE (season_id, id),
+                    FOREIGN KEY (season_id, civilization_id)
+                        REFERENCES civilization_accounts(season_id, civilization_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, ledger_transaction_id)
+                        REFERENCES economy_ledger_transactions(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, reversal_transaction_id)
+                        REFERENCES economy_ledger_transactions(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE UNIQUE INDEX economy_bridge_one_open_per_player
+                ON economy_bridge_transfers(player_id)
+                WHERE status IN ('PREPARED', 'RECONCILIATION_REQUIRED')
+                """.trimIndent(),
+                """
+                CREATE INDEX economy_bridge_by_status
+                ON economy_bridge_transfers(status, created_at_ms, id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER economy_bridge_validate_update
+                BEFORE UPDATE ON economy_bridge_transfers
+                WHEN NEW.id <> OLD.id OR
+                     NEW.season_id <> OLD.season_id OR
+                     NEW.civilization_id <> OLD.civilization_id OR
+                     NEW.player_id <> OLD.player_id OR
+                     NEW.direction <> OLD.direction OR
+                     NEW.amount_minor <> OLD.amount_minor OR
+                     NEW.currency_scale <> OLD.currency_scale OR
+                     NEW.provider_name <> OLD.provider_name OR
+                     NEW.idempotency_key <> OLD.idempotency_key OR
+                     NEW.created_at_ms <> OLD.created_at_ms OR
+                     NOT (
+                        (OLD.status = 'PREPARED' AND NEW.status IN (
+                            'COMPLETED', 'EXTERNAL_FAILED', 'RECONCILIATION_REQUIRED'
+                        )) OR
+                        (OLD.status = 'RECONCILIATION_REQUIRED' AND NEW.status IN (
+                            'COMPLETED', 'RECONCILED_CANCELLED'
+                        ))
+                     )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid economy bridge transition');
+                END
+                """.trimIndent(),
+            ),
+        ),
     )
 }

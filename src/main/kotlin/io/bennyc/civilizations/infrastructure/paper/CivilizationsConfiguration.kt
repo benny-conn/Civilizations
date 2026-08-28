@@ -1,18 +1,25 @@
 package io.bennyc.civilizations.infrastructure.paper
 
 import io.bennyc.civilizations.application.claim.ClaimRules
+import io.bennyc.civilizations.application.economy.EconomyRules
+import io.bennyc.civilizations.application.economy.RepairEconomyRules
 import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.application.war.WarService
 import io.bennyc.civilizations.domain.season.SeasonStatus
+import io.bennyc.civilizations.domain.civilization.MembershipRole
+import io.bennyc.civilizations.domain.economy.CurrencyScale
 import io.bennyc.civilizations.domain.war.WarRulesSnapshot
 import org.bukkit.configuration.file.FileConfiguration
 import java.nio.file.Path
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 data class CivilizationsConfiguration(
     val databasePath: Path,
     val claimRules: ClaimRules,
     val phaseRules: GameplayPhaseRules,
     val warRules: WarRulesSnapshot,
+    val economyRules: EconomyRules,
 ) {
     companion object {
         fun load(
@@ -34,6 +41,12 @@ data class CivilizationsConfiguration(
             val maxClaimCount = config.requiredInt("claims.max-count", "v2.claims.max-count")
             require(maxClaimCount > 0) { "claims.max-count must be positive" }
 
+            val currencyScaleValue = config.requiredInt("economy.currency-scale")
+            require(currencyScaleValue in CurrencyScale.MIN_DECIMAL_PLACES..CurrencyScale.MAX_DECIMAL_PLACES) {
+                "economy.currency-scale must be between ${CurrencyScale.MIN_DECIMAL_PLACES} and " +
+                    CurrencyScale.MAX_DECIMAL_PLACES
+            }
+            val currencyScale = CurrencyScale(currencyScaleValue)
             return CivilizationsConfiguration(
                 databasePath = databasePath,
                 claimRules = ClaimRules(
@@ -67,6 +80,30 @@ data class CivilizationsConfiguration(
                                 WarService.MAX_BATTLE_DURATION_SECONDS
                         }
                     },
+                ),
+                economyRules = EconomyRules(
+                    currencyScale = currencyScale,
+                    openingCivilizationBalance = config.requiredMoney(
+                        "economy.opening-civilization-balance",
+                        currencyScale,
+                    ),
+                    repair = RepairEconomyRules(
+                        restoreOriginalUnitPrice = config.requiredMoney(
+                            "economy.repair.restore-original-unit-price",
+                            currencyScale,
+                        ),
+                        removePlacementUnitPrice = config.requiredMoney(
+                            "economy.repair.remove-placement-unit-price",
+                            currencyScale,
+                        ),
+                        victorShareBasisPoints = config.requiredPercentageBasisPoints(
+                            "economy.repair.victor-share-percent",
+                        ),
+                        allowDebt = config.requiredBoolean("economy.repair.allow-debt"),
+                        ordinaryInitiatorRoles = config.requiredMembershipRoles(
+                            "economy.repair.ordinary-initiator-roles",
+                        ),
+                    ),
                 ),
             )
         }
@@ -144,6 +181,58 @@ data class CivilizationsConfiguration(
                     safePhases.joinToString()
             }
             return phases.toSet()
+        }
+
+        private fun FileConfiguration.requiredMoney(
+            path: String,
+            currencyScale: CurrencyScale,
+        ) = try {
+            currencyScale.parse(requiredScalarText(path)).also { amount ->
+                require(amount.minorUnits >= 0) { "$path cannot be negative" }
+            }
+        } catch (failure: IllegalArgumentException) {
+            throw IllegalArgumentException("$path ${failure.message}", failure)
+        }
+
+        private fun FileConfiguration.requiredPercentageBasisPoints(path: String): Int {
+            val percentage = try {
+                BigDecimal(requiredScalarText(path))
+                    .setScale(2, RoundingMode.UNNECESSARY)
+            } catch (failure: NumberFormatException) {
+                throw IllegalArgumentException("$path must be a percentage from 0 through 100")
+            } catch (failure: ArithmeticException) {
+                throw IllegalArgumentException("$path may have at most two decimal places")
+            }
+            require(percentage >= BigDecimal.ZERO && percentage <= BigDecimal(100)) {
+                "$path must be between 0 and 100"
+            }
+            return percentage.movePointRight(2).intValueExact()
+        }
+
+        private fun FileConfiguration.requiredMembershipRoles(
+            path: String,
+        ): Set<MembershipRole> {
+            val rawValues = get(path) as? List<*>
+                ?: throw IllegalArgumentException("$path must be a YAML list")
+            val roles = rawValues.mapIndexed { index, rawValue ->
+                val value = rawValue as? String
+                    ?: throw IllegalArgumentException("$path[$index] must be a role name")
+                MembershipRole.entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
+                    ?: throw IllegalArgumentException(
+                        "$path[$index] must be one of ${MembershipRole.entries.joinToString()}",
+                    )
+            }
+            require(roles.size == roles.toSet().size) { "$path cannot contain duplicate roles" }
+            require(roles.isNotEmpty()) { "$path must contain at least one role" }
+            return roles.toSet()
+        }
+
+        private fun FileConfiguration.requiredScalarText(path: String): String = when (
+            val value = get(path)
+        ) {
+            is String -> value
+            is Byte, is Short, is Int, is Long, is Float, is Double -> value.toString()
+            else -> throw IllegalArgumentException("$path must be a numeric scalar")
         }
 
         private val CLAIM_PHASES =

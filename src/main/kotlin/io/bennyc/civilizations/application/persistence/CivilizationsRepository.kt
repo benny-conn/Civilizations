@@ -11,6 +11,13 @@ import io.bennyc.civilizations.domain.damage.BattleDamageReportEntry
 import io.bennyc.civilizations.domain.damage.BlockPosition3D
 import io.bennyc.civilizations.domain.damage.BlockChangeCursor
 import io.bennyc.civilizations.domain.damage.ReportedBattleBlockChange
+import io.bennyc.civilizations.domain.economy.CivilizationAccount
+import io.bennyc.civilizations.domain.economy.EconomyBridgeStatus
+import io.bennyc.civilizations.domain.economy.EconomyBridgeTransfer
+import io.bennyc.civilizations.domain.economy.EconomyBridgeTransferId
+import io.bennyc.civilizations.domain.economy.LedgerTransaction
+import io.bennyc.civilizations.domain.economy.LedgerTransactionId
+import io.bennyc.civilizations.domain.economy.SeasonEconomySettings
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
@@ -77,6 +84,34 @@ interface CivilizationsReadContext {
 
     fun listBattleSurrendersForSeason(seasonId: SeasonId): List<BattleSurrenderRecord>
 
+    fun findSeasonEconomySettings(seasonId: SeasonId): SeasonEconomySettings?
+
+    fun findCivilizationAccount(civilizationId: CivilizationId): CivilizationAccount?
+
+    fun listCivilizationAccounts(seasonId: SeasonId): List<CivilizationAccount>
+
+    fun findLedgerTransaction(id: LedgerTransactionId): LedgerTransaction?
+
+    fun findLedgerTransactionByIdempotencyKey(idempotencyKey: String): LedgerTransaction?
+
+    fun listLedgerTransactionsForCivilization(
+        civilizationId: CivilizationId,
+        limit: Int,
+    ): List<LedgerTransaction>
+
+    fun findEconomyBridgeTransfer(id: EconomyBridgeTransferId): EconomyBridgeTransfer?
+
+    fun findEconomyBridgeTransferByIdempotencyKey(
+        idempotencyKey: String,
+    ): EconomyBridgeTransfer?
+
+    fun findOpenEconomyBridgeTransferForPlayer(playerId: PlayerId): EconomyBridgeTransfer?
+
+    fun listEconomyBridgeTransfers(
+        statuses: Set<EconomyBridgeStatus>,
+        limit: Int,
+    ): List<EconomyBridgeTransfer>
+
     fun findBlockChange(battleId: BattleId, position: BlockPosition3D): BattleBlockChange?
 
     fun countBlockChanges(battleId: BattleId): Long
@@ -128,6 +163,16 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
     fun insertBattleParticipant(participant: BattleParticipant)
 
     fun insertBattleSurrender(surrender: BattleSurrenderRecord)
+
+    fun insertSeasonEconomySettings(settings: SeasonEconomySettings)
+
+    fun insertCivilizationAccount(account: CivilizationAccount)
+
+    fun insertLedgerTransaction(transaction: LedgerTransaction)
+
+    fun insertEconomyBridgeTransfer(transfer: EconomyBridgeTransfer)
+
+    fun updateEconomyBridgeTransfer(transfer: EconomyBridgeTransfer)
 
     /** Returns false only when this battle/coordinate was already journaled. */
     fun insertBlockChangeIfAbsent(blockChange: BattleBlockChange): Boolean

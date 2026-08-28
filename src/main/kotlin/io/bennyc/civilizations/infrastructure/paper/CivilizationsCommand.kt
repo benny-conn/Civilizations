@@ -4,6 +4,7 @@ import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.war.DeclareWar
 import io.bennyc.civilizations.application.war.SurrenderBattle
 import io.bennyc.civilizations.domain.civilization.Civilization
+import io.bennyc.civilizations.domain.economy.EconomyBridgeDirection
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.war.BattleStatus
@@ -13,6 +14,8 @@ import io.bennyc.civilizations.infrastructure.runtime.ActiveSeasonRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeMutationOutcome
+import io.bennyc.civilizations.infrastructure.paper.economy.PaperEconomyBridgeCoordinator
+import io.bennyc.civilizations.infrastructure.paper.economy.PaperEconomyTransferOutcome
 import io.papermc.paper.command.brigadier.BasicCommand
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import net.kyori.adventure.text.Component
@@ -25,11 +28,12 @@ import java.util.UUID
 import java.util.logging.Logger
 
 /** Player-facing declared-war operations; civilization authority stays application-owned. */
-class CivilizationsWarCommand(
+class CivilizationsCommand(
     private val runtime: CivilizationsRuntime,
     private val rules: WarRulesSnapshot,
     private val server: Server,
     private val logger: Logger,
+    private val economyBridge: PaperEconomyBridgeCoordinator,
 ) : BasicCommand {
     override fun execute(source: CommandSourceStack, args: Array<out String>) {
         val sender = source.sender
@@ -37,6 +41,9 @@ class CivilizationsWarCommand(
             "status" -> showStatus(sender)
             "declare" -> declare(sender, args)
             "surrender" -> surrender(sender)
+            "balance" -> showBalance(sender)
+            "deposit" -> transferMoney(sender, args, EconomyBridgeDirection.DEPOSIT_TO_CIVILIZATION)
+            "withdraw" -> transferMoney(sender, args, EconomyBridgeDirection.WITHDRAW_TO_PLAYER)
             else -> showHelp(sender)
         }
     }
@@ -46,7 +53,7 @@ class CivilizationsWarCommand(
         args: Array<out String>,
     ): Collection<String> {
         val choices = when {
-            args.size <= 1 -> listOf("status", "declare", "surrender")
+            args.size <= 1 -> listOf("status", "declare", "surrender", "balance", "deposit", "withdraw")
             args.firstOrNull().equals("declare", true) && args.size == 2 ->
                 targetCivilizationReferences(source.sender)
             else -> emptyList()
@@ -55,7 +62,82 @@ class CivilizationsWarCommand(
         return choices.filter { it.lowercase(Locale.ROOT).startsWith(partial) }
     }
 
-    override fun permission(): String = WAR_PERMISSION
+    override fun permission(): String = USE_PERMISSION
+
+    private fun showBalance(sender: CommandSender) {
+        val player = sender as? Player ?: return error(sender, "Only a player has a treasury balance")
+        if (!player.hasPermission(BALANCE_PERMISSION)) {
+            return error(sender, "You do not have permission to view the treasury")
+        }
+        val active = activeSeason(sender) ?: return
+        val membership = active.membershipOf(PlayerId(player.uniqueId))
+            ?: return error(sender, "You are not in a civilization this season")
+        val account = active.civilizationAccounts[membership.civilizationId]
+            ?: return error(sender, "Your civilization treasury is unavailable")
+        info(
+            sender,
+            "Civilization treasury: ${active.economySettings.currencyScale.format(account.balance)}",
+        )
+    }
+
+    private fun transferMoney(
+        sender: CommandSender,
+        args: Array<out String>,
+        direction: EconomyBridgeDirection,
+    ) {
+        val player = sender as? Player ?: return error(sender, "Only a player can transfer money")
+        val permission = when (direction) {
+            EconomyBridgeDirection.DEPOSIT_TO_CIVILIZATION -> DEPOSIT_PERMISSION
+            EconomyBridgeDirection.WITHDRAW_TO_PLAYER -> WITHDRAW_PERMISSION
+        }
+        if (!player.hasPermission(permission)) {
+            return error(sender, "You do not have permission for that treasury operation")
+        }
+        if (args.size != 2) {
+            val name = direction.name.lowercase(Locale.ROOT).substringBefore('_')
+            return error(sender, "Usage: /civ $name <amount>")
+        }
+        val active = activeSeason(sender) ?: return
+        val membership = active.membershipOf(PlayerId(player.uniqueId))
+            ?: return error(sender, "You are not in a civilization this season")
+        val amount = try {
+            active.economySettings.currencyScale.parse(args[1])
+        } catch (failure: IllegalArgumentException) {
+            return error(sender, failure.message ?: "Invalid money amount")
+        }
+        if (amount.minorUnits <= 0) {
+            return error(sender, "Amount must be greater than zero")
+        }
+        info(sender, "Preparing treasury transfer…")
+        economyBridge.transfer(
+            player = player,
+            seasonId = active.season.id,
+            civilizationId = membership.civilizationId,
+            direction = direction,
+            amount = amount,
+        ) { outcome ->
+            when (outcome) {
+                is PaperEconomyTransferOutcome.Completed -> success(
+                    sender,
+                    when (direction) {
+                        EconomyBridgeDirection.DEPOSIT_TO_CIVILIZATION ->
+                            "Deposited ${active.economySettings.currencyScale.format(amount)} into the civilization treasury"
+                        EconomyBridgeDirection.WITHDRAW_TO_PLAYER ->
+                            "Withdrew ${active.economySettings.currencyScale.format(amount)} to your player wallet"
+                    },
+                )
+                is PaperEconomyTransferOutcome.Rejected -> error(sender, outcome.description)
+                is PaperEconomyTransferOutcome.ReconciliationRequired -> error(
+                    sender,
+                    "Transfer ${outcome.transferId} needs admin reconciliation; it will not be retried automatically",
+                )
+                is PaperEconomyTransferOutcome.Failed -> error(
+                    sender,
+                    "Treasury transfer failed: ${outcome.failure.message}",
+                )
+            }
+        }
+    }
 
     private fun declare(sender: CommandSender, args: Array<out String>) {
         val player = sender as? Player ?: return error(sender, "Only a player can declare war")
@@ -257,7 +339,10 @@ class CivilizationsWarCommand(
         civilizations.singleOrNull { it.id == id }?.name?.value ?: id.toString()
 
     private fun showHelp(sender: CommandSender) {
-        info(sender, "Civilizations war commands:")
+        info(sender, "Civilizations commands:")
+        sender.sendMessage(Component.text("/civ balance", NamedTextColor.GRAY))
+        sender.sendMessage(Component.text("/civ deposit <amount>", NamedTextColor.GRAY))
+        sender.sendMessage(Component.text("/civ withdraw <amount> (leader)", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ status", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ declare <civilization>", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ surrender", NamedTextColor.GRAY))
@@ -280,8 +365,11 @@ class CivilizationsWarCommand(
             .append(Component.text(message, color))
 
     companion object {
-        const val WAR_PERMISSION = "civilizations.war"
+        const val USE_PERMISSION = "civilizations.use"
         const val DECLARE_PERMISSION = "civilizations.war.declare"
         const val SURRENDER_PERMISSION = "civilizations.war.surrender"
+        const val BALANCE_PERMISSION = "civilizations.economy.balance"
+        const val DEPOSIT_PERMISSION = "civilizations.economy.deposit"
+        const val WITHDRAW_PERMISSION = "civilizations.economy.withdraw"
     }
 }

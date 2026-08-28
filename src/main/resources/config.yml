@@ -28,3 +28,16 @@ gameplay:
   war:
     # Snapshotted into each declaration; changes affect future wars after restart.
     battle-duration-seconds: 1800
+economy:
+  # Fixed-point precision for civilization treasuries and the Vault player bridge.
+  # It is snapshotted per season and cannot change after that season opens accounts.
+  currency-scale: 2
+  opening-civilization-balance: "0.00"
+  repair:
+    # A3 snapshots these prices into each future repair job.
+    restore-original-unit-price: "1.00"
+    remove-placement-unit-price: "1.00"
+    victor-share-percent: "25.00"
+    allow-debt: false
+    ordinary-initiator-roles:
+      - LEADER
