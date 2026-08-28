@@ -6,6 +6,7 @@ import io.bennyc.civilizations.infrastructure.paper.CivilizationsCommand
 import io.bennyc.civilizations.infrastructure.paper.economy.PaperEconomyBridgeCoordinator
 import io.bennyc.civilizations.infrastructure.paper.economy.VaultEconomyBootstrap
 import io.bennyc.civilizations.infrastructure.paper.protection.PaperProtectionListener
+import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeStartOutcome
@@ -18,6 +19,7 @@ class CivilizationsPlugin : JavaPlugin() {
     private lateinit var runtime: CivilizationsRuntime
     private lateinit var protectionListener: PaperProtectionListener
     private lateinit var battleEntryListener: PaperBattleEntryListener
+    private lateinit var repairCoordinator: PaperRepairCoordinator
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -57,12 +59,19 @@ class CivilizationsPlugin : JavaPlugin() {
             logger.info("Using ${playerEconomy.descriptor.providerName} for player wallets via Vault")
         }
         val economyBridge = PaperEconomyBridgeCoordinator(runtime, playerEconomy, logger)
+        repairCoordinator = PaperRepairCoordinator(
+            plugin = this,
+            runtime = runtime,
+            server = server,
+            rules = runtimeConfiguration.repairRunnerRules,
+            logger = logger,
+        )
 
         registerCommand(
             "civadmin",
             "Administer Civilizations",
             listOf("civilizationsadmin"),
-            CivilizationsAdminCommand(runtime, logger),
+            CivilizationsAdminCommand(runtime, logger, repairCoordinator),
         )
         registerCommand(
             "civilizations",
@@ -74,6 +83,7 @@ class CivilizationsPlugin : JavaPlugin() {
                 server = server,
                 logger = logger,
                 economyBridge = economyBridge,
+                repairCoordinator = repairCoordinator,
             ),
         )
         protectionListener = PaperProtectionListener(runtime, server, logger)
@@ -100,6 +110,10 @@ class CivilizationsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::repairCoordinator.isInitialized) {
+            logger.info("Repair runner metrics: ${repairCoordinator.metricsSummary()}")
+            repairCoordinator.close()
+        }
         if (::protectionListener.isInitialized) {
             logger.info(
                 "Battle block mutation metrics: " +

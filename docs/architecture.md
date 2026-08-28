@@ -211,6 +211,16 @@ player's later manual change. Falling-block or block-display reconstruction effe
 decorate an accepted repair mutation, but they are never authoritative, may not place
 blocks themselves, and must be bounded and restart-clean.
 
+The runner owns one global execution queue and one bounded live-assessment queue. It reads
+and writes world state only on the server thread, holds at most one plugin chunk ticket,
+loads existing chunks asynchronously without generation, and persists each ordered prefix
+before advancing. A solid restoration intersecting a player is deferred without moving the
+cursor. Missing worlds/chunks pause the job, and startup converts any interrupted `RUNNING`
+job to `PAUSED`; an explicit resume safely re-reads the same cursor and compares again.
+Repair lifecycle/cursor storage uses the runtime's serialized worker without rebuilding the
+unrelated hot gameplay snapshot after every batch. New paid jobs still refresh that snapshot
+because their atomic ledger transaction changes a treasury balance.
+
 ## Live runtime
 
 `CivilizationsRuntime` is the owner of runtime state and structured background work.
@@ -221,7 +231,7 @@ blocks themselves, and must be bounded and restart-clean.
 - Mutations submitted before readiness are rejected. Infrastructure failures move the runtime to `Failed` and disable the plugin rather than falling back to another store.
 - Shutdown stops new work and gives the storage executor a bounded drain period. Civilizations no longer cancels scheduler tasks owned by other plugins.
 
-The live `/civadmin` and `/civ` adapters use Paper's `BasicCommand` API, explicit UUIDs for offline roster operations, Adventure messages, and explicit global permissions. `/civadmin` exposes focused setup plus war/battle inspection and recovery operations; `/civ` exposes player war status, declaration, and leader surrender. Both parse and translate only; business decisions remain in application services.
+The live `/civadmin` and `/civ` adapters use Paper's `BasicCommand` API, explicit UUIDs for offline roster operations, Adventure messages, and explicit global permissions. `/civadmin` exposes focused setup, war/battle inspection, and repair sponsorship/lifecycle recovery; `/civ` exposes player war operations plus repair status and absolute-target start commands. Both parse and translate only; business decisions remain in application services.
 
 The former commands, listeners, tasks, placeholders, menus, global managers, serializers, compatibility adapters, and datastores were deleted after the cutover. Git history preserves them for reference without allowing a second source of truth to compile or ship.
 

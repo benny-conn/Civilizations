@@ -14,12 +14,33 @@ import java.nio.file.Path
 import java.math.BigDecimal
 import java.math.RoundingMode
 
+data class RepairRunnerRules(
+    val blocksPerTick: Int,
+    val assessmentBlocksPerTick: Int,
+) {
+    init {
+        require(blocksPerTick in 1..MAX_BLOCKS_PER_TICK) {
+            "repair.runner.blocks-per-tick must be between 1 and $MAX_BLOCKS_PER_TICK"
+        }
+        require(assessmentBlocksPerTick in 1..MAX_ASSESSMENT_BLOCKS_PER_TICK) {
+            "repair.assessment.blocks-per-tick must be between 1 and " +
+                MAX_ASSESSMENT_BLOCKS_PER_TICK
+        }
+    }
+
+    companion object {
+        const val MAX_BLOCKS_PER_TICK = 1_000
+        const val MAX_ASSESSMENT_BLOCKS_PER_TICK = 4_000
+    }
+}
+
 data class CivilizationsConfiguration(
     val databasePath: Path,
     val claimRules: ClaimRules,
     val phaseRules: GameplayPhaseRules,
     val warRules: WarRulesSnapshot,
     val economyRules: EconomyRules,
+    val repairRunnerRules: RepairRunnerRules,
 ) {
     companion object {
         fun load(
@@ -102,6 +123,12 @@ data class CivilizationsConfiguration(
                         ordinaryInitiatorRoles = config.requiredMembershipRoles(
                             "economy.repair.ordinary-initiator-roles",
                         ),
+                    ),
+                ),
+                repairRunnerRules = RepairRunnerRules(
+                    blocksPerTick = config.requiredInt("repair.runner.blocks-per-tick"),
+                    assessmentBlocksPerTick = config.requiredInt(
+                        "repair.assessment.blocks-per-tick",
                     ),
                 ),
             )

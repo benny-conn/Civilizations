@@ -26,6 +26,8 @@ currently no `/reload` integration or partial live-reload behavior.
 | `economy.repair.remove-placement-unit-price` | `1.00` | Non-negative price for each selected `REMOVE_PLACED_BLOCK` repair unit. |
 | `economy.repair.victor-share-percent` | `25.00` | Percentage from `0` through `100`, with at most two decimal places, of an ordinary repair payment assigned to the battle victor. |
 | `economy.repair.ordinary-initiator-roles` | `[LEADER]` | Non-empty civilization roles allowed to initiate an ordinary paid repair. |
+| `repair.runner.blocks-per-tick` | `20` | Global maximum authoritative repair mutations in one server tick, from `1` through `1000`. At the normal 20 ticks/second, the default ceiling is 400 blocks/second; storage and chunk transitions can make actual throughput lower. |
+| `repair.assessment.blocks-per-tick` | `200` | Global maximum live block observations in one server tick while calculating status or a fresh quote, from `1` through `4000`. |
 
 Phase names are case-insensitive when loaded, but the shipped file uses uppercase names
 to match the durable season statuses. Duplicate or unknown phase names are rejected.
@@ -61,10 +63,17 @@ For example, completing 50% through a job and then 3% manually makes the current
 53%, so a request to reach 100% selects and charges 47%. Later alterations that match
 neither the original nor sealed damaged state are shown as conflicts and are not selected.
 
-There will be no `admin-waives-cost` setting. A privileged admin repair command will name
-the target civilization and execute the same repair operation with an audited
+There is no `admin-waives-cost` setting. The privileged admin repair command names
+the target civilization and executes the same repair operation with an audited
 admin-sponsored funding context. It charges no civilization account and therefore pays
 no victor share.
+
+The two Paper repair budgets control pace rather than durable meaning, so they are not
+snapshotted into jobs. The runner processes one job and holds at most one plugin chunk
+ticket at a time. It releases that lease when moving to another chunk/job, uses
+non-generating asynchronous chunk loads, defers solid restoration while a player
+intersects the block, and pauses at the unchanged cursor if a world or existing chunk is
+unavailable.
 
 ## Configuration boundary
 

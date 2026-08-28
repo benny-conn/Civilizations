@@ -152,6 +152,49 @@ class CivilizationsRuntime private constructor(
     }
 
     /**
+     * Serializes repair storage work without rebuilding the published gameplay snapshot.
+     * Repair observations, lifecycle state, work items, and cursors are deliberately absent
+     * from event-time state. A newly paid job still uses [submitMutation] because it changes
+     * a civilization treasury balance.
+     */
+    fun <T> submitRepairOperation(
+        operation: RepairJobService.() -> ApplicationResult<T>,
+        completion: (RuntimeMutationOutcome<T>) -> Unit,
+    ) {
+        val current = state
+        if (closed.get() || current !is CivilizationsRuntimeState.Ready) {
+            dispatchToServer {
+                completion(RuntimeMutationOutcome.NotReady(state))
+            }
+            return
+        }
+
+        try {
+            worker.execute {
+                try {
+                    val result = mutationScope.repairs.operation()
+                    dispatchToServer {
+                        val ready = state as? CivilizationsRuntimeState.Ready
+                        if (ready == null) {
+                            completion(RuntimeMutationOutcome.NotReady(state))
+                        } else {
+                            completion(RuntimeMutationOutcome.Completed(result, ready))
+                        }
+                    }
+                } catch (failure: Throwable) {
+                    publishFatal(failure) {
+                        completion(RuntimeMutationOutcome.Failed(failure))
+                    }
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            dispatchToServer {
+                completion(RuntimeMutationOutcome.NotReady(state))
+            }
+        }
+    }
+
+    /**
      * Serializes a damage-journal write without rebuilding the published gameplay snapshot.
      * Journal rows are durable history but are intentionally absent from event-time memory.
      */

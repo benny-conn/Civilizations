@@ -15,6 +15,8 @@ permissions:
       civilizations.economy.balance: true
       civilizations.economy.deposit: true
       civilizations.economy.withdraw: true
+      civilizations.repair.status: true
+      civilizations.repair.start: true
   civilizations.war:
     description: Use player-facing Civilizations war commands.
     default: true
@@ -39,6 +41,12 @@ permissions:
     default: true
   civilizations.economy.withdraw:
     description: Withdraw civilization treasury money as its leader.
+    default: true
+  civilizations.repair.status:
+    description: View current battle repair completion, remaining work, conflicts, and price.
+    default: true
+  civilizations.repair.start:
+    description: Start an authorized repair for the player's civilization.
     default: true
   civilizations.admin:
     description: Administer Civilizations.

@@ -40,3 +40,11 @@ economy:
     victor-share-percent: "25.00"
     ordinary-initiator-roles:
       - LEADER
+repair:
+  # Paper world work is bounded globally. Changes require a server restart.
+  runner:
+    # Maximum authoritative block mutations in one server tick (20 ticks/second).
+    blocks-per-tick: 20
+  assessment:
+    # Maximum live block observations in one server tick before quoting a repair.
+    blocks-per-tick: 200

@@ -12,6 +12,8 @@ import io.bennyc.civilizations.domain.economy.EconomyBridgeTransferId
 import io.bennyc.civilizations.domain.economy.LedgerPosting
 import io.bennyc.civilizations.domain.economy.LedgerTransactionKind
 import io.bennyc.civilizations.domain.identity.PlayerId
+import io.bennyc.civilizations.domain.repair.RepairJob
+import io.bennyc.civilizations.domain.repair.RepairJobId
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.BattleId
 import io.bennyc.civilizations.domain.war.BattleOutcome
@@ -22,6 +24,9 @@ import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeMutationOutcome
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeMutationScope
+import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
+import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairOutcome
+import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairStatus
 import io.papermc.paper.command.brigadier.BasicCommand
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import net.kyori.adventure.text.Component
@@ -31,10 +36,13 @@ import org.bukkit.command.CommandSender
 import java.util.Locale
 import java.util.UUID
 import java.util.logging.Logger
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 class CivilizationsAdminCommand(
     private val runtime: CivilizationsRuntime,
     private val logger: Logger,
+    private val repairCoordinator: PaperRepairCoordinator,
 ) : BasicCommand {
     override fun execute(
         source: CommandSourceStack,
@@ -49,6 +57,7 @@ class CivilizationsAdminCommand(
             "war" -> handleWar(sender, args)
             "battle" -> handleBattle(sender, args)
             "economy" -> handleEconomy(sender, args)
+            "repair" -> handleRepair(sender, args)
             else -> showHelp(sender)
         }
     }
@@ -59,7 +68,16 @@ class CivilizationsAdminCommand(
     ): Collection<String> {
         val choices = when {
             args.size <= 1 ->
-                listOf("status", "season", "civilization", "claim", "war", "battle", "economy")
+                listOf(
+                    "status",
+                    "season",
+                    "civilization",
+                    "claim",
+                    "war",
+                    "battle",
+                    "economy",
+                    "repair",
+                )
             args[0].equals("season", true) && args.size == 2 ->
                 listOf("create", "select", "phase")
             args[0].equals("season", true) && args.getOrNull(1).equals("phase", true) ->
@@ -88,6 +106,14 @@ class CivilizationsAdminCommand(
                 listOf("attacker", "defender", "draw")
             args[0].equals("economy", true) && args.size == 2 ->
                 listOf("balances", "ledger", "adjust", "pending", "reconcile")
+            args[0].equals("repair", true) && args.size == 2 ->
+                listOf("list", "inspect", "status", "sponsor", "pause", "resume", "cancel")
+            args[0].equals("repair", true) && args.size == 3 &&
+                args[1].lowercase(Locale.ROOT) in setOf("list", "status", "sponsor") ->
+                battleReferences()
+            args[0].equals("repair", true) && args.size == 4 &&
+                args[1].lowercase(Locale.ROOT) in setOf("status", "sponsor") ->
+                civilizationReferences()
             args[0].equals("economy", true) &&
                 args.getOrNull(1).equals("adjust", true) && args.size == 3 ->
                 civilizationReferences()
@@ -104,6 +130,189 @@ class CivilizationsAdminCommand(
     }
 
     override fun permission(): String = ADMIN_PERMISSION
+
+    private fun handleRepair(sender: CommandSender, args: Array<out String>) {
+        when (args.getOrNull(1)?.lowercase(Locale.ROOT)) {
+            "list" -> {
+                val battleId = args.getOrNull(2)?.let { parseBattleId(sender, it) }
+                    ?: return usage(sender, "/civadmin repair list <battle-id>")
+                repairCoordinator.listForBattle(battleId) { outcome ->
+                    when (outcome) {
+                        is PaperRepairOutcome.Completed -> {
+                            if (outcome.value.isEmpty()) {
+                                info(sender, "Battle $battleId has no repair jobs")
+                            } else {
+                                info(sender, "Repair jobs for battle $battleId:")
+                                outcome.value.forEach { job ->
+                                    sender.sendMessage(
+                                        Component.text("- ${repairJobSummary(job)}", NamedTextColor.GRAY),
+                                    )
+                                }
+                            }
+                        }
+                        else -> showRepairFailure(sender, outcome)
+                    }
+                }
+            }
+            "inspect" -> {
+                val jobId = args.getOrNull(2)?.let { parseRepairJobId(sender, it) }
+                    ?: return usage(sender, "/civadmin repair inspect <job-id>")
+                repairCoordinator.inspect(jobId) { outcome ->
+                    when (outcome) {
+                        is PaperRepairOutcome.Completed -> info(
+                            sender,
+                            repairJobDetails(outcome.value),
+                        )
+                        else -> showRepairFailure(sender, outcome)
+                    }
+                }
+            }
+            "status" -> {
+                val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+                    ?: return error(sender, "No active season is loaded")
+                val battleId = args.getOrNull(2)?.let { parseBattleId(sender, it) }
+                    ?: return usage(
+                        sender,
+                        "/civadmin repair status <battle-id> <civilization>",
+                    )
+                val civilization = args.getOrNull(3)?.let { reference ->
+                    active.findCivilizationForCommand(reference)
+                }
+                    ?: return error(sender, "That civilization does not exist")
+                info(sender, "Scanning battle damage in bounded batches…")
+                repairCoordinator.status(battleId, civilization.id) { outcome ->
+                    when (outcome) {
+                        is PaperRepairOutcome.Completed -> showAdminRepairStatus(
+                            sender,
+                            outcome.value,
+                        )
+                        else -> showRepairFailure(sender, outcome)
+                    }
+                }
+            }
+            "sponsor" -> sponsorRepair(sender, args)
+            "pause", "resume", "cancel" -> lifecycleRepair(sender, args)
+            else -> usage(
+                sender,
+                "/civadmin repair <list|inspect|status|sponsor|pause|resume|cancel> ...",
+            )
+        }
+    }
+
+    private fun sponsorRepair(sender: CommandSender, args: Array<out String>) {
+        if (args.size < 6) {
+            return usage(
+                sender,
+                "/civadmin repair sponsor <battle-id> <civilization> " +
+                    "<target-percent> <audit-reason>",
+            )
+        }
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+            ?: return error(sender, "No active season is loaded")
+        val battleId = parseBattleId(sender, args[2]) ?: return
+        val civilization = active.findCivilizationForCommand(args[3])
+            ?: return error(sender, "Civilization '${args[3]}' does not exist")
+        val target = parseRepairPercentage(sender, args[4]) ?: return
+        val reason = args.drop(5).joinToString(" ").trim()
+        if (reason.isEmpty()) return usage(sender, "Sponsored repairs require an audit reason")
+        val actor = (sender as? org.bukkit.entity.Player)?.let { PlayerId(it.uniqueId) }
+        info(sender, "Scanning current damage before creating the sponsored repair…")
+        repairCoordinator.startSponsored(
+            battleId = battleId,
+            civilizationId = civilization.id,
+            adminPlayerId = actor,
+            targetCompletionBasisPoints = target,
+        ) { outcome ->
+            when (outcome) {
+                is PaperRepairOutcome.Completed -> {
+                    success(
+                        sender,
+                        "Sponsored repair ${outcome.value.job.id} started for " +
+                            "${outcome.value.job.selectedCount} blocks",
+                    )
+                    audit(
+                        sender,
+                        "repair.sponsor",
+                        "${outcome.value.job.id}; battle=$battleId; " +
+                            "civilization=${civilization.id}; target=$target",
+                        reason,
+                    )
+                }
+                else -> showRepairFailure(sender, outcome)
+            }
+        }
+    }
+
+    private fun lifecycleRepair(sender: CommandSender, args: Array<out String>) {
+        val operation = args[1].lowercase(Locale.ROOT)
+        val jobId = args.getOrNull(2)?.let { parseRepairJobId(sender, it) }
+            ?: return usage(sender, "/civadmin repair $operation <job-id> <audit-reason>")
+        val reason = args.drop(3).joinToString(" ").trim()
+        if (reason.isEmpty()) return usage(sender, "Repair lifecycle changes require an audit reason")
+        val completion: (PaperRepairOutcome<RepairJob>) -> Unit = { outcome ->
+            when (outcome) {
+                is PaperRepairOutcome.Completed -> {
+                    success(sender, "Repair ${outcome.value.id} is ${outcome.value.status}")
+                    audit(sender, "repair.$operation", jobId.toString(), reason)
+                }
+                else -> showRepairFailure(sender, outcome)
+            }
+        }
+        when (operation) {
+            "pause" -> repairCoordinator.pause(jobId, completion)
+            "resume" -> repairCoordinator.resume(jobId, completion)
+            else -> repairCoordinator.cancel(jobId, completion)
+        }
+    }
+
+    private fun showAdminRepairStatus(sender: CommandSender, status: PaperRepairStatus) {
+        val assessment = status.assessment
+        info(
+            sender,
+            "Battle ${assessment.basis.battle.id}, civilization " +
+                "${assessment.basis.civilizationId}: " +
+                "${formatRepairPercentage(assessment.completionBasisPoints)} complete; " +
+                "restored=${assessment.restoredCount}, repairable=${assessment.repairableCount}, " +
+                "conflicts=${assessment.conflictCount}, total=${assessment.totalEligibleCount}",
+        )
+        when (val quote = status.quoteToFull) {
+            is ApplicationResult.Applied -> info(
+                sender,
+                "100% quote selects ${quote.value.selectedCount} blocks; " +
+                    "grossMinorUnits=${quote.value.grossCost.minorUnits}; " +
+                    "victorMinorUnits=${quote.value.victorProceeds.minorUnits}",
+            )
+            is ApplicationResult.Unchanged -> Unit
+            is ApplicationResult.Rejected -> info(sender, quote.failure.description)
+        }
+        status.jobs.firstOrNull()?.let { info(sender, "Latest ${repairJobSummary(it)}") }
+    }
+
+    private fun repairJobSummary(job: RepairJob): String =
+        "${job.id}: ${job.status}, civilization=${job.civilizationId}, " +
+            "cursor=${job.nextItemOrdinal}/${job.selectedCount}"
+
+    private fun repairJobDetails(job: RepairJob): String =
+        "Repair ${job.id}: battle=${job.battleId}; civilization=${job.civilizationId}; " +
+            "funding=${job.fundingMode}; status=${job.status}; target=" +
+            "${formatRepairPercentage(job.targetCompletionBasisPoints)}; " +
+            "observed restored/repairable/conflict=${job.observedRestoredCount}/" +
+            "${job.observedRepairableCount}/${job.observedConflictCount}; " +
+            "cursor=${job.nextItemOrdinal}/${job.selectedCount}; results restored/conflict/failed=" +
+            "${job.restoredCount}/${job.skippedConflictCount}/${job.failedCount}; " +
+            "costMinorUnits=${job.grossCost.minorUnits}; " +
+            "victorProceedsMinorUnits=${job.victorProceeds.minorUnits}; " +
+            "createdAt=${job.createdAt}; updatedAt=${job.updatedAt}; failure=${job.failureMessage}"
+
+    private fun showRepairFailure(sender: CommandSender, outcome: PaperRepairOutcome<*>) {
+        when (outcome) {
+            is PaperRepairOutcome.Completed -> error(sender, "Unexpected repair result")
+            is PaperRepairOutcome.Rejected -> error(sender, outcome.description)
+            is PaperRepairOutcome.Unavailable -> error(sender, outcome.description)
+            is PaperRepairOutcome.Failed ->
+                error(sender, "Repair operation failed: ${outcome.failure.message}")
+        }
+    }
 
     private fun handleEconomy(sender: CommandSender, args: Array<out String>) {
         when (args.getOrNull(1)?.lowercase(Locale.ROOT)) {
@@ -801,6 +1010,12 @@ class CivilizationsAdminCommand(
                 NamedTextColor.GRAY,
             ),
         )
+        sender.sendMessage(
+            Component.text(
+                "/civadmin repair <list|inspect|status|sponsor|pause|resume|cancel> ...",
+                NamedTextColor.GRAY,
+            ),
+        )
     }
 
     private fun io.bennyc.civilizations.infrastructure.runtime.ActiveSeasonRuntimeState
@@ -873,6 +1088,33 @@ class CivilizationsAdminCommand(
             error(sender, "'$value' is not a valid battle UUID")
             null
         }
+
+    private fun parseRepairJobId(sender: CommandSender, value: String): RepairJobId? =
+        try {
+            RepairJobId(UUID.fromString(value))
+        } catch (_: IllegalArgumentException) {
+            error(sender, "'$value' is not a valid repair job UUID")
+            null
+        }
+
+    private fun parseRepairPercentage(sender: CommandSender, value: String): Int? = try {
+        val percentage = BigDecimal(value).setScale(2, RoundingMode.UNNECESSARY)
+        if (percentage <= BigDecimal.ZERO || percentage > BigDecimal(100)) {
+            error(sender, "Target percent must be greater than 0 and at most 100")
+            null
+        } else {
+            percentage.movePointRight(2).intValueExact()
+        }
+    } catch (_: NumberFormatException) {
+        error(sender, "Target percent must be a number")
+        null
+    } catch (_: ArithmeticException) {
+        error(sender, "Target percent may have at most two decimal places")
+        null
+    }
+
+    private fun formatRepairPercentage(basisPoints: Int): String =
+        BigDecimal.valueOf(basisPoints.toLong(), 2).stripTrailingZeros().toPlainString() + "%"
 
     private fun <T> mutate(
         sender: CommandSender,

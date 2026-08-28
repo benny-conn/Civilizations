@@ -43,6 +43,8 @@ class CivilizationsConfigurationTest {
             assertEquals(MoneyAmount.ZERO, loaded.economyRules.openingCivilizationBalance)
             assertEquals(MoneyAmount(100), loaded.economyRules.repair.restoreOriginalUnitPrice)
             assertEquals(2_500, loaded.economyRules.repair.victorShareBasisPoints)
+            assertEquals(20, loaded.repairRunnerRules.blocksPerTick)
+            assertEquals(200, loaded.repairRunnerRules.assessmentBlocksPerTick)
         } finally {
             dataFolder.toFile().deleteRecursively()
         }
@@ -133,6 +135,32 @@ class CivilizationsConfigurationTest {
         assertContains(amountFailure.message.orEmpty(), "economy.opening-civilization-balance")
     }
 
+    @Test
+    fun `repair tick budgets are path-validated`() {
+        val override = load(
+            validYaml
+                .replaceFirst("blocks-per-tick: 20", "blocks-per-tick: 7")
+                .replaceFirst("blocks-per-tick: 200", "blocks-per-tick: 350"),
+        )
+        assertEquals(7, override.repairRunnerRules.blocksPerTick)
+        assertEquals(350, override.repairRunnerRules.assessmentBlocksPerTick)
+
+        val runnerFailure = assertFailsWith<IllegalArgumentException> {
+            load(validYaml.replaceFirst("blocks-per-tick: 20", "blocks-per-tick: 0"))
+        }
+        assertContains(runnerFailure.message.orEmpty(), "repair.runner.blocks-per-tick")
+
+        val assessmentFailure = assertFailsWith<IllegalArgumentException> {
+            load(
+                validYaml.replaceFirst("blocks-per-tick: 200", "blocks-per-tick: 4001"),
+            )
+        }
+        assertContains(
+            assessmentFailure.message.orEmpty(),
+            "repair.assessment.blocks-per-tick",
+        )
+    }
+
     private fun load(yaml: String): CivilizationsConfiguration {
         val dataFolder = Files.createTempDirectory("civilizations-config-test")
         return try {
@@ -173,6 +201,11 @@ class CivilizationsConfigurationTest {
                 remove-placement-unit-price: "1.00"
                 victor-share-percent: "25.00"
                 ordinary-initiator-roles: [LEADER]
+            repair:
+              runner:
+                blocks-per-tick: 20
+              assessment:
+                blocks-per-tick: 200
         """.trimIndent()
     }
 }
