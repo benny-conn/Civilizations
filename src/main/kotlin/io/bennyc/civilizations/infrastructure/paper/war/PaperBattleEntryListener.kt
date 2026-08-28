@@ -2,11 +2,13 @@ package io.bennyc.civilizations.infrastructure.paper.war
 
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.war.BattleRoster
+import io.bennyc.civilizations.application.war.BattleCombatEnrollment
 import io.bennyc.civilizations.domain.claim.BlockPosition2D
 import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.war.BattleStatus
+import io.bennyc.civilizations.domain.war.BattleCombatRulesSnapshot
 import io.bennyc.civilizations.infrastructure.runtime.ActiveSeasonRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
@@ -30,6 +32,7 @@ internal class PaperBattleEntryListener(
     private val runtime: CivilizationsRuntime,
     private val server: Server,
     private val logger: Logger,
+    private val combatRules: BattleCombatRulesSnapshot,
     private val gate: BattleEntryAttemptGate = BattleEntryAttemptGate(),
     private val nanoTime: () -> Long = System::nanoTime,
 ) : Listener {
@@ -141,6 +144,20 @@ internal class PaperBattleEntryListener(
         }
 
         val defenderName = active.civilizationName(entry.defendingCivilizationId)
+        val battleCivilizationIds = setOf(
+            entry.enteringCivilizationId,
+            entry.defendingCivilizationId,
+        )
+        val combatantPlayerIds = active.memberships
+            .asSequence()
+            .filter { (civilizationId, _) -> civilizationId in battleCivilizationIds }
+            .flatMap { (_, memberships) -> memberships.asSequence() }
+            .mapNotNull { membership ->
+                server.getPlayer(membership.playerId.value)
+                    ?.takeIf { it.isOnline && it.hasPermission(PARTICIPATE_PERMISSION) }
+                    ?.let { membership.playerId }
+            }
+            .toSet()
         player.sendActionBar(
             Component.text(
                 "Entering $defenderName territory — starting battle…",
@@ -149,7 +166,12 @@ internal class PaperBattleEntryListener(
         )
         runtime.submitMutation(
             operation = {
-                wars.startBattleFromEntry(entry.war.id, actorId, entry.enteredClaim.id)
+                wars.startBattleFromEntry(
+                    entry.war.id,
+                    actorId,
+                    entry.enteredClaim.id,
+                    BattleCombatEnrollment(combatRules, combatantPlayerIds),
+                )
             },
             completion = { outcome ->
                 gate.complete(actorId)
@@ -199,7 +221,9 @@ internal class PaperBattleEntryListener(
         }
         logger.info(
             "Battle ${roster.battle.id} started for war ${roster.battle.warId}: " +
-                "$attacker attacked $defender; endsAt=${roster.battle.endsAt}",
+                "$attacker attacked $defender; combatants=${roster.combatants.size}; " +
+                "lives=${roster.combatState?.rules?.livesPerCombatant}; " +
+                "endsAt=${roster.battle.endsAt}",
         )
     }
 

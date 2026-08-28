@@ -4,7 +4,7 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The architecture rework is complete. See [TODO.md](TODO.md) for the prioritized product roadmap, [docs/architecture.md](docs/architecture.md) for the stable dependency and persistence boundaries, and [docs/worktree-roadmap.md](docs/worktree-roadmap.md) for the dependency-aware multi-worktree queue for net-new MVP work.
 
-The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, a first-write-wins battle damage journal, bounded live-world resolution into immutable damage reports, exact civilization treasury accounts backed by an immutable idempotent ledger, and persisted resumable repair plans with atomic payments.
+The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, snapshotted combatants and lives, a first-write-wins battle damage journal, bounded live-world resolution into immutable damage reports, exact civilization treasury accounts backed by an immutable idempotent ledger, and persisted resumable repair plans with atomic payments.
 
 The incomplete pre-rework commands, mutable model graph, menus, scheduled tasks, adapters, and JSON-blob datastores have been deleted. Paper listeners protect claims through the application policy. During an active battle in the global `WAR` phase, snapshotted participants may break or place simple single blocks in either side's claimed land. The listener cancels the original event, commits its first-write-wins journal record off-thread, then revalidates and applies the mutation on the server thread. Block entities, multi-place operations, entities, explosions, and unsafe cascading blocks remain protected.
 
@@ -51,8 +51,9 @@ B4 connects an explicit surrender or admin outcome to that reconstruction path. 
 moves the battle to `RESOLVING`, removes destructive eligibility, observes journaled
 coordinates on the Paper thread in bounded batches, seals the immutable report, and only
 then closes the battle. Expired battles follow the same safe observation path with zero
-players online, but remain `RESOLVING` after the report is sealed until the ordinary
-timeout outcome rule is approved or an admin supplies an explicit recovery outcome.
+players online. Schema-9 battles now carry A4's durable defender-at-timeout outcome;
+older outcome-neutral battles remain `RESOLVING` until an admin supplies an explicit
+recovery outcome.
 
 B4 passed an isolated real Paper 26.2 checkpoint with a three-coordinate active battle.
 A missing, ungenerated chunk left the battle safely in `RESOLVING`; after the fixture
@@ -62,6 +63,14 @@ restart after report sealing but before surrendered-battle closure reused the im
 report without another world scan and closed with the persisted defender-victory outcome.
 The audited command also reopened a legacy report-less closed battle only for its recorded
 outcome, failed safely on its missing chunk, and completed after an explicit retry.
+
+A4 adds durable combatant enrollment separate from the immutable political roster,
+idempotent life-loss events, elimination outcomes, and defender victory at the absolute
+battle deadline. Eliminated combatants disappear from the published destruction capability
+after the durable mutation refreshes. Disconnecting does not itself consume a life; an
+external combat logger can feed its real player/NPC death consequence through the same
+life-loss operation. See [docs/combat-logging.md](docs/combat-logging.md) for the Paper 26.2
+integration recommendation. Targeted PVP/death/respawn wiring remains B5.
 
 ## Administration
 

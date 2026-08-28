@@ -8,8 +8,9 @@ and participation behavior can be exercised as well as the basic two-player loop
 The guide deliberately records current limitations instead of treating unfinished
 features as passes. On the current build, civilization setup, claims, protection, war
 declaration, hostile-entry battle activation, simple battle block mutation, persistence,
-bounded report sealing, treasuries, and paid repair are live. PVP, deaths, lives,
-elimination, and the ordinary timeout outcome are not implemented yet.
+durable online combatant/life state, defender-at-timeout resolution, bounded report
+sealing, treasuries, and paid repair are live. Targeted PVP and Paper death/respawn or
+combat-logger translation are not implemented until B5.
 
 ## Test record
 
@@ -163,7 +164,9 @@ From the console:
 
 Move the Aurelia player from outside Borealis land across the boundary. Pass when the war
 becomes active, one battle starts, both sides receive the battle ID and absolute end time,
-and repeated boundary crossings do not create another battle.
+and repeated boundary crossings do not create another battle. At least one permitted
+player from each side must be online when the boundary is crossed; offline members remain
+in the historical participant roster but are not combatants in this battle.
 
 Record and inspect the battle:
 
@@ -171,6 +174,9 @@ Record and inspect the battle:
 /civadmin battle list
 /civadmin battle inspect <BATTLE_ID>
 ```
+
+The inspection should show the full participant count, smaller/equal combatant count,
+living count, snapshotted lives, and no combat resolution yet.
 
 While the battle is active, verify:
 
@@ -189,6 +195,9 @@ While the battle is active, verify:
    eligible for removal during repair.
 8. PVP is still denied in claimed land. This is an expected current limitation, not a
    failed test; targeted battle PVP belongs to the upcoming combat adapter.
+9. Disconnecting a combatant does not change the living count by itself. If testing an
+   external combat logger, use [combat-logging.md](combat-logging.md); its real player/NPC
+   death translation is a B5 checkpoint, not part of A4.
 
 Optional four-player roster check: after the battle starts, move a non-leader member to
 the opposing civilization with `/civadmin civilization move-member <PLAYER_UUID> <civ>`.
@@ -221,8 +230,9 @@ destruction or duplicating report rows.
 To test ordinary expiry, let a battle reach its configured deadline with nobody issuing a
 command. It should enter `RESOLVING`, remove destructive eligibility, and seal its damage
 report even with zero players online. It should deliberately remain `RESOLVING` without a
-winner because the Season One timeout outcome is not settled. Use the explicit admin path
-above to supply an outcome and continue the repair test.
+winner only if it is a legacy battle created before schema 9. A new battle should show
+`combatResolution=TIMEOUT`, request `DEFENDER_VICTORY`, seal the report, and close with the
+defending civilization as winner without an admin command.
 
 ## 8. Repair path for a battle that already has a sealed report
 

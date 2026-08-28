@@ -61,6 +61,15 @@ class DamageJournalService(
                 ?: return@transaction ApplicationResult.Rejected(
                     ActorNotInBattleJournal(battle.id, request.actorId),
                 )
+            if (findBattleCombatState(battle.id) != null) {
+                val combatant = listBattleCombatants(battle.id)
+                    .singleOrNull { it.playerId == request.actorId }
+                if (combatant == null || combatant.isEliminated) {
+                    return@transaction ApplicationResult.Rejected(
+                        ActorNotActiveBattleCombatant(battle.id, request.actorId),
+                    )
+                }
+            }
             val claim = findClaim(request.claimId)
                 ?: return@transaction ApplicationResult.Rejected(
                     JournalClaimNotFound(request.claimId),
@@ -186,6 +195,14 @@ data class ActorNotInBattleJournal(
     val playerId: PlayerId,
 ) : ApplicationFailure {
     override val description: String = "Player $playerId is not a participant in battle $battleId"
+}
+
+data class ActorNotActiveBattleCombatant(
+    val battleId: BattleId,
+    val playerId: PlayerId,
+) : ApplicationFailure {
+    override val description: String =
+        "Player $playerId has no remaining combat capability in battle $battleId"
 }
 
 data class JournalClaimNotFound(val claimId: ClaimId) : ApplicationFailure {

@@ -48,7 +48,14 @@ import io.bennyc.civilizations.domain.repair.RepairJobStatus
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleCombatResolutionCause
+import io.bennyc.civilizations.domain.war.BattleCombatRulesSnapshot
+import io.bennyc.civilizations.domain.war.BattleCombatState
+import io.bennyc.civilizations.domain.war.BattleCombatant
+import io.bennyc.civilizations.domain.war.BattleDisconnectPolicy
 import io.bennyc.civilizations.domain.war.BattleId
+import io.bennyc.civilizations.domain.war.BattleLifeEvent
+import io.bennyc.civilizations.domain.war.BattleLifeEventId
 import io.bennyc.civilizations.domain.war.BattleOutcome
 import io.bennyc.civilizations.domain.war.BattleParticipant
 import io.bennyc.civilizations.domain.war.BattleSide
@@ -248,6 +255,42 @@ private open class JdbcReadContext(
         """.trimIndent(),
         bind = { setString(1, battleId.toString()) },
         map = ResultSet::toBattleParticipant,
+    )
+
+    override fun findBattleCombatState(battleId: BattleId): BattleCombatState? = queryOne(
+        sql = "$BATTLE_COMBAT_STATE_SELECT WHERE battle_id = ?",
+        bind = { setString(1, battleId.toString()) },
+        map = ResultSet::toBattleCombatState,
+    )
+
+    override fun listBattleCombatStatesForSeason(
+        seasonId: SeasonId,
+    ): List<BattleCombatState> = queryMany(
+        sql = "$BATTLE_COMBAT_STATE_SELECT WHERE season_id = ? ORDER BY initialized_at_ms, battle_id",
+        bind = { setString(1, seasonId.toString()) },
+        map = ResultSet::toBattleCombatState,
+    )
+
+    override fun listBattleCombatants(battleId: BattleId): List<BattleCombatant> = queryMany(
+        sql = """
+            $BATTLE_COMBATANT_SELECT
+            WHERE battle_id = ?
+            ORDER BY side, enrolled_at_ms, player_id
+        """.trimIndent(),
+        bind = { setString(1, battleId.toString()) },
+        map = ResultSet::toBattleCombatant,
+    )
+
+    override fun findBattleLifeEvent(id: BattleLifeEventId): BattleLifeEvent? = queryOne(
+        sql = "$BATTLE_LIFE_EVENT_SELECT WHERE id = ?",
+        bind = { setString(1, id.toString()) },
+        map = ResultSet::toBattleLifeEvent,
+    )
+
+    override fun listBattleLifeEvents(battleId: BattleId): List<BattleLifeEvent> = queryMany(
+        sql = "$BATTLE_LIFE_EVENT_SELECT WHERE battle_id = ? ORDER BY recorded_at_ms, id",
+        bind = { setString(1, battleId.toString()) },
+        map = ResultSet::toBattleLifeEvent,
     )
 
     override fun findBattleSurrender(battleId: BattleId): BattleSurrenderRecord? = queryOne(
@@ -739,6 +782,22 @@ private open class JdbcReadContext(
             SELECT season_id, battle_id, player_id, civilization_id, side, joined_at_ms
             FROM battle_participants
         """
+        const val BATTLE_COMBAT_STATE_SELECT = """
+            SELECT season_id, battle_id, lives_per_combatant, timeout_outcome,
+                   disconnect_policy, initialized_at_ms, resolution_cause,
+                   requested_outcome, decided_at_ms
+            FROM battle_combat_states
+        """
+        const val BATTLE_COMBATANT_SELECT = """
+            SELECT season_id, battle_id, player_id, civilization_id, side,
+                   initial_lives, lives_remaining, enrolled_at_ms, eliminated_at_ms
+            FROM battle_combatants
+        """
+        const val BATTLE_LIFE_EVENT_SELECT = """
+            SELECT id, season_id, battle_id, player_id, lives_before, lives_after,
+                   recorded_at_ms
+            FROM battle_life_events
+        """
         const val BATTLE_SURRENDER_SELECT = """
             SELECT season_id, battle_id, surrendered_civilization_id,
                    surrendered_by_player_id, requested_outcome, surrendered_at_ms
@@ -1073,6 +1132,102 @@ private class JdbcWriteContext(
             setString(4, participant.civilizationId.toString())
             setString(5, participant.side.name)
             setLong(6, participant.joinedAt.toEpochMilli())
+        }
+    }
+
+    override fun insertBattleCombatState(state: BattleCombatState) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_combat_states(
+                    season_id, battle_id, lives_per_combatant, timeout_outcome,
+                    disconnect_policy, initialized_at_ms, resolution_cause,
+                    requested_outcome, decided_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, state.seasonId.toString())
+            setString(2, state.battleId.toString())
+            setInt(3, state.rules.livesPerCombatant)
+            setString(4, state.rules.timeoutOutcome.name)
+            setString(5, state.rules.disconnectPolicy.name)
+            setLong(6, state.initializedAt.toEpochMilli())
+            setString(7, state.resolutionCause?.name)
+            setString(8, state.requestedOutcome?.name)
+            setInstantOrNull(9, state.decidedAt)
+        }
+    }
+
+    override fun updateBattleCombatState(state: BattleCombatState) {
+        val updated = executeUpdate(
+            sql = """
+                UPDATE battle_combat_states
+                SET resolution_cause = ?, requested_outcome = ?, decided_at_ms = ?
+                WHERE battle_id = ? AND season_id = ?
+            """.trimIndent(),
+        ) {
+            setString(1, state.resolutionCause?.name)
+            setString(2, state.requestedOutcome?.name)
+            setInstantOrNull(3, state.decidedAt)
+            setString(4, state.battleId.toString())
+            setString(5, state.seasonId.toString())
+        }
+        requireUpdated(updated, "Battle combat state ${state.battleId}")
+    }
+
+    override fun insertBattleCombatant(combatant: BattleCombatant) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_combatants(
+                    season_id, battle_id, player_id, civilization_id, side,
+                    initial_lives, lives_remaining, enrolled_at_ms, eliminated_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, combatant.seasonId.toString())
+            setString(2, combatant.battleId.toString())
+            setString(3, combatant.playerId.toString())
+            setString(4, combatant.civilizationId.toString())
+            setString(5, combatant.side.name)
+            setInt(6, combatant.initialLives)
+            setInt(7, combatant.livesRemaining)
+            setLong(8, combatant.enrolledAt.toEpochMilli())
+            setInstantOrNull(9, combatant.eliminatedAt)
+        }
+    }
+
+    override fun updateBattleCombatant(combatant: BattleCombatant) {
+        val updated = executeUpdate(
+            sql = """
+                UPDATE battle_combatants
+                SET lives_remaining = ?, eliminated_at_ms = ?
+                WHERE battle_id = ? AND player_id = ? AND season_id = ?
+            """.trimIndent(),
+        ) {
+            setInt(1, combatant.livesRemaining)
+            setInstantOrNull(2, combatant.eliminatedAt)
+            setString(3, combatant.battleId.toString())
+            setString(4, combatant.playerId.toString())
+            setString(5, combatant.seasonId.toString())
+        }
+        requireUpdated(updated, "Battle combatant ${combatant.battleId}/${combatant.playerId}")
+    }
+
+    override fun insertBattleLifeEvent(event: BattleLifeEvent) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_life_events(
+                    id, season_id, battle_id, player_id, lives_before, lives_after,
+                    recorded_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, event.id.toString())
+            setString(2, event.seasonId.toString())
+            setString(3, event.battleId.toString())
+            setString(4, event.playerId.toString())
+            setInt(5, event.livesBefore)
+            setInt(6, event.livesAfter)
+            setLong(7, event.recordedAt.toEpochMilli())
         }
     }
 
@@ -1524,6 +1679,42 @@ private fun ResultSet.toBattleParticipant(): BattleParticipant = BattleParticipa
     civilizationId = CivilizationId(uuid("civilization_id")),
     side = BattleSide.valueOf(getString("side")),
     joinedAt = instant("joined_at_ms"),
+)
+
+private fun ResultSet.toBattleCombatState(): BattleCombatState = BattleCombatState(
+    seasonId = SeasonId(uuid("season_id")),
+    battleId = BattleId(uuid("battle_id")),
+    rules = BattleCombatRulesSnapshot(
+        livesPerCombatant = getInt("lives_per_combatant"),
+        timeoutOutcome = BattleOutcome.valueOf(getString("timeout_outcome")),
+        disconnectPolicy = BattleDisconnectPolicy.valueOf(getString("disconnect_policy")),
+    ),
+    initializedAt = instant("initialized_at_ms"),
+    resolutionCause = getString("resolution_cause")?.let(BattleCombatResolutionCause::valueOf),
+    requestedOutcome = getString("requested_outcome")?.let(BattleOutcome::valueOf),
+    decidedAt = nullableInstant("decided_at_ms"),
+)
+
+private fun ResultSet.toBattleCombatant(): BattleCombatant = BattleCombatant(
+    seasonId = SeasonId(uuid("season_id")),
+    battleId = BattleId(uuid("battle_id")),
+    playerId = PlayerId(uuid("player_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    side = BattleSide.valueOf(getString("side")),
+    initialLives = getInt("initial_lives"),
+    livesRemaining = getInt("lives_remaining"),
+    enrolledAt = instant("enrolled_at_ms"),
+    eliminatedAt = nullableInstant("eliminated_at_ms"),
+)
+
+private fun ResultSet.toBattleLifeEvent(): BattleLifeEvent = BattleLifeEvent(
+    id = BattleLifeEventId(uuid("id")),
+    seasonId = SeasonId(uuid("season_id")),
+    battleId = BattleId(uuid("battle_id")),
+    playerId = PlayerId(uuid("player_id")),
+    livesBefore = getInt("lives_before"),
+    livesAfter = getInt("lives_after"),
+    recordedAt = instant("recorded_at_ms"),
 )
 
 private fun ResultSet.toBattleSurrenderRecord(): BattleSurrenderRecord = BattleSurrenderRecord(

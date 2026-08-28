@@ -82,6 +82,7 @@ class PaperBattleResolutionCoordinator(
             .filter { it.status == BattleStatus.RESOLVING }
             .forEach { battle ->
                 val outcome = activeSeason.battleSurrenders[battle.id]?.requestedOutcome
+                    ?: activeSeason.battleCombatStates[battle.id]?.requestedOutcome
                 enqueue(PendingResolution(battle.id, outcome))
             }
     }
@@ -374,24 +375,37 @@ class PaperBattleResolutionCoordinator(
             .firstOrNull() ?: return
         expiring += battle.id
         runtime.submitMutation(
-            operation = { wars.beginResolution(battle.id) },
+            operation = { combat.beginTimeoutResolution(battle.id) },
         ) { outcome ->
             expiring -= battle.id
             when (outcome) {
-                is RuntimeMutationOutcome.Completed -> when (outcome.result) {
-                    is ApplicationResult.Applied,
-                    is ApplicationResult.Unchanged,
-                    -> {
+                is RuntimeMutationOutcome.Completed -> when (val result = outcome.result) {
+                    is ApplicationResult.Applied -> {
+                        val requested = result.value.requestedOutcome
                         logger.info(
-                            "Expired battles entered resolution; sealing damage while " +
-                                "awaiting the ordinary timeout outcome policy",
+                            if (requested == null) {
+                                "Legacy expired battle entered outcome-neutral resolution"
+                            } else {
+                                "Expired battle entered resolution as $requested"
+                            },
                         )
                         // Runtime refresh recovers every expired battle in one transaction,
                         // not only the one that caused this wakeup.
                         recover(outcome.state)
                     }
+                    is ApplicationResult.Unchanged -> {
+                        val requested = result.value.requestedOutcome
+                        logger.info(
+                            if (requested == null) {
+                                "Legacy expired battle entered outcome-neutral resolution"
+                            } else {
+                                "Expired battle entered resolution as $requested"
+                            },
+                        )
+                        recover(outcome.state)
+                    }
                     is ApplicationResult.Rejected -> logger.warning(
-                        outcome.result.failure.description,
+                        result.failure.description,
                     )
                 }
                 is RuntimeMutationOutcome.NotReady -> Unit

@@ -28,7 +28,11 @@ import io.bennyc.civilizations.domain.repair.RepairJobItem
 import io.bennyc.civilizations.domain.repair.RepairJobStatus
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleCombatState
+import io.bennyc.civilizations.domain.war.BattleCombatant
 import io.bennyc.civilizations.domain.war.BattleId
+import io.bennyc.civilizations.domain.war.BattleLifeEvent
+import io.bennyc.civilizations.domain.war.BattleLifeEventId
 import io.bennyc.civilizations.domain.war.BattleParticipant
 import io.bennyc.civilizations.domain.war.BattleSurrenderRecord
 import io.bennyc.civilizations.domain.war.War
@@ -84,6 +88,16 @@ interface CivilizationsReadContext {
     fun listOpenBattlesForCivilization(civilizationId: CivilizationId): List<Battle>
 
     fun listBattleParticipants(battleId: BattleId): List<BattleParticipant>
+
+    fun findBattleCombatState(battleId: BattleId): BattleCombatState?
+
+    fun listBattleCombatStatesForSeason(seasonId: SeasonId): List<BattleCombatState>
+
+    fun listBattleCombatants(battleId: BattleId): List<BattleCombatant>
+
+    fun findBattleLifeEvent(id: BattleLifeEventId): BattleLifeEvent?
+
+    fun listBattleLifeEvents(battleId: BattleId): List<BattleLifeEvent>
 
     fun findBattleSurrender(battleId: BattleId): BattleSurrenderRecord?
 
@@ -195,6 +209,16 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
     fun updateBattle(battle: Battle)
 
     fun insertBattleParticipant(participant: BattleParticipant)
+
+    fun insertBattleCombatState(state: BattleCombatState)
+
+    fun updateBattleCombatState(state: BattleCombatState)
+
+    fun insertBattleCombatant(combatant: BattleCombatant)
+
+    fun updateBattleCombatant(combatant: BattleCombatant)
+
+    fun insertBattleLifeEvent(event: BattleLifeEvent)
 
     fun insertBattleSurrender(surrender: BattleSurrenderRecord)
 

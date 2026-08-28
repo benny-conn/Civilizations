@@ -928,13 +928,19 @@ class CivilizationsAdminCommand(
         val battle = active.battles.singleOrNull { it.id == battleId }
             ?: return error(sender, "Battle $battleId does not exist in the active season")
         val participants = active.battleParticipants[battle.id].orEmpty()
+        val combatState = active.battleCombatStates[battle.id]
+        val combatants = active.battleCombatants[battle.id].orEmpty()
+        val aliveCombatants = combatants.count { !it.isEliminated }
         val surrender = active.battleSurrenders[battle.id]
         info(
             sender,
             "Battle ${battle.id}: war=${battle.warId}; " +
                 "attacker=${battle.attackingCivilizationId}; " +
                 "defender=${battle.defendingCivilizationId}; status=${battle.status}; " +
-                "participants=${participants.size}; startedAt=${battle.startedAt}; " +
+                "participants=${participants.size}; combatants=${combatants.size}; " +
+                "alive=$aliveCombatants; lives=${combatState?.rules?.livesPerCombatant}; " +
+                "combatResolution=${combatState?.resolutionCause}; " +
+                "combatOutcome=${combatState?.requestedOutcome}; startedAt=${battle.startedAt}; " +
                 "endsAt=${battle.endsAt}; resolvingAt=${battle.resolvingAt}; " +
                 "endedAt=${battle.endedAt}; outcome=${battle.outcome}; " +
                 if (surrender == null) {

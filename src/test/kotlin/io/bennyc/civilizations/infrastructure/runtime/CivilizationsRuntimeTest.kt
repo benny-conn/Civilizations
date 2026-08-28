@@ -14,6 +14,9 @@ import io.bennyc.civilizations.application.protection.ProtectionDecision
 import io.bennyc.civilizations.application.support.SequentialIdGenerator
 import io.bennyc.civilizations.application.support.playerId
 import io.bennyc.civilizations.application.war.DeclareWar
+import io.bennyc.civilizations.application.war.BattleCombatEnrollment
+import io.bennyc.civilizations.application.war.BattleLifeLoss
+import io.bennyc.civilizations.application.war.RecordBattleLifeLosses
 import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.civilization.CivilizationName
 import io.bennyc.civilizations.domain.civilization.CivilizationStatus
@@ -31,6 +34,8 @@ import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.BattleStatus
+import io.bennyc.civilizations.domain.war.BattleCombatRulesSnapshot
+import io.bennyc.civilizations.domain.war.BattleLifeEventId
 import io.bennyc.civilizations.infrastructure.persistence.jdbc.JdbcCivilizationsRepository
 import io.bennyc.civilizations.infrastructure.persistence.jdbc.SchemaMigrator
 import io.bennyc.civilizations.infrastructure.persistence.jdbc.SqliteConnectionFactory
@@ -63,7 +68,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(8, started.migration.currentVersion)
+            assertEquals(9, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -230,7 +235,15 @@ class CivilizationsRuntimeTest {
                 declared
             }
             val battleOutcome = runtime.submitAwait {
-                wars.startBattleFromEntry(war.id, playerId(2), southClaim.id)
+                wars.startBattleFromEntry(
+                    war.id,
+                    playerId(2),
+                    southClaim.id,
+                    BattleCombatEnrollment(
+                        BattleCombatRulesSnapshot(livesPerCombatant = 1),
+                        setOf(playerId(1), playerId(2), playerId(3), playerId(4)),
+                    ),
+                )
             }.awaitCompleted()
             val battle = battleOutcome.appliedValue().battle
             val live = assertNotNull(battleOutcome.state.activeSeason)
@@ -334,6 +347,36 @@ class CivilizationsRuntimeTest {
                 runtime.state,
                 "Journal-only writes must not rebuild the full gameplay snapshot",
             )
+            val eliminated = runtime.submitAwait {
+                combat.recordLifeLosses(
+                    RecordBattleLifeLosses(
+                        battle.id,
+                        listOf(
+                            BattleLifeLoss(
+                                BattleLifeEventId(UUID(9, 1)),
+                                playerId(2),
+                            ),
+                        ),
+                    ),
+                )
+            }.awaitCompleted()
+            val eliminatedLive = assertNotNull(eliminated.state.activeSeason)
+            assertNull(
+                eliminatedLive.authorizeBattleBlockMutation(
+                    playerId(2),
+                    PlayerProtectionAction.BLOCK_BREAK,
+                    BlockPosition2D(world, 40, 8),
+                ),
+                "Elimination must remove the player's battle destruction capability",
+            )
+            assertNotNull(
+                eliminatedLive.authorizeBattleBlockMutation(
+                    playerId(1),
+                    PlayerProtectionAction.BLOCK_BREAK,
+                    BlockPosition2D(world, 40, 8),
+                ),
+                "The remaining attacker must retain battle capability",
+            )
             runtime.close()
 
             val restarted = database.runtime(clock = mutableClock)
@@ -352,7 +395,7 @@ class CivilizationsRuntimeTest {
                     claimId = southClaim.id,
                     position = BlockPosition3D(world, 40, 72, 8),
                     observedState = SimpleBlockSnapshot("minecraft:air"),
-                    actorId = playerId(2),
+                    actorId = playerId(1),
                     cause = BlockMutationCause.PLAYER_PLACE,
                 ),
             ).awaitCompleted()

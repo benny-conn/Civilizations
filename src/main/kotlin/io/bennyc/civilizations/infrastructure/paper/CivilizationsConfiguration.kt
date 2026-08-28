@@ -9,6 +9,7 @@ import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.civilization.MembershipRole
 import io.bennyc.civilizations.domain.economy.CurrencyScale
 import io.bennyc.civilizations.domain.war.WarRulesSnapshot
+import io.bennyc.civilizations.domain.war.BattleCombatRulesSnapshot
 import org.bukkit.configuration.file.FileConfiguration
 import java.nio.file.Path
 import java.math.BigDecimal
@@ -54,6 +55,7 @@ data class CivilizationsConfiguration(
     val claimRules: ClaimRules,
     val phaseRules: GameplayPhaseRules,
     val warRules: WarRulesSnapshot,
+    val battleCombatRules: BattleCombatRulesSnapshot,
     val battleResolutionRules: BattleResolutionRules,
     val economyRules: EconomyRules,
     val repairRunnerRules: RepairRunnerRules,
@@ -115,6 +117,16 @@ data class CivilizationsConfiguration(
                         require(seconds in 1..WarService.MAX_BATTLE_DURATION_SECONDS) {
                             "gameplay.war.battle-duration-seconds must be between 1 and " +
                                 WarService.MAX_BATTLE_DURATION_SECONDS
+                        }
+                    },
+                ),
+                battleCombatRules = BattleCombatRulesSnapshot(
+                    livesPerCombatant = config.requiredInt(
+                        "gameplay.war.lives-per-combatant",
+                    ).also { lives ->
+                        require(lives in 1..BattleCombatRulesSnapshot.MAX_LIVES_PER_COMBATANT) {
+                            "gameplay.war.lives-per-combatant must be between 1 and " +
+                                BattleCombatRulesSnapshot.MAX_LIVES_PER_COMBATANT
                         }
                     },
                 ),

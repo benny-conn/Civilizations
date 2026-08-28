@@ -1381,5 +1381,282 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        SchemaMigration(
+            version = 9,
+            name = "durable_battle_combat_state",
+            statements = listOf(
+                """
+                CREATE TABLE battle_combat_states (
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT PRIMARY KEY,
+                    lives_per_combatant INTEGER NOT NULL CHECK (
+                        lives_per_combatant BETWEEN 1 AND 10
+                    ),
+                    timeout_outcome TEXT NOT NULL CHECK (
+                        timeout_outcome = 'DEFENDER_VICTORY'
+                    ),
+                    disconnect_policy TEXT NOT NULL CHECK (
+                        disconnect_policy = 'RETAIN_LIFE'
+                    ),
+                    initialized_at_ms INTEGER NOT NULL CHECK (initialized_at_ms >= 0),
+                    resolution_cause TEXT CHECK (resolution_cause IN ('ELIMINATION', 'TIMEOUT')),
+                    requested_outcome TEXT CHECK (
+                        requested_outcome IN (
+                            'ATTACKER_VICTORY', 'DEFENDER_VICTORY', 'DRAW'
+                        )
+                    ),
+                    decided_at_ms INTEGER,
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (
+                        (resolution_cause IS NULL AND requested_outcome IS NULL AND
+                            decided_at_ms IS NULL) OR
+                        (resolution_cause IS NOT NULL AND requested_outcome IS NOT NULL AND
+                            decided_at_ms IS NOT NULL AND decided_at_ms >= initialized_at_ms)
+                    ),
+                    CHECK (
+                        resolution_cause <> 'TIMEOUT' OR requested_outcome = timeout_outcome
+                    ),
+                    FOREIGN KEY (season_id, battle_id)
+                        REFERENCES battles(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX battle_combat_states_by_season
+                ON battle_combat_states(season_id, initialized_at_ms, battle_id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_combat_states_validate_insert
+                BEFORE INSERT ON battle_combat_states
+                WHEN NOT EXISTS (
+                    SELECT 1 FROM battles battle
+                    WHERE battle.id = NEW.battle_id
+                      AND battle.season_id = NEW.season_id
+                      AND battle.status = 'ACTIVE'
+                      AND NEW.initialized_at_ms = battle.started_at_ms
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'combat state requires its newly active battle');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_combat_states_validate_update
+                BEFORE UPDATE ON battle_combat_states
+                WHEN NEW.season_id <> OLD.season_id OR
+                     NEW.battle_id <> OLD.battle_id OR
+                     NEW.lives_per_combatant <> OLD.lives_per_combatant OR
+                     NEW.timeout_outcome <> OLD.timeout_outcome OR
+                     NEW.disconnect_policy <> OLD.disconnect_policy OR
+                     NEW.initialized_at_ms <> OLD.initialized_at_ms OR
+                     OLD.resolution_cause IS NOT NULL OR
+                     NEW.resolution_cause IS NULL OR
+                     NEW.requested_outcome IS NULL OR
+                     NEW.decided_at_ms IS NULL OR
+                     NOT EXISTS (
+                         SELECT 1 FROM battles battle
+                         WHERE battle.id = NEW.battle_id
+                           AND battle.status = 'RESOLVING'
+                     )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid battle combat-state transition');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_combat_states_cannot_be_deleted
+                BEFORE DELETE ON battle_combat_states
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle combat states cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE battle_combatants (
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT NOT NULL,
+                    player_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    side TEXT NOT NULL CHECK (side IN ('ATTACKER', 'DEFENDER')),
+                    initial_lives INTEGER NOT NULL CHECK (initial_lives BETWEEN 1 AND 10),
+                    lives_remaining INTEGER NOT NULL CHECK (
+                        lives_remaining BETWEEN 0 AND initial_lives
+                    ),
+                    enrolled_at_ms INTEGER NOT NULL CHECK (enrolled_at_ms >= 0),
+                    eliminated_at_ms INTEGER,
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(player_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    CHECK (
+                        (lives_remaining = 0 AND eliminated_at_ms IS NOT NULL AND
+                            eliminated_at_ms >= enrolled_at_ms) OR
+                        (lives_remaining > 0 AND eliminated_at_ms IS NULL)
+                    ),
+                    PRIMARY KEY (battle_id, player_id),
+                    FOREIGN KEY (battle_id)
+                        REFERENCES battle_combat_states(battle_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (battle_id, player_id)
+                        REFERENCES battle_participants(battle_id, player_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX battle_combatants_by_side
+                ON battle_combatants(battle_id, side, lives_remaining, player_id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_combatants_validate_insert
+                BEFORE INSERT ON battle_combatants
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM battle_combat_states state
+                    JOIN battle_participants participant
+                      ON participant.battle_id = NEW.battle_id
+                     AND participant.player_id = NEW.player_id
+                    JOIN battles battle ON battle.id = NEW.battle_id
+                    WHERE state.battle_id = NEW.battle_id
+                      AND state.season_id = NEW.season_id
+                      AND participant.season_id = NEW.season_id
+                      AND participant.civilization_id = NEW.civilization_id
+                      AND participant.side = NEW.side
+                      AND battle.status = 'ACTIVE'
+                      AND state.lives_per_combatant = NEW.initial_lives
+                      AND NEW.lives_remaining = NEW.initial_lives
+                      AND NEW.enrolled_at_ms = state.initialized_at_ms
+                      AND NEW.eliminated_at_ms IS NULL
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'combatant does not match the battle enrollment');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_combatants_validate_update
+                BEFORE UPDATE ON battle_combatants
+                WHEN NEW.season_id <> OLD.season_id OR
+                     NEW.battle_id <> OLD.battle_id OR
+                     NEW.player_id <> OLD.player_id OR
+                     NEW.civilization_id <> OLD.civilization_id OR
+                     NEW.side <> OLD.side OR
+                     NEW.initial_lives <> OLD.initial_lives OR
+                     NEW.enrolled_at_ms <> OLD.enrolled_at_ms OR
+                     OLD.lives_remaining = 0 OR
+                     NEW.lives_remaining <> OLD.lives_remaining - 1 OR
+                     (NEW.lives_remaining = 0 AND NEW.eliminated_at_ms IS NULL) OR
+                     (NEW.lives_remaining > 0 AND NEW.eliminated_at_ms IS NOT NULL)
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid battle combatant life transition');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_combatants_cannot_be_deleted
+                BEFORE DELETE ON battle_combatants
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle combatants cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE battle_life_events (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT NOT NULL,
+                    player_id TEXT NOT NULL,
+                    lives_before INTEGER NOT NULL CHECK (lives_before > 0),
+                    lives_after INTEGER NOT NULL CHECK (lives_after >= 0),
+                    recorded_at_ms INTEGER NOT NULL CHECK (recorded_at_ms >= 0),
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(player_id) = 36),
+                    CHECK (lives_after = lives_before - 1),
+                    FOREIGN KEY (battle_id, player_id)
+                        REFERENCES battle_combatants(battle_id, player_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX battle_life_events_by_battle
+                ON battle_life_events(battle_id, recorded_at_ms, id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_life_events_validate_insert
+                BEFORE INSERT ON battle_life_events
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM battle_combatants combatant
+                    JOIN battles battle ON battle.id = NEW.battle_id
+                    WHERE combatant.battle_id = NEW.battle_id
+                      AND combatant.player_id = NEW.player_id
+                      AND combatant.season_id = NEW.season_id
+                      AND combatant.lives_remaining = NEW.lives_after
+                      AND NEW.recorded_at_ms >= battle.started_at_ms
+                      AND NEW.recorded_at_ms < battle.ends_at_ms
+                      AND battle.status = 'ACTIVE'
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle life event does not match current combat state');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_life_events_are_immutable
+                BEFORE UPDATE ON battle_life_events
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle life events are immutable');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_life_events_cannot_be_deleted
+                BEFORE DELETE ON battle_life_events
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle life events cannot be deleted');
+                END
+                """.trimIndent(),
+                "DROP TRIGGER battle_block_changes_validate_insert",
+                """
+                CREATE TRIGGER battle_block_changes_validate_insert
+                BEFORE INSERT ON battle_block_changes
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM battles battle
+                    JOIN seasons season ON season.id = NEW.season_id
+                    JOIN claims claim ON claim.id = NEW.claim_id
+                    JOIN battle_participants participant
+                      ON participant.battle_id = NEW.battle_id
+                     AND participant.player_id = NEW.first_actor_id
+                    WHERE battle.id = NEW.battle_id
+                      AND battle.season_id = NEW.season_id
+                      AND battle.status = 'ACTIVE'
+                      AND NEW.recorded_at_ms >= battle.started_at_ms
+                      AND NEW.recorded_at_ms < battle.ends_at_ms
+                      AND season.status = 'WAR'
+                      AND claim.season_id = NEW.season_id
+                      AND claim.civilization_id IN (
+                          battle.attacking_civilization_id,
+                          battle.defending_civilization_id
+                      )
+                      AND claim.world_id = NEW.world_id
+                      AND NEW.block_x BETWEEN claim.min_x AND claim.max_x
+                      AND NEW.block_z BETWEEN claim.min_z AND claim.max_z
+                      AND participant.civilization_id IN (
+                          battle.attacking_civilization_id,
+                          battle.defending_civilization_id
+                      )
+                      AND (
+                          NOT EXISTS (
+                              SELECT 1 FROM battle_combat_states state
+                              WHERE state.battle_id = NEW.battle_id
+                          ) OR EXISTS (
+                              SELECT 1 FROM battle_combatants combatant
+                              WHERE combatant.battle_id = NEW.battle_id
+                                AND combatant.player_id = NEW.first_actor_id
+                                AND combatant.lives_remaining > 0
+                          )
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'block change is not valid for the active battle');
+                END
+                """.trimIndent(),
+            ),
+        ),
     )
 }

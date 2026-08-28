@@ -39,6 +39,7 @@ class CivilizationsConfigurationTest {
                 loaded.phaseRules.memberLandActionsAllowedIn,
             )
             assertEquals(1_800, loaded.warRules.battleDurationSeconds)
+            assertEquals(1, loaded.battleCombatRules.livesPerCombatant)
             assertEquals(200, loaded.battleResolutionRules.observationsPerTick)
             assertEquals(CurrencyScale(2), loaded.economyRules.currencyScale)
             assertEquals(MoneyAmount.ZERO, loaded.economyRules.openingCivilizationBalance)
@@ -116,6 +117,19 @@ class CivilizationsConfigurationTest {
         }
 
         assertContains(failure.message.orEmpty(), "gameplay.war.battle-duration-seconds")
+    }
+
+    @Test
+    fun `battle combat lives are path-validated`() {
+        val override = load(
+            validYaml.replace("lives-per-combatant: 1", "lives-per-combatant: 3"),
+        )
+        assertEquals(3, override.battleCombatRules.livesPerCombatant)
+
+        val failure = assertFailsWith<IllegalArgumentException> {
+            load(validYaml.replace("lives-per-combatant: 1", "lives-per-combatant: 0"))
+        }
+        assertContains(failure.message.orEmpty(), "gameplay.war.lives-per-combatant")
     }
 
     @Test
@@ -218,6 +232,7 @@ class CivilizationsConfigurationTest {
                 member-land-actions: [SETUP, PEACE, WAR]
               war:
                 battle-duration-seconds: 1800
+                lives-per-combatant: 1
                 resolution-observations-per-tick: 200
             economy:
               currency-scale: 2

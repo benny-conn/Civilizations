@@ -28,6 +28,9 @@ gameplay:
   war:
     # Snapshotted into each declaration; changes affect future wars after restart.
     battle-duration-seconds: 1800
+    # Online, permitted members enrolled when a battle starts receive this many lives.
+    # Disconnecting retains a life; an external combat logger may turn it into a death.
+    lives-per-combatant: 1
     # Performance budget only: maximum journal coordinates observed in one server
     # tick while sealing a resolving battle's immutable damage report.
     resolution-observations-per-tick: 200

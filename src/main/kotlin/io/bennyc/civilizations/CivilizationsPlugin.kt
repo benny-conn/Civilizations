@@ -104,7 +104,12 @@ class CivilizationsPlugin : JavaPlugin() {
         )
         protectionListener = PaperProtectionListener(runtime, server, logger)
         server.pluginManager.registerEvents(protectionListener, this)
-        battleEntryListener = PaperBattleEntryListener(runtime, server, logger)
+        battleEntryListener = PaperBattleEntryListener(
+            runtime,
+            server,
+            logger,
+            runtimeConfiguration.battleCombatRules,
+        )
         server.pluginManager.registerEvents(battleEntryListener, this)
         runtime.start { outcome ->
             when (outcome) {

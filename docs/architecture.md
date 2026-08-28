@@ -60,6 +60,13 @@ defaults are `0`, `1`, `1`, `25%`, and leader-only. A repair job snapshots the e
 economic rules when it is created so a later restart or configuration edit cannot change
 its price or proceeds.
 
+Season One battle combat follows the same snapshot rule. YAML controls lives per enrolled
+combatant, defaulting to one and bounded from one through ten. The battle combat record
+also freezes defender victory at timeout and `RETAIN_LIFE` disconnect behavior. Those two
+values are lifecycle policy rather than live plugin-integration settings: an external
+combat logger may produce a real death consequence, but disconnect alone never rewrites
+Civilizations state.
+
 Civilizations owns civilization money as exact fixed-point SQL balances. Schema migration
 7 creates one account per civilization, immutable ledger transaction headers and postings,
 and balance-application triggers inside the same database transaction. Caller-supplied
@@ -123,7 +130,7 @@ The persistence boundary lives under `application.persistence`; JDBC is an imple
 
 - `CivilizationsRepository` exposes scoped read contexts and atomic write transactions. Application code does not receive JDBC connections or SQL types.
 - Schema changes are ordered, named, and recorded in `schema_migrations`. Startup refuses unknown or renamed migrations instead of guessing.
-- The schema models seasons, civilizations, memberships, claims, wars, timed battles, battle-participant snapshots, immutable block-change journal rows, and sealed per-battle damage reports as separate relational records.
+- The schema models seasons, civilizations, memberships, claims, wars, timed battles, battle-participant snapshots, battle combat rules/combatants/life events, immutable block-change journal rows, and sealed per-battle damage reports as separate relational records.
 - Civilization display names are normalized before storage and unique within a season.
 - Composite foreign keys prevent a membership or claim from referencing a civilization in a different season.
 - The membership primary key permits one civilization per player per season while retaining membership history across seasons.
@@ -165,15 +172,51 @@ force-resolution is an explicit audited recovery operation, not an ordinary vict
 - The rules snapshot records `HOSTILE_CLAIM_ENTRY`, `OPPOSING_CIVILIZATION_CLAIMS`, and the configured battle duration. A horizontal block transition or teleport into a hostile claim starts an eligible battle: the entering side becomes attacker and the entered claim's owner becomes defender.
 - “Battlefield” is not a separate region type. All claim lookup continues through the normal chunk index; the active read model maps each civilization to the opposing civilization's ordinary claim IDs.
 - Both civilization rosters are snapshotted as battle participants when the battle starts. Later membership changes cannot rewrite the historical roster.
+- New schema-9 battles additionally snapshot the eligible online participants as combatants. Each combatant receives the configured lives; enrollment and sides remain immutable.
 - Absolute timestamps, not decrementing task counters, drive expiry. Startup and every runtime refresh idempotently move expired `ACTIVE` battles to `RESOLVING`, which immediately removes their eligibility from live memory.
 - The Paper resolution coordinator also checks those absolute deadlines while the server
   remains online. It bounds live block observations per tick, loads existing chunks
   asynchronously without generation, and serializes its single chunk lease with repair
   world work. A surrender's requested outcome is already durable, so restart recovery can
-  seal and close it automatically. A timeout has no invented winner: its report is sealed
-  while the battle remains `RESOLVING` until an approved ordinary rule or audited admin
-  outcome completes it.
+  seal and close it automatically. New A4 battles likewise persist ordinary elimination
+  outcomes and defender victory at timeout. Older outcome-neutral battles remain
+  `RESOLVING` until an audited admin outcome completes them.
 - The runtime precomputes membership, open-war-pair, open-battle, and active-battle lookups. The Paper entry listener uses only those published values and the claim index on movement/teleport paths, coalesces per-player attempts behind a bounded gate, and submits durable battle start work off-thread. PVP or other destructive capabilities remain disconnected until their own slices define and enforce them.
+
+## Battle combat state
+
+Schema migration 9 separates political participation history from gameplay combat state.
+`battle_participants` remains the full immutable roster. `battle_combat_states` stores the
+effective lives, timeout outcome, disconnect policy, and any ordinary resolution request;
+`battle_combatants` stores the selected participant side and remaining lives; and immutable
+`battle_life_events` make retries safe without consuming a life twice.
+
+The battle-entry Paper adapter selects only members who are online and hold the global
+participation permission when activation begins. The triggering entrant must be selected,
+and both sides require at least one combatant, so an entirely offline defender is not
+auto-defeated. The application transaction activates the war, inserts the battle and full
+participant roster, and inserts the combat snapshot together.
+
+Life losses may be submitted as one simultaneous batch. Outcome calculation uses the
+post-batch state rather than event order: no living defenders means attacker victory, no
+living attackers means defender victory, and both sides losing their final combatant in
+the same batch is a draw. Reaching the absolute deadline requests the snapshotted defender
+victory even with zero players online. Either transition first moves the battle to
+`RESOLVING`, immediately removing live conflict capability; B4 then seals damage and closes
+with the already-durable outcome.
+
+Disconnects have no Civilizations deadline and do not consume a life. A separate combat-log
+plugin can keep a stand-in vulnerable or convert logout to a death. B5 owns the thin Paper
+translation from an ordinary player death or recognized stand-in death to the idempotent
+life-loss operation. This avoids competing timers and keeps a plugin swap from
+reinterpreting durable battle state. The current Paper 26.2 candidate and verification
+contract are documented in [combat-logging.md](combat-logging.md).
+
+Until B5 lands, participant PVP and Paper death/respawn behavior remain protected. A4 does
+publish only living combatants into the existing destruction-capability read model, so an
+eliminated combatant cannot continue journaled building damage after the refreshed snapshot
+is installed. Legacy battles created without a schema-9 combat snapshot retain the former
+participant eligibility and outcome-neutral timeout recovery path.
 
 ## Damage journal
 
@@ -183,7 +226,7 @@ force-resolution is an explicit audited recovery operation, not an ordinary vict
 - Both enemy and owner mutations in either side's land are journalable. This prevents defenders rebuilding during a battle from silently escaping the same pre-battle restoration history.
 - Attacker placement is represented by journaling the replaced state—often `minecraft:air`—before placement. Restoring air later removes the attacker-created block.
 - Rows retain season, battle, claim, first actor/cause/time, and canonical simple block data. They are immutable in SQL and can be read in bounded cursor pages without loading a city's damage into live runtime memory.
-- The service validates an active, unexpired battle, global `WAR` phase, snapshotted participant, claim party, and exact X/Z containment. SQL triggers independently enforce the same durable boundary.
+- The service validates an active, unexpired battle, global `WAR` phase, snapshotted participant, living combatant status when A4 state exists, claim party, and exact X/Z containment. SQL triggers independently enforce the same durable boundary.
 - A prepared result is a single-use handoff, not durable permission. The Paper adapter cancels the original event, prepares the journal off-thread, returns to the server thread, confirms the block still matches the observed state and live battle authorization, then applies at most one mutation. A mismatch aborts rather than overwriting newer world state.
 - `SimpleBlockSnapshot` deliberately excludes block-entity payloads. Season One conflict mutation permits only simple, independently mutable building blocks whose relevant state it fully represents. Containers, signs, banners, lecterns, spawners, beds, every other block entity, and cascading/multi-block mutations remain protected. Entity damage is not part of block destruction and requires its own targeted participant-PVP capability.
 
@@ -242,7 +285,7 @@ because their atomic ledger transaction changes a treasury balance.
 `CivilizationsRuntime` is the owner of runtime state and structured background work.
 
 - Startup migrations and reads run on the storage executor. The plugin remains in a visible `Starting` state until a `Ready` snapshot is published on the server thread.
-- Runtime snapshots contain the active season, civilizations, memberships, wars, battles, participant snapshots, a read-only-by-convention claim index, derived active-battle eligibility, and a protection policy built over those values. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
+- Runtime snapshots contain the active season, civilizations, memberships, wars, battles, participant/combatant snapshots, a read-only-by-convention claim index, derived living-combatant eligibility, and a protection policy built over those values. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
 - Startup verifies that an active season is not archived, every active civilization has exactly one leader, every claim has an active owner, no persisted claims overlap, open wars reference active parties, and open battles/participants match their war and trigger claim. Invalid durable state fails closed with actionable IDs instead of partially enabling gameplay.
 - Mutations submitted before readiness are rejected. Infrastructure failures move the runtime to `Failed` and disable the plugin rather than falling back to another store.
 - Shutdown stops new work and gives the storage executor a bounded drain period. Civilizations no longer cancels scheduler tasks owned by other plugins.

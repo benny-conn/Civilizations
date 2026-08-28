@@ -16,6 +16,9 @@ import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleCombatRulesSnapshot
+import io.bennyc.civilizations.domain.war.BattleCombatState
+import io.bennyc.civilizations.domain.war.BattleCombatant
 import io.bennyc.civilizations.domain.war.BattleId
 import io.bennyc.civilizations.domain.war.BattleOutcome
 import io.bennyc.civilizations.domain.war.BattleParticipant
@@ -155,6 +158,7 @@ class WarService(
         warId: WarId,
         triggeringPlayerId: PlayerId,
         enteredClaimId: ClaimId,
+        combatEnrollment: BattleCombatEnrollment? = null,
     ): ApplicationResult<BattleRoster> = repository.transaction {
         var war = findWar(warId)
             ?: return@transaction ApplicationResult.Rejected(WarNotFound(warId))
@@ -191,7 +195,12 @@ class WarService(
         }
         listBattlesForWar(warId).firstOrNull { it.status.isOpen }?.let { existing ->
             return@transaction ApplicationResult.Unchanged(
-                BattleRoster(existing, listBattleParticipants(existing.id)),
+                BattleRoster(
+                    battle = existing,
+                    participants = listBattleParticipants(existing.id),
+                    combatState = findBattleCombatState(existing.id),
+                    combatants = listBattleCombatants(existing.id),
+                ),
             )
         }
 
@@ -211,6 +220,31 @@ class WarService(
                     CivilizationAlreadyInOpenBattle(civilizationId, existing.id),
                 )
             }
+        }
+
+        val selectedCombatants = combatEnrollment?.let { enrollment ->
+            val rostersByPlayer = (attackingRoster + defendingRoster)
+                .associateBy { it.playerId }
+            if (triggeringPlayerId !in enrollment.playerIds) {
+                return@transaction ApplicationResult.Rejected(
+                    BattleTriggerMustBeCombatant(triggeringPlayerId),
+                )
+            }
+            val unknown = enrollment.playerIds.firstOrNull { it !in rostersByPlayer }
+            if (unknown != null) {
+                return@transaction ApplicationResult.Rejected(
+                    BattleCombatantNotInRoster(unknown),
+                )
+            }
+            val selected = enrollment.playerIds.map { rostersByPlayer.getValue(it) }
+            listOf(entrant.civilizationId, defendingCivilizationId).forEach { civilizationId ->
+                if (selected.none { it.civilizationId == civilizationId }) {
+                    return@transaction ApplicationResult.Rejected(
+                        BattleCombatantSideEmpty(civilizationId),
+                    )
+                }
+            }
+            selected
         }
 
         val now = clock.instant()
@@ -271,7 +305,41 @@ class WarService(
         }
         insertBattle(battle)
         participants.forEach(::insertBattleParticipant)
-        ApplicationResult.Applied(BattleRoster(battle, participants))
+        val combatState = combatEnrollment?.let { enrollment ->
+            BattleCombatState(
+                seasonId = battle.seasonId,
+                battleId = battle.id,
+                rules = enrollment.rules,
+                initializedAt = now,
+                resolutionCause = null,
+                requestedOutcome = null,
+                decidedAt = null,
+            ).also(::insertBattleCombatState)
+        }
+        val combatants = if (combatState == null) {
+            emptyList()
+        } else {
+            selectedCombatants.orEmpty().map { membership ->
+                BattleCombatant(
+                    seasonId = battle.seasonId,
+                    battleId = battle.id,
+                    playerId = membership.playerId,
+                    civilizationId = membership.civilizationId,
+                    side = if (membership.civilizationId == battle.attackingCivilizationId) {
+                        BattleSide.ATTACKER
+                    } else {
+                        BattleSide.DEFENDER
+                    },
+                    initialLives = combatState.rules.livesPerCombatant,
+                    livesRemaining = combatState.rules.livesPerCombatant,
+                    enrolledAt = now,
+                    eliminatedAt = null,
+                ).also(::insertBattleCombatant)
+            }
+        }
+        ApplicationResult.Applied(
+            BattleRoster(battle, participants, combatState, combatants),
+        )
     }
 
     /**
@@ -602,7 +670,18 @@ data class DeclareWar(
 data class BattleRoster(
     val battle: Battle,
     val participants: List<BattleParticipant>,
+    val combatState: BattleCombatState? = null,
+    val combatants: List<BattleCombatant> = emptyList(),
 )
+
+data class BattleCombatEnrollment(
+    val rules: BattleCombatRulesSnapshot,
+    val playerIds: Set<PlayerId>,
+) {
+    init {
+        require(playerIds.isNotEmpty()) { "Battle combat enrollment cannot be empty" }
+    }
+}
 
 data class SurrenderBattle(
     val seasonId: SeasonId,
@@ -719,6 +798,23 @@ data class EntryIsNotOpponentLand(
 data class BattleRosterEmpty(val civilizationId: CivilizationId) : ApplicationFailure {
     override val description: String =
         "Civilization $civilizationId has no roster to snapshot for battle"
+}
+
+data class BattleCombatantNotInRoster(val playerId: PlayerId) : ApplicationFailure {
+    override val description: String =
+        "Player $playerId cannot become a combatant because they are not in the battle roster"
+}
+
+data class BattleTriggerMustBeCombatant(val playerId: PlayerId) : ApplicationFailure {
+    override val description: String =
+        "Triggering player $playerId must be enrolled as a battle combatant"
+}
+
+data class BattleCombatantSideEmpty(
+    val civilizationId: CivilizationId,
+) : ApplicationFailure {
+    override val description: String =
+        "Civilization $civilizationId needs at least one eligible online combatant"
 }
 
 data class CivilizationAlreadyInOpenBattle(
