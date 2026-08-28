@@ -71,6 +71,10 @@ Operators have the explicit `civilizations.admin.bypass` permission. Ordinary me
 
 The repository includes a reproducible development server workflow. Server binaries, worlds, logs, plugin data, and configuration live in the ignored `server/` directory at the repository root.
 
+The end-to-end operator and player procedure is documented in
+[docs/manual-playtest.md](docs/manual-playtest.md). It includes restart checkpoints,
+expected current limitations, and the repair path for battles with sealed reports.
+
 Set it up without starting it:
 
 ```bash
