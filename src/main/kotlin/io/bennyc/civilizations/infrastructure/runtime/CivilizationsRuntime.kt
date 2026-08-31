@@ -837,12 +837,83 @@ data class ActiveSeasonRuntimeState(
             }
         }
     }
+    private val activeBattleCombatantByPlayer = buildMap {
+        for (eligibility in activeBattleEligibility) {
+            if (eligibility.combatState == null) continue
+            for (combatant in eligibility.combatants) {
+                if (combatant.isEliminated) continue
+                require(put(combatant.playerId, eligibility to combatant) == null) {
+                    "Player ${combatant.playerId} is a living combatant in more than one battle"
+                }
+            }
+        }
+    }
 
     fun membershipOf(playerId: PlayerId): Membership? = membershipByPlayer[playerId]
 
     fun activeBattleAt(target: BlockPosition2D): Battle? {
         val claim = claimIndex.claimAt(target) ?: return null
         return activeBattleByCivilization[claim.civilizationId]
+    }
+
+    /** Returns one enrolled, living combatant without touching durable storage. */
+    fun activeBattleCombatant(playerId: PlayerId): ActiveBattleCombatantRuntimeState? {
+        val (eligibility, combatant) = activeBattleCombatantByPlayer[playerId] ?: return null
+        return ActiveBattleCombatantRuntimeState(eligibility.battle, combatant)
+    }
+
+    /**
+     * Grants claim-scoped PVP only between living combatants on opposite sides of the
+     * same active battle. The global WAR phase and exact target are rechecked by the
+     * central protection policy before the capability is returned.
+     */
+    fun authorizeBattlePvp(
+        actorId: PlayerId,
+        targetPlayerId: PlayerId,
+        target: BlockPosition2D,
+    ): ActiveBattlePvpAuthorization? {
+        val (actorEligibility, actor) = activeBattleCombatantByPlayer[actorId] ?: return null
+        val (targetEligibility, targetCombatant) =
+            activeBattleCombatantByPlayer[targetPlayerId] ?: return null
+        if (actorEligibility.battle.id != targetEligibility.battle.id ||
+            actor.side == targetCombatant.side
+        ) {
+            return null
+        }
+        val claim = claimIndex.claimAt(target) ?: return null
+        if (claim.civilizationId != actorEligibility.battle.attackingCivilizationId &&
+            claim.civilizationId != actorEligibility.battle.defendingCivilizationId
+        ) {
+            return null
+        }
+        val conflict = ConflictAuthorization.Active(
+            kind = ConflictKind.WAR,
+            actorId = actorId,
+            eligibleClaimIds = setOf(claim.id),
+            allowedActions = setOf(PlayerProtectionAction.PVP),
+            targetPlayerIds = setOf(targetPlayerId),
+        )
+        val decision = protection.decidePlayerAction(
+            PlayerProtectionRequest(
+                actorId = actorId,
+                action = PlayerProtectionAction.PVP,
+                target = target,
+                targetPlayerId = targetPlayerId,
+                conflictAuthorization = conflict,
+            ),
+        )
+        if (decision !is ProtectionDecision.Allowed ||
+            decision.reason != ProtectionReason.CONFLICT_OVERRIDE
+        ) {
+            return null
+        }
+        return ActiveBattlePvpAuthorization(
+            battleId = actorEligibility.battle.id,
+            claimId = claim.id,
+            actorId = actorId,
+            targetPlayerId = targetPlayerId,
+            target = target,
+        )
     }
 
     /** Resolves an opposing-claim entry entirely from the published hot-path state. */
@@ -958,9 +1029,22 @@ data class ActiveBattleBlockMutationAuthorization(
     val target: BlockPosition2D,
 )
 
+data class ActiveBattleCombatantRuntimeState(
+    val battle: Battle,
+    val combatant: BattleCombatant,
+)
+
+data class ActiveBattlePvpAuthorization(
+    val battleId: BattleId,
+    val claimId: ClaimId,
+    val actorId: PlayerId,
+    val targetPlayerId: PlayerId,
+    val target: BlockPosition2D,
+)
+
 /**
- * Published combat eligibility. B1 consumes only its simple break/place subset;
- * participant PVP, battle entry, and other combat behavior remain separate adapters.
+ * Published combat eligibility. B1 consumes its simple break/place subset and B5 derives
+ * exact actor/target PVP from living combatants; other combat behavior remains separate.
  */
 data class ActiveBattleEligibilityRuntimeState(
     val war: War,

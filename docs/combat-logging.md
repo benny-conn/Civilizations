@@ -3,7 +3,7 @@
 Civilizations deliberately does not implement a second disconnect timer. A battle
 combatant who disconnects keeps the same durable remaining-life count. A server-provided
 combat-logging plugin may keep the player vulnerable, spawn a killable stand-in, or turn
-the logout into a death. B5 should translate that plugin's authoritative death consequence
+the logout into a death. B5 translates that plugin's authoritative death consequence
 into the same idempotent Civilizations life-loss operation used for an ordinary
 `PlayerDeathEvent`.
 
@@ -19,6 +19,15 @@ candidate for the test server. Its current release explicitly targets Paper 26.2
 killable persistent combat-log NPC, and exposes the original player's UUID on that NPC via
 the `battlelock:combat_log_player_id` persistent-data key. That gives B5 a dependency-free
 way to recognize an NPC death and attribute the battle life loss to the enrolled player.
+Civilizations has no BattleLock binary dependency: it reads that one documented marker and
+uses the stand-in entity UUID to derive a stable life-event ID. In either party's claimed
+battle land, a living owner's proxy can be damaged only by a living opponent from the same
+battle. Outside that land, the server's ordinary wilderness/claim entity policy remains in
+force. This is not a generic claimed-land villager/entity damage grant.
+BattleLock 1.8 removes the proxy from its own lethal-damage callback, so Civilizations
+marks the hit after exact protection authorization, captures it only if still uncancelled
+at `MONITOR`, and retains `EntityDeathEvent` as an idempotent fallback for environmental or
+alternate removal paths.
 
 [PvPManager](https://github.com/ChanceSD/PvPManager) is the more established fallback and
 publishes a developer API plus configurable logout-kill behavior. Its current public
@@ -38,3 +47,14 @@ not reinterpret combatants, lives, eliminations, or already-requested outcomes.
 - Eliminated players lose battle PVP and destruction capability after the refreshed runtime
   snapshot publishes.
 - Plugin/server restart does not discard a stand-in penalty or a Civilizations elimination.
+
+The implementation also preserves vanilla death, drops, and respawn selection. It adds no
+Civilizations respawn countdown and no spectator camera. A final-life death suppresses that
+player's battle capabilities while storage is still pending; after publication, the
+durable eliminated state continues to deny PVP and journaled block mutation.
+
+The B5 isolated server checkpoint co-loaded Civilizations with reviewed BattleLock `1.8`
+(`a67cd459fbee85f6e26072f282340499735547b2b9930fa41cdb2ad805dec505`) on Paper 26.2
+build 112, reached ready state, shut down cleanly, and restarted with the same database.
+The upcoming human playtest still owns the multi-client hit, logout, stand-in kill,
+inventory, and reconnect checks listed above.

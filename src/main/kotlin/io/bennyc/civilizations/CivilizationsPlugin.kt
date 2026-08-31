@@ -8,6 +8,7 @@ import io.bennyc.civilizations.infrastructure.paper.economy.VaultEconomyBootstra
 import io.bennyc.civilizations.infrastructure.paper.protection.PaperProtectionListener
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
+import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleCombatListener
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionCoordinator
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeStartOutcome
@@ -20,6 +21,7 @@ class CivilizationsPlugin : JavaPlugin() {
     private lateinit var runtime: CivilizationsRuntime
     private lateinit var protectionListener: PaperProtectionListener
     private lateinit var battleEntryListener: PaperBattleEntryListener
+    private lateinit var battleCombatListener: PaperBattleCombatListener
     private lateinit var battleResolutionCoordinator: PaperBattleResolutionCoordinator
     private lateinit var repairCoordinator: PaperRepairCoordinator
 
@@ -102,7 +104,21 @@ class CivilizationsPlugin : JavaPlugin() {
                 battleResolutionCoordinator = battleResolutionCoordinator,
             ),
         )
-        protectionListener = PaperProtectionListener(runtime, server, logger)
+        battleCombatListener = PaperBattleCombatListener(
+            plugin = this,
+            runtime = runtime,
+            server = server,
+            logger = logger,
+            resolutionCoordinator = battleResolutionCoordinator,
+        )
+        server.pluginManager.registerEvents(battleCombatListener, this)
+        protectionListener = PaperProtectionListener(
+            runtime,
+            server,
+            logger,
+            battleCombatListener::isCapabilitySuppressed,
+            battleCombatListener::markAuthorizedBattleLockLethalDamage,
+        )
         server.pluginManager.registerEvents(protectionListener, this)
         battleEntryListener = PaperBattleEntryListener(
             runtime,
@@ -132,6 +148,10 @@ class CivilizationsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::battleCombatListener.isInitialized) {
+            logger.info("Battle combat metrics: ${battleCombatListener.metricsSummary()}")
+            battleCombatListener.close()
+        }
         if (::battleResolutionCoordinator.isInitialized) {
             logger.info(
                 "Battle resolution metrics: ${battleResolutionCoordinator.metricsSummary()}",

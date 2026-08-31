@@ -278,6 +278,46 @@ class CivilizationsRuntimeTest {
                 ),
                 "Owner changes in battle land must also enter the journal bridge",
             )
+            assertEquals(
+                battle.id,
+                assertNotNull(
+                    live.authorizeBattlePvp(
+                        playerId(2),
+                        playerId(3),
+                        BlockPosition2D(world, 40, 8),
+                    ),
+                ).battleId,
+                "Opposing living combatants should receive exact claimed-land PVP",
+            )
+            assertNotNull(
+                live.authorizeBattlePvp(
+                    playerId(3),
+                    playerId(2),
+                    BlockPosition2D(world, 8, 8),
+                ),
+                "Either side's claimed battle land should support targeted PVP",
+            )
+            assertNull(
+                live.authorizeBattlePvp(
+                    playerId(1),
+                    playerId(2),
+                    BlockPosition2D(world, 40, 8),
+                ),
+                "Friendly fire must not receive a battle capability",
+            )
+            assertNull(
+                live.authorizeBattlePvp(
+                    playerId(2),
+                    playerId(3),
+                    BlockPosition2D(world, 80, 8),
+                ),
+                "Wilderness PVP remains vanilla rather than a battle capability",
+            )
+            assertEquals(
+                1,
+                assertNotNull(live.activeBattleCombatant(playerId(2)))
+                    .combatant.livesRemaining,
+            )
             assertNull(
                 live.authorizeBattleBlockMutation(
                     playerId(99),
@@ -369,6 +409,23 @@ class CivilizationsRuntimeTest {
                 ),
                 "Elimination must remove the player's battle destruction capability",
             )
+            assertNull(
+                eliminatedLive.authorizeBattlePvp(
+                    playerId(2),
+                    playerId(3),
+                    BlockPosition2D(world, 40, 8),
+                ),
+                "An eliminated actor must lose targeted PVP",
+            )
+            assertNull(
+                eliminatedLive.authorizeBattlePvp(
+                    playerId(3),
+                    playerId(2),
+                    BlockPosition2D(world, 40, 8),
+                ),
+                "An eliminated target must not remain attackable through battle PVP",
+            )
+            assertNull(eliminatedLive.activeBattleCombatant(playerId(2)))
             assertNotNull(
                 eliminatedLive.authorizeBattleBlockMutation(
                     playerId(1),
@@ -376,6 +433,14 @@ class CivilizationsRuntimeTest {
                     BlockPosition2D(world, 40, 8),
                 ),
                 "The remaining attacker must retain battle capability",
+            )
+            assertNotNull(
+                eliminatedLive.authorizeBattlePvp(
+                    playerId(1),
+                    playerId(3),
+                    BlockPosition2D(world, 40, 8),
+                ),
+                "Other opposing living combatants must retain targeted PVP",
             )
             runtime.close()
 

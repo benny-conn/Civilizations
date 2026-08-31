@@ -36,13 +36,13 @@ Branches in different lanes may proceed together when their port contract alread
 | B3 | `benny/paper-repair-runner` | Paper integration | A3, B1 | Repair status/start and admin lifecycle commands; bounded server-thread repair batches; compare-before-repair conflict skips that preserve manual rebuilding; pause/resume; optional cosmetic hooks; real-Paper restart verification. | Complete |
 | B4 | `benny/battle-resolution-coordinator` | Paper integration | B3 | Bounded Paper observation of a resolving battle's journal, immutable damage-report sealing, then closure with an already-explicit surrender/admin outcome. Preserve restart-safe `RESOLVING` state and do not invent the ordinary timeout winner. | Complete |
 | A4 | `benny/battle-combat-state` | Durable feature | B4, approved Season One combat rules | Durable online combatant enrollment separate from political history, snapshotted lives, idempotent elimination events, defender-at-deadline resolution, and disconnect-retains-life compatibility with an external combat logger. | Complete |
-| B5 | `benny/paper-battle-combat` | Paper integration | A4 | Targeted living-combatant PVP, Paper death/respawn enforcement, external combat-logger player/NPC death translation, and bounded teammate-view UX if approved. | Ready |
+| B5 | `benny/paper-battle-combat` | Paper integration | A4 | Targeted living-combatant PVP, same-tick Paper death batching, normal respawn/elimination messaging, and dependency-free BattleLock stand-in death translation. Teammate viewing remains deferred. | Complete |
 | A5 | `benny/battle-casualty-economics` | Durable feature | A2, A4, approved casualty prices | Immutable idempotent casualty records and civilization treasury sink charges with attacker/defender prices snapshotted per battle. | Decision blocked |
 | D1 | `feature/repair-inventory-gui` | Paper integration | B3 | Inventory GUI over the same repair status/start services, showing actual completion, remaining repairable work, conflicts, price, and victor share. No menu-owned policy. | Later UX follow-up |
 
 ### Work that can start now
 
-A4 now gives new battles durable ordinary elimination and defender-timeout outcomes, while B4 seals their damage reports before closure. B5 is the next gameplay feature: targeted PVP plus Paper death/respawn and combat-logger integration. A5 remains blocked on exact casualty prices. C1 and the remaining C2 automation are independent operations items, and D1 is the later command-to-inventory repair UX follow-up.
+The first playable combat/reconstruction loop is now connected through B5: targeted PVP and authoritative Paper/BattleLock deaths feed A4, while B4 seals damage before closure and B3 performs paid repair. A5 remains blocked on exact casualty prices. C1 and the remaining C2 automation are independent operations items, and D1 is the next unblocked player-facing feature follow-up.
 
 A3 snapshots A2's validated repair-economics values into each durable job and uses one idempotent ledger transaction for payment and proceeds. B3 must preserve that application boundary: it supplies bounded current-world observations and executes persisted items, but does not recalculate price or select work in Paper code. The removed legacy frameworks and object graph are not available as implementation shortcuts.
 
@@ -56,14 +56,13 @@ A3 snapshots A2's validated repair-economics values into each durable job and us
 - MVP battle destruction is limited to simple, independently mutable, non-block-entity building blocks. Containers, all other block entities, non-player entities, and cascading changes remain protected.
 - Disconnected land is modeled as explicit claim groups with configurable limits, establishment costs, and progression thresholds rather than a connectivity bypass.
 - External economy plugins remain authoritative for player wallets through Vault; Civilizations SQL is authoritative for civilization treasuries. Deposits withdraw a player only after a durable prepare record, withdrawals reserve the treasury before player credit, and any indeterminate result is reconciled rather than automatically retried.
-- A battle snapshots eligible online, globally permitted members as its combatants while retaining the full political roster for history. Combatants receive configurable lives (default one); final-life elimination removes their battle capability, eliminating a side wins, simultaneous final elimination draws, and defenders win at timeout. Disconnect alone retains the life. An external combat logger may produce an ordinary player death or killable stand-in death, which B5 must translate idempotently rather than running a second Civilizations grace timer.
+- A battle snapshots eligible online, globally permitted members as its combatants while retaining the full political roster for history. Combatants receive configurable lives (default one); final-life elimination removes their battle capability, eliminating a side wins, simultaneous final elimination draws, and defenders win at timeout. Disconnect alone retains the life. An external combat logger may produce an ordinary player death or killable stand-in death, which B5 translates idempotently rather than running a second Civilizations grace timer.
 
 ## Product decisions that still block code
 
 These are deliberately decisions, not invitations for an implementation agent to invent game design:
 
 - the exact economic relationship among casualty charges, battle outcome, and any future spoils outside the settled repair-payment share;
-- whether B5 should ship teammate-locked spectating after elimination; unrestricted spectator free-camera remains disallowed;
 - Season One defaults for claim-group limits, founding costs, and progression thresholds;
 - the initial set of global LuckPerms-gated player commands; civilization-scoped custom roles remain a post-MVP plugin-owned feature.
 
@@ -72,3 +71,5 @@ An agent may model a neutral mechanism behind a port, but must not choose these 
 ## Later parallel tracks
 
 After the MVP loop is complete, separate worktrees can take the D1 repair inventory GUI, player-facing roster/claim UX, season reset/history, scarcity experiments, assassination, or occupation. Assassination must be its own persisted conflict context with targeted PVP eligibility and atomic succession; it is not a special case hidden inside ordinary claim protection.
+Teammate-locked post-elimination viewing may be added as a separate bounded Paper UX slice
+after playtesting; unrestricted spectator free-camera remains disallowed.

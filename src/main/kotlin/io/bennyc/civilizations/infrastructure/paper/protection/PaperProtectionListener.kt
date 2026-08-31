@@ -10,6 +10,7 @@ import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.BattleBlockMutationQueue
+import io.bennyc.civilizations.infrastructure.paper.war.BattleLockStandIn
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Location
@@ -19,6 +20,7 @@ import org.bukkit.block.Block
 import org.bukkit.entity.AreaEffectCloud
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EvokerFangs
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.entity.Projectile
 import org.bukkit.entity.TNTPrimed
@@ -61,14 +63,20 @@ class PaperProtectionListener(
     private val runtime: CivilizationsRuntime,
     server: Server,
     logger: Logger,
+    private val isBattleCapabilitySuppressed: (PlayerId) -> Boolean = { false },
+    private val markAuthorizedBattleLockLethalDamage: (PlayerId, Entity) -> Unit = { _, _ -> },
 ) : Listener {
     private val battleMutations = PaperBattleBlockMutationAdapter(
         server = server,
         logger = logger,
         mutationQueue = BattleBlockMutationQueue(runtime::prepareBlockMutation),
         authorize = { actorId, action, target ->
-            val ready = runtime.state as? CivilizationsRuntimeState.Ready
-            ready?.activeSeason?.authorizeBattleBlockMutation(actorId, action, target)
+            if (isBattleCapabilitySuppressed(actorId)) {
+                null
+            } else {
+                val ready = runtime.state as? CivilizationsRuntimeState.Ready
+                ready?.activeSeason?.authorizeBattleBlockMutation(actorId, action, target)
+            }
         },
         isActiveBattleLand = { target ->
             val ready = runtime.state as? CivilizationsRuntimeState.Ready
@@ -295,19 +303,68 @@ class PaperProtectionListener(
             ?: event.damager.responsiblePlayer()
             ?: return
         val targetPlayer = event.entity as? Player
-        val action = if (targetPlayer == null) {
-            PlayerProtectionAction.ENTITY_DAMAGE
-        } else {
-            PlayerProtectionAction.PVP
+        if (player.hasPermission(ADMIN_BYPASS_PERMISSION)) {
+            return
         }
-        if (!allows(
-                player = player,
-                action = action,
-                target = event.entity.position(),
-                targetPlayerId = targetPlayer?.playerId(),
-            )
-        ) {
+        if (targetPlayer != null) {
+            val actorId = player.playerId()
+            val targetPlayerId = targetPlayer.playerId()
+            if (isBattleCapabilitySuppressed(actorId) ||
+                isBattleCapabilitySuppressed(targetPlayerId)
+            ) {
+                event.isCancelled = true
+                notifyDenied(player)
+                return
+            }
+            if (allowsBattlePvp(player, targetPlayerId, event.entity.position())) {
+                return
+            }
+            if (!allows(
+                    player = player,
+                    action = PlayerProtectionAction.PVP,
+                    target = event.entity.position(),
+                    targetPlayerId = targetPlayerId,
+                )
+            ) {
+                event.isCancelled = true
+            }
+            return
+        }
+
+        val standInOwnerId = BattleLockStandIn.ownerId(event.entity)
+        val activeSeason = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+        val standInCombatant = if (standInOwnerId != null && activeSeason != null) {
+            activeSeason.activeBattleCombatant(standInOwnerId)
+        } else {
+            null
+        }
+        val standInBattleLand = standInCombatant != null &&
+            activeSeason?.activeBattleAt(event.entity.position())?.id == standInCombatant.battle.id
+        if (standInOwnerId != null && standInCombatant != null && standInBattleLand) {
+            val actorId = player.playerId()
+            val allowed = !isBattleCapabilitySuppressed(actorId) &&
+                !isBattleCapabilitySuppressed(standInOwnerId) &&
+                allowsBattlePvp(player, standInOwnerId, event.entity.position())
+            if (!allowed) {
+                event.isCancelled = true
+                notifyDenied(player)
+            } else {
+                val living = event.entity as? LivingEntity
+                if (living != null && event.finalDamage >= living.health) {
+                    markAuthorizedBattleLockLethalDamage(standInOwnerId, living)
+                }
+            }
+            return
+        }
+
+        val allowed = allows(player, PlayerProtectionAction.ENTITY_DAMAGE, event.entity.position())
+        if (!allowed) {
             event.isCancelled = true
+        } else if (standInOwnerId != null && standInCombatant != null) {
+            val living = event.entity as? LivingEntity
+            if (living != null && event.finalDamage >= living.health) {
+                markAuthorizedBattleLockLethalDamage(standInOwnerId, living)
+            }
         }
     }
 
@@ -381,6 +438,20 @@ class PaperProtectionListener(
     }
 
     fun battleMutationMetricsSummary(): String = battleMutations.metricsSummary()
+
+    private fun allowsBattlePvp(
+        player: Player,
+        targetPlayerId: PlayerId,
+        target: BlockPosition2D,
+    ): Boolean {
+        val state = runtime.state as? CivilizationsRuntimeState.Ready ?: return false
+        val activeSeason = state.activeSeason ?: return false
+        return activeSeason.authorizeBattlePvp(
+            actorId = player.playerId(),
+            targetPlayerId = targetPlayerId,
+            target = target,
+        ) != null
+    }
 
     private fun allows(
         player: Player,

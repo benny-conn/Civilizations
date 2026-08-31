@@ -9,8 +9,9 @@ The guide deliberately records current limitations instead of treating unfinishe
 features as passes. On the current build, civilization setup, claims, protection, war
 declaration, hostile-entry battle activation, simple battle block mutation, persistence,
 durable online combatant/life state, defender-at-timeout resolution, bounded report
-sealing, treasuries, and paid repair are live. Targeted PVP and Paper death/respawn or
-combat-logger translation are not implemented until B5.
+sealing, targeted participant PVP, Paper death/respawn integration, BattleLock stand-in
+translation, treasuries, and paid repair are live. Delayed respawn and teammate-locked
+viewing are deliberately deferred rather than treated as current behavior.
 
 ## Test record
 
@@ -57,6 +58,12 @@ actual behavior, relevant ID, and the matching section of `server/logs/latest.lo
 5. For a shorter session, edit `server/plugins/Civilizations/config.yml` before creating
    the season, set `gameplay.war.battle-duration-seconds` to a small value such as `300`,
    and restart. Configuration is loaded only at startup. Do not use `/reload`.
+
+6. For the combat-logging checkpoint, install reviewed
+   [BattleLock 1.8](https://hangar.papermc.io/Jelly-Pudding/BattleLock/versions/1.8) in
+   `server/plugins` and restart. The expected JAR SHA-256 is
+   `a67cd459fbee85f6e26072f282340499735547b2b9930fa41cdb2ad805dec505`. Confirm both
+   plugins enable cleanly before beginning the run.
 
 Use a unique season name for each run instead of editing or deleting the database.
 
@@ -181,23 +188,31 @@ living count, snapshotted lives, and no combat resolution yet.
 While the battle is active, verify:
 
 1. A snapshotted Aurelia participant can break and place simple, independent blocks in
-   Borealis's claims.
-2. The same player cannot mutate Aurelia's own land through the enemy-side battle override
-   unless normal owner policy independently permits it.
+   Borealis's claims. Owner rebuilding in Aurelia's claim also uses the journal-first
+   battle path while the battle is active.
+2. An Aurelia living combatant can damage a Borealis living combatant in either side's
+   claimed land. Direct melee and player-fired projectiles should both work.
 3. A non-participant cannot use the battle to mutate either civilization's land.
-4. Containers and other block entities remain protected. Include at least a chest and a
+4. Teammates, non-combatants, eliminated players, and players from an unrelated battle do
+   not receive claimed-land PVP. Wilderness retains the server's ordinary PVP behavior.
+5. Containers and other block entities remain protected. Include at least a chest and a
    sign or banner.
-5. Beds, multi-block placement, gravity/cascading blocks, fire, fluids, and explosions do
+6. Beds, multi-block placement, gravity/cascading blocks, fire, fluids, and explosions do
    not gain an unjournaled battle override.
-6. Repeatedly changing one simple coordinate works in the world but retains one immutable
+7. Repeatedly changing one simple coordinate works in the world but retains one immutable
    pre-battle baseline for later reconstruction.
-7. A block placed over air in enemy land is accepted as a simple placement and is later
+8. A block placed over air in enemy land is accepted as a simple placement and is later
    eligible for removal during repair.
-8. PVP is still denied in claimed land. This is an expected current limitation, not a
-   failed test; targeted battle PVP belongs to the upcoming combat adapter.
-9. Disconnecting a combatant does not change the living count by itself. If testing an
-   external combat logger, use [combat-logging.md](combat-logging.md); its real player/NPC
-   death translation is a B5 checkpoint, not part of A4.
+9. With four players, kill one combatant while their teammate remains alive. The death
+   should consume exactly one life. At the default one-life setting, the eliminated player
+   should respawn through normal Minecraft behavior, receive a clear message, and be unable
+   to PVP or break/place in either side's battle land. They remain free to play elsewhere.
+10. Repeating or retrying the same authoritative death consequence must not consume another
+    life. `/civadmin battle inspect <BATTLE_ID>` should show the expected living count.
+11. Disconnecting a combatant does not change the living count by itself. If testing
+    BattleLock, use [combat-logging.md](combat-logging.md): an opposing living combatant may
+    damage its recognized stand-in in battle land, while a teammate or non-combatant may
+    not. Killing the stand-in consumes exactly one life for its stored player UUID.
 
 Optional four-player roster check: after the battle starts, move a non-leader member to
 the opposing civilization with `/civadmin civilization move-member <PLAYER_UUID> <civ>`.
@@ -208,6 +223,10 @@ capabilities must not change. A later battle should use the new membership.
 
 Use one of these paths:
 
+- Ordinary combat path: eliminate every living combatant on one side. The opposing side
+  should win; if both sides lose their final combatants in the same server tick, the result
+  should be a draw. Combat and destruction stop as soon as the durable elimination update
+  publishes, then report sealing and closure continue through the ordinary B4 coordinator.
 - Preferred surrender path: the current leader of either side runs `/civ surrender`.
   The battle should enter `RESOLVING` immediately, stop destructive eligibility, seal its
   damage report in bounded batches, and close with the opposing side as winner.

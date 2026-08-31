@@ -181,7 +181,7 @@ force-resolution is an explicit audited recovery operation, not an ordinary vict
   seal and close it automatically. New A4 battles likewise persist ordinary elimination
   outcomes and defender victory at timeout. Older outcome-neutral battles remain
   `RESOLVING` until an audited admin outcome completes them.
-- The runtime precomputes membership, open-war-pair, open-battle, and active-battle lookups. The Paper entry listener uses only those published values and the claim index on movement/teleport paths, coalesces per-player attempts behind a bounded gate, and submits durable battle start work off-thread. PVP or other destructive capabilities remain disconnected until their own slices define and enforce them.
+- The runtime precomputes membership, open-war-pair, open-battle, living-combatant, and active-battle lookups. The Paper entry listener uses only those published values and the claim index on movement/teleport paths, coalesces per-player attempts behind a bounded gate, and submits durable battle start work off-thread. B5 derives exact PVP capabilities from the same published snapshot; other destructive capabilities remain disconnected until their own slices define and enforce them.
 
 ## Battle combat state
 
@@ -206,17 +206,40 @@ victory even with zero players online. Either transition first moves the battle 
 with the already-durable outcome.
 
 Disconnects have no Civilizations deadline and do not consume a life. A separate combat-log
-plugin can keep a stand-in vulnerable or convert logout to a death. B5 owns the thin Paper
-translation from an ordinary player death or recognized stand-in death to the idempotent
-life-loss operation. This avoids competing timers and keeps a plugin swap from
-reinterpreting durable battle state. The current Paper 26.2 candidate and verification
-contract are documented in [combat-logging.md](combat-logging.md).
+plugin can keep a stand-in vulnerable or convert logout to a death. B5 translates an
+ordinary `PlayerDeathEvent` or recognized BattleLock stand-in lethal hit/death into the
+same idempotent life-loss operation. BattleLock 1.8 removes a lethally hit proxy during its
+damage callback, so Civilizations marks the exact hit after protection authorization and
+captures the uncancelled damage event at `MONITOR` without relying on a later death event;
+`EntityDeathEvent` remains an environmental/fallback path. The documented
+`battlelock:combat_log_player_id` persistent-data UUID is read without a compile/runtime
+dependency; a deterministic event ID derived from the stand-in entity UUID makes both
+callbacks and retries safe. This avoids
+competing timers and keeps a plugin swap from reinterpreting durable battle state. The
+operational contract is documented in [combat-logging.md](combat-logging.md).
 
-Until B5 lands, participant PVP and Paper death/respawn behavior remain protected. A4 does
-publish only living combatants into the existing destruction-capability read model, so an
-eliminated combatant cannot continue journaled building damage after the refreshed snapshot
-is installed. Legacy battles created without a schema-9 combat snapshot retain the former
-participant eligibility and outcome-neutral timeout recovery path.
+B5 batches deaths observed in one server tick by battle before submitting storage work, so
+simultaneous final deaths retain A4's draw semantics. The bounded queue permits at most the
+currently observed remaining lives for one player and suppresses final-life capabilities
+immediately while persistence is in flight. Storage still runs off-thread; the refreshed
+runtime snapshot publishes on the server thread before the completion can re-enable any
+action. Because Paper has no death-event UUID, an ordinary death derives its idempotency key
+from battle, player, observed remaining life, and server tick; a later life or post-restart
+state therefore receives a different identity. Vanilla death, drops, and respawn locations remain authoritative. Paper supplies
+clear remaining-life/elimination messages but does not add a second respawn timer or
+unrestricted spectator mode.
+
+Only living combatants on opposite immutable sides of the same active battle receive PVP
+capability, and only when the target stands in either party's ordinary claimed land. Direct
+player damage and responsible player-fired projectiles use that same check. A recognized
+BattleLock stand-in is treated as a proxy for its living owner only for this exact PVP
+authorization; normal entities remain on the ordinary protected path. Eliminated players
+lose both targeted PVP and journaled building capability. Outside the two parties' claimed
+battle land, stand-ins retain the same ordinary entity policy as their coordinate; any
+recognized lethal consequence for a living combatant still enters the idempotent life path.
+Legacy battles created without a
+schema-9 combat snapshot retain block-mutation compatibility but receive no B5 PVP or death
+translation because they have no durable lives to consume.
 
 ## Damage journal
 
@@ -300,7 +323,7 @@ The former commands, listeners, tasks, placeholders, menus, global managers, ser
 
 - Unclaimed coordinates retain vanilla behavior. Members and leaders may mutate their civilization's claims in the configured safe subset of `SETUP`, `PEACE`, and `WAR`; outsiders may not. `FINALE` and `ARCHIVED` always freeze claimed land except for explicit admin bypass.
 - PVP in claimed land always requires a conflict capability. Merely putting the season in `WAR` does not authorize anybody to attack or destroy blocks.
-- A conflict capability is bound to its actor, kind, allowed actions, eligible claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The runtime converts persisted active-battle eligibility into a claim-scoped break/place capability only for the journal-first adapter. It does not grant PVP, entity, container, explosion, or other destructive capabilities.
+- A conflict capability is bound to its actor, kind, allowed actions, eligible claim IDs, and PVP target participants. War capabilities are valid only in `WAR`; assassination capabilities are limited to targeted PVP in `PEACE` or `WAR`. The runtime converts persisted active-battle eligibility into claim-scoped break/place capabilities for the journal-first adapter and exact actor/target PVP capabilities for B5. It does not grant generic entity, container, explosion, or other destructive capabilities.
 - No block entity can appear in an MVP conflict capability. Block-break translation must classify and deny containers and other persistent-data blocks so a generic break grant cannot bypass that invariant.
 - Explosions remove only claimed blocks from the event's block list. Autonomous fire and entity block changes are denied on claimed targets. Fluids, pistons, hopper transfers, and inventory pickup may move within one ownership area but not between civilizations or across wilderness boundaries.
 - While runtime state is loading or failed, mutation listeners fail closed. Once a ready runtime has no active season, events retain vanilla behavior.
@@ -311,8 +334,8 @@ The current event matrix is:
 | --- | --- | --- |
 | Blocks | break, place/multi-place, clicked-block interact, bucket fill/empty, player ignition | Exact affected coordinate; owner/admin allowed, outsider denied; active battle participants receive journal-first simple single-block break/place |
 | Containers | block interact/break, inventory open, automated move/pickup | Direct access follows membership; automation cannot cross ownership |
-| Entities | interact/damage, armor stands, hanging place/break, vehicles, projectiles | Entity coordinate is authoritative; the responsible projectile/TNT player is resolved |
-| PVP | entity damage by player or player-shot projectile | Vanilla in wilderness; denied in claims without a targeted conflict capability |
+| Entities | interact/damage, armor stands, hanging place/break, vehicles, projectiles | Entity coordinate is authoritative; the responsible projectile/TNT player is resolved. A BattleLock marker receives only its living owner's exact opposing-combatant PVP proxy check |
+| PVP | entity damage by player or player-shot projectile | Vanilla in wilderness; in either party's claimed battle land, allowed only for living opponents in the same active battle |
 | Environment | entity/block explosions, burn/ignite/fire spread, entity block change | Claimed targets are removed or cancelled |
 | Boundaries | fluid flow, piston head/moved blocks, inventory transfer | Every source/destination pair must have the same owner, including wilderness as no owner |
 | Movement | horizontal block transitions and teleport | Movement remains physically unrestricted; entering a hostile claim resolves the candidate entirely from published memory, gives immediate phase/permission/battle feedback, and submits an eligible battle start through a bounded/coalesced off-thread path |

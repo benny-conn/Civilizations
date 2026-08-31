@@ -7,6 +7,8 @@ The architecture rework is complete. See [TODO.md](TODO.md) for the prioritized 
 The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, snapshotted combatants and lives, a first-write-wins battle damage journal, bounded live-world resolution into immutable damage reports, exact civilization treasury accounts backed by an immutable idempotent ledger, and persisted resumable repair plans with atomic payments.
 
 The incomplete pre-rework commands, mutable model graph, menus, scheduled tasks, adapters, and JSON-blob datastores have been deleted. Paper listeners protect claims through the application policy. During an active battle in the global `WAR` phase, snapshotted participants may break or place simple single blocks in either side's claimed land. The listener cancels the original event, commits its first-write-wins journal record off-thread, then revalidates and applies the mutation on the server thread. Block entities, multi-place operations, entities, explosions, and unsafe cascading blocks remain protected.
+Living opposing combatants may also PVP in either side's claimed land; teammates,
+non-combatants, and eliminated players receive no battle PVP capability.
 
 ## Current platform
 
@@ -69,8 +71,21 @@ idempotent life-loss events, elimination outcomes, and defender victory at the a
 battle deadline. Eliminated combatants disappear from the published destruction capability
 after the durable mutation refreshes. Disconnecting does not itself consume a life; an
 external combat logger can feed its real player/NPC death consequence through the same
-life-loss operation. See [docs/combat-logging.md](docs/combat-logging.md) for the Paper 26.2
-integration recommendation. Targeted PVP/death/respawn wiring remains B5.
+life-loss operation.
+
+B5 connects that state to Paper. Claimed-land PVP is granted only between living combatants
+on opposite sides of the same active battle, including player-fired projectiles. Ordinary
+player deaths are batched by server tick and consume one durable life; an eliminated player
+respawns normally but loses battle PVP and destruction capability. BattleLock stand-ins are
+recognized through their documented persistent-data UUID and receive only the same narrow
+opposing-combatant damage exception. See [docs/combat-logging.md](docs/combat-logging.md).
+Delayed respawn and teammate-locked viewing remain later playtest-driven UX.
+
+B5 passed clean Paper 26.2 build-112 boots and restart with reviewed BattleLock 1.8
+co-loaded. Focused tests cover exact opponent/land authorization, elimination capability
+removal, same-tick batching, per-player pending-life bounds, and deterministic duplicate
+identities. Multi-client PVP, logout, stand-in death, and reconnect remain explicit manual
+playtest checkpoints.
 
 ## Administration
 
