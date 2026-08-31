@@ -278,7 +278,7 @@ class CivilizationsAdminCommand(
                 "restored=${assessment.restoredCount}, repairable=${assessment.repairableCount}, " +
                 "conflicts=${assessment.conflictCount}, total=${assessment.totalEligibleCount}",
         )
-        when (val quote = status.quoteToFull) {
+        when (val quote = status.quote) {
             is ApplicationResult.Applied -> info(
                 sender,
                 "100% quote selects ${quote.value.selectedCount} blocks; " +

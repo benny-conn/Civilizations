@@ -161,6 +161,47 @@ class RepairJobServiceTest {
     }
 
     @Test
+    fun `confirmed repair never charges above the displayed maximum`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database, damageCount = 10, unitPrice = 10)
+            val request = fixture.request(
+                "repair:confirmed-price",
+                10_000,
+                fixture.observations(),
+            )
+
+            val rejected = fixture.repairs.create(
+                request,
+                maximumGrossCost = MoneyAmount(99),
+            ).rejection()
+
+            assertEquals(
+                RepairConfirmationPriceExceeded(MoneyAmount(99), MoneyAmount(100)),
+                rejected,
+            )
+            assertEquals(MoneyAmount(1_000), fixture.balance(fixture.southId))
+            assertNull(database.repository.read {
+                findRepairJobByIdempotencyKey("repair:confirmed-price")
+            })
+
+            val created = fixture.repairs.create(
+                request,
+                maximumGrossCost = MoneyAmount(100),
+            ).appliedValue()
+            assertEquals(MoneyAmount(100), created.job.grossCost)
+            assertEquals(MoneyAmount(900), fixture.balance(fixture.southId))
+
+            assertIs<RepairConfirmationPriceExceeded>(
+                fixture.repairs.create(
+                    request,
+                    maximumGrossCost = MoneyAmount(99),
+                ).rejection(),
+            )
+            assertEquals(MoneyAmount(900), fixture.balance(fixture.southId))
+        }
+    }
+
+    @Test
     fun `restore and placement removal prices are snapshotted separately`() {
         SqliteTestDatabase().use { database ->
             val fixture = fixture(

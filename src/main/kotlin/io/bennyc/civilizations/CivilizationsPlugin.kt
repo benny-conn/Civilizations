@@ -7,6 +7,7 @@ import io.bennyc.civilizations.infrastructure.paper.economy.PaperEconomyBridgeCo
 import io.bennyc.civilizations.infrastructure.paper.economy.VaultEconomyBootstrap
 import io.bennyc.civilizations.infrastructure.paper.protection.PaperProtectionListener
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
+import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairMenu
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleCombatListener
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionCoordinator
@@ -24,6 +25,7 @@ class CivilizationsPlugin : JavaPlugin() {
     private lateinit var battleCombatListener: PaperBattleCombatListener
     private lateinit var battleResolutionCoordinator: PaperBattleResolutionCoordinator
     private lateinit var repairCoordinator: PaperRepairCoordinator
+    private lateinit var repairMenu: PaperRepairMenu
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -78,6 +80,13 @@ class CivilizationsPlugin : JavaPlugin() {
             logger = logger,
             repairCoordinator = repairCoordinator,
         )
+        repairMenu = PaperRepairMenu(
+            runtime = runtime,
+            server = server,
+            repairCoordinator = repairCoordinator,
+            logger = logger,
+        )
+        server.pluginManager.registerEvents(repairMenu, this)
 
         registerCommand(
             "civadmin",
@@ -101,6 +110,7 @@ class CivilizationsPlugin : JavaPlugin() {
                 logger = logger,
                 economyBridge = economyBridge,
                 repairCoordinator = repairCoordinator,
+                repairMenu = repairMenu,
                 battleResolutionCoordinator = battleResolutionCoordinator,
             ),
         )
@@ -148,6 +158,9 @@ class CivilizationsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::repairMenu.isInitialized) {
+            repairMenu.close()
+        }
         if (::battleCombatListener.isInitialized) {
             logger.info("Battle combat metrics: ${battleCombatListener.metricsSummary()}")
             battleCombatListener.close()

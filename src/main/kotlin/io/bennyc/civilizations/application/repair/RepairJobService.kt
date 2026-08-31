@@ -106,7 +106,10 @@ class RepairJobService(
     }
 
     /** The payment, repair job, and every selected item are committed atomically. */
-    fun create(request: CreateRepairJobRequest): ApplicationResult<CreatedRepairJob> =
+    fun create(
+        request: CreateRepairJobRequest,
+        maximumGrossCost: MoneyAmount? = null,
+    ): ApplicationResult<CreatedRepairJob> =
         repository.transaction {
             if (request.idempotencyKey.isBlank() ||
                 request.idempotencyKey.length > RepairJob.MAX_KEY_LENGTH
@@ -117,9 +120,20 @@ class RepairJobService(
             }
             findRepairJobByIdempotencyKey(request.idempotencyKey)?.let { existing ->
                 return@transaction if (existing.matches(request)) {
-                    ApplicationResult.Unchanged(
-                        CreatedRepairJob(existing, findPayment(existing), null),
-                    )
+                    if (maximumGrossCost != null &&
+                        existing.grossCost.minorUnits > maximumGrossCost.minorUnits
+                    ) {
+                        ApplicationResult.Rejected(
+                            RepairConfirmationPriceExceeded(
+                                confirmedMaximum = maximumGrossCost,
+                                currentPrice = existing.grossCost,
+                            ),
+                        )
+                    } else {
+                        ApplicationResult.Unchanged(
+                            CreatedRepairJob(existing, findPayment(existing), null),
+                        )
+                    }
                 } else {
                     ApplicationResult.Rejected(
                         RepairIdempotencyConflict(request.idempotencyKey),
@@ -178,6 +192,16 @@ class RepairJobService(
                 is ApplicationResult.Applied -> result.value
                 is ApplicationResult.Rejected -> return@transaction result
                 is ApplicationResult.Unchanged -> error("Repair quote cannot be unchanged")
+            }
+            if (maximumGrossCost != null &&
+                quote.grossCost.minorUnits > maximumGrossCost.minorUnits
+            ) {
+                return@transaction ApplicationResult.Rejected(
+                    RepairConfirmationPriceExceeded(
+                        confirmedMaximum = maximumGrossCost,
+                        currentPrice = quote.grossCost,
+                    ),
+                )
             }
             val jobId = idGenerator.newRepairJobId()
             val payment = if (request.fundingMode == RepairFundingMode.ORDINARY) {
@@ -846,6 +870,14 @@ data class RepairTargetUnreachable(
     override val description: String =
         "Repair target $targetBasisPoints cannot be reached: $repairableCount blocks are repairable and " +
             "$conflictCount have later player changes"
+}
+
+data class RepairConfirmationPriceExceeded(
+    val confirmedMaximum: MoneyAmount,
+    val currentPrice: MoneyAmount,
+) : ApplicationFailure {
+    override val description: String =
+        "The current repair price exceeds the confirmed quote; review the new price"
 }
 
 data class RepairSeasonNotActive(val seasonId: SeasonId) : ApplicationFailure {

@@ -38,11 +38,11 @@ Branches in different lanes may proceed together when their port contract alread
 | A4 | `benny/battle-combat-state` | Durable feature | B4, approved Season One combat rules | Durable online combatant enrollment separate from political history, snapshotted lives, idempotent elimination events, defender-at-deadline resolution, and disconnect-retains-life compatibility with an external combat logger. | Complete |
 | B5 | `benny/paper-battle-combat` | Paper integration | A4 | Targeted living-combatant PVP, same-tick Paper death batching, normal respawn/elimination messaging, and dependency-free BattleLock stand-in death translation. Teammate viewing remains deferred. | Complete |
 | A5 | `benny/battle-casualty-economics` | Durable feature | A2, A4, approved casualty prices | Immutable idempotent casualty records and civilization treasury sink charges with attacker/defender prices snapshotted per battle. | Decision blocked |
-| D1 | `feature/repair-inventory-gui` | Paper integration | B3 | Inventory GUI over the same repair status/start services, showing actual completion, remaining repairable work, conflicts, price, and victor share. No menu-owned policy. | Later UX follow-up |
+| D1 | `benny/repair-inventory-gui` | Paper integration | B3 | Inventory GUI over the same repair status/start services, showing actual completion, remaining repairable work, conflicts, price, and victor share. No menu-owned policy. | Complete |
 
 ### Work that can start now
 
-The first playable combat/reconstruction loop is now connected through B5: targeted PVP and authoritative Paper/BattleLock deaths feed A4, while B4 seals damage before closure and B3 performs paid repair. A5 remains blocked on exact casualty prices. C1 and the remaining C2 automation are independent operations items, and D1 is the next unblocked player-facing feature follow-up.
+The first playable combat/reconstruction loop is now connected through B5: targeted PVP and authoritative Paper/BattleLock deaths feed A4, while B4 seals damage before closure and B3 performs paid repair. D1 now supplies the player-facing repair battle picker, bounded status view, absolute-target previews, and confirmation flow without moving policy into the menu. A5 remains blocked on exact casualty prices; C1 and the remaining C2 automation are the next unblocked operations items.
 
 A3 snapshots A2's validated repair-economics values into each durable job and uses one idempotent ledger transaction for payment and proceeds. B3 must preserve that application boundary: it supplies bounded current-world observations and executes persisted items, but does not recalculate price or select work in Paper code. The removed legacy frameworks and object graph are not available as implementation shortcuts.
 
@@ -70,6 +70,6 @@ An agent may model a neutral mechanism behind a port, but must not choose these 
 
 ## Later parallel tracks
 
-After the MVP loop is complete, separate worktrees can take the D1 repair inventory GUI, player-facing roster/claim UX, season reset/history, scarcity experiments, assassination, or occupation. Assassination must be its own persisted conflict context with targeted PVP eligibility and atomic succession; it is not a special case hidden inside ordinary claim protection.
+After the MVP loop is complete, separate worktrees can take player-facing roster/claim UX, season reset/history, scarcity experiments, assassination, or occupation. Assassination must be its own persisted conflict context with targeted PVP eligibility and atomic succession; it is not a special case hidden inside ordinary claim protection.
 Teammate-locked post-elimination viewing may be added as a separate bounded Paper UX slice
 after playtesting; unrestricted spectator free-camera remains disallowed.

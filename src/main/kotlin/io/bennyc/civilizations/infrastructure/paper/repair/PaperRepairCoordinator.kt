@@ -15,6 +15,7 @@ import io.bennyc.civilizations.application.repair.RepairWorkResult
 import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.damage.BlockPosition3D
 import io.bennyc.civilizations.domain.damage.SimpleBlockSnapshot
+import io.bennyc.civilizations.domain.economy.MoneyAmount
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.repair.RepairFundingMode
@@ -95,11 +96,16 @@ class PaperRepairCoordinator(
     fun status(
         battleId: BattleId,
         civilizationId: CivilizationId,
+        targetCompletionBasisPoints: Int = RepairJob.MAX_BASIS_POINTS,
         completion: (PaperRepairOutcome<PaperRepairStatus>) -> Unit,
     ) {
         beginScan(battleId, civilizationId) { scan ->
             when (scan) {
-                is PaperRepairOutcome.Completed -> loadStatus(scan.value, completion)
+                is PaperRepairOutcome.Completed -> loadStatus(
+                    scan = scan.value,
+                    targetCompletionBasisPoints = targetCompletionBasisPoints,
+                    completion = completion,
+                )
                 is PaperRepairOutcome.Rejected -> completion(scan)
                 is PaperRepairOutcome.Unavailable -> completion(scan)
                 is PaperRepairOutcome.Failed -> completion(scan)
@@ -112,6 +118,7 @@ class PaperRepairCoordinator(
         civilizationId: CivilizationId,
         playerId: PlayerId,
         targetCompletionBasisPoints: Int,
+        maximumGrossCost: MoneyAmount? = null,
         completion: (PaperRepairOutcome<CreatedRepairJob>) -> Unit,
     ) = startRepair(
         battleId = battleId,
@@ -119,6 +126,7 @@ class PaperRepairCoordinator(
         playerId = playerId,
         fundingMode = RepairFundingMode.ORDINARY,
         targetCompletionBasisPoints = targetCompletionBasisPoints,
+        maximumGrossCost = maximumGrossCost,
         completion = completion,
     )
 
@@ -134,6 +142,7 @@ class PaperRepairCoordinator(
         playerId = adminPlayerId,
         fundingMode = RepairFundingMode.ADMIN_SPONSORED,
         targetCompletionBasisPoints = targetCompletionBasisPoints,
+        maximumGrossCost = null,
         completion = completion,
     )
 
@@ -210,6 +219,7 @@ class PaperRepairCoordinator(
         playerId: PlayerId?,
         fundingMode: RepairFundingMode,
         targetCompletionBasisPoints: Int,
+        maximumGrossCost: MoneyAmount?,
         completion: (PaperRepairOutcome<CreatedRepairJob>) -> Unit,
     ) {
         beginScan(battleId, civilizationId) { scan ->
@@ -231,6 +241,7 @@ class PaperRepairCoordinator(
                             observations = observations,
                             idempotencyKey = "paper-repair:${UUID.randomUUID()}",
                         ),
+                        maximumGrossCost = maximumGrossCost,
                     )
                 },
             ) { outcome ->
@@ -302,6 +313,7 @@ class PaperRepairCoordinator(
 
     private fun loadStatus(
         scan: CompletedScan,
+        targetCompletionBasisPoints: Int,
         completion: (PaperRepairOutcome<PaperRepairStatus>) -> Unit,
     ) {
         submitRepair(
@@ -315,13 +327,20 @@ class PaperRepairCoordinator(
                     QuoteRepairRequest(
                         battleId = scan.basis.battle.id,
                         civilizationId = scan.basis.civilizationId,
-                        targetCompletionBasisPoints = 10_000,
+                        targetCompletionBasisPoints = targetCompletionBasisPoints,
                         observations = scan.observations,
                     ),
                 )
                 val jobs = listForBattle(scan.basis.battle.id)
                     .filter { it.civilizationId == scan.basis.civilizationId }
-                ApplicationResult.Applied(PaperRepairStatus(assessment, quote, jobs))
+                ApplicationResult.Applied(
+                    PaperRepairStatus(
+                        assessment = assessment,
+                        targetCompletionBasisPoints = targetCompletionBasisPoints,
+                        quote = quote,
+                        jobs = jobs,
+                    ),
+                )
             },
             completion = completion,
         )
@@ -843,7 +862,8 @@ data class CompletedScan(
 
 data class PaperRepairStatus(
     val assessment: RepairAssessment,
-    val quoteToFull: ApplicationResult<RepairQuote>,
+    val targetCompletionBasisPoints: Int,
+    val quote: ApplicationResult<RepairQuote>,
     val jobs: List<RepairJob>,
 )
 

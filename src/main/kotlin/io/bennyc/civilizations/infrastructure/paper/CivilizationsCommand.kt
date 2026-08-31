@@ -22,6 +22,7 @@ import io.bennyc.civilizations.infrastructure.runtime.RuntimeMutationOutcome
 import io.bennyc.civilizations.infrastructure.paper.economy.PaperEconomyBridgeCoordinator
 import io.bennyc.civilizations.infrastructure.paper.economy.PaperEconomyTransferOutcome
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
+import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairMenu
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairOutcome
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairStatus
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionCoordinator
@@ -47,6 +48,7 @@ class CivilizationsCommand(
     private val logger: Logger,
     private val economyBridge: PaperEconomyBridgeCoordinator,
     private val repairCoordinator: PaperRepairCoordinator,
+    private val repairMenu: PaperRepairMenu,
     private val battleResolutionCoordinator: PaperBattleResolutionCoordinator,
 ) : BasicCommand {
     override fun execute(source: CommandSourceStack, args: Array<out String>) {
@@ -73,8 +75,13 @@ class CivilizationsCommand(
             args.firstOrNull().equals("declare", true) && args.size == 2 ->
                 targetCivilizationReferences(source.sender)
             args.firstOrNull().equals("repair", true) && args.size == 2 ->
-                listOf("status", "start")
-            args.firstOrNull().equals("repair", true) && args.size == 3 -> battleReferences()
+                listOf("menu", "status", "start")
+            args.firstOrNull().equals("repair", true) &&
+                args.getOrNull(1).equals("menu", true) && args.size == 3 ->
+                battleReferences(source.sender)
+            args.firstOrNull().equals("repair", true) &&
+                args.getOrNull(1)?.lowercase(Locale.ROOT) in setOf("status", "start") &&
+                args.size == 3 -> battleReferences(source.sender)
             else -> emptyList()
         }
         val partial = args.lastOrNull()?.lowercase(Locale.ROOT).orEmpty()
@@ -88,9 +95,26 @@ class CivilizationsCommand(
         val active = activeSeason(sender) ?: return
         val membership = active.membershipOf(PlayerId(player.uniqueId))
             ?: return error(sender, "You are not in a civilization this season")
-        val battleId = args.getOrNull(2)?.let { parseBattleId(sender, it) }
-            ?: return error(sender, "Usage: /civ repair <status|start> <battle-id> [target-percent]")
-        when (args.getOrNull(1)?.lowercase(Locale.ROOT)) {
+        val action = args.getOrNull(1)?.lowercase(Locale.ROOT)
+        if (action == null) {
+            if (!player.hasPermission(REPAIR_STATUS_PERMISSION)) {
+                return error(sender, "You do not have permission to view repair status")
+            }
+            repairMenu.open(player)
+            return
+        }
+        when (action) {
+            "menu" -> {
+                if (!player.hasPermission(REPAIR_STATUS_PERMISSION)) {
+                    return error(sender, "You do not have permission to view repair status")
+                }
+                if (args.size !in 2..3) {
+                    return error(sender, "Usage: /civ repair menu [battle-id]")
+                }
+                val battleId = args.getOrNull(2)?.let { parseBattleId(sender, it) }
+                if (args.size == 3 && battleId == null) return
+                repairMenu.open(player, battleId)
+            }
             "status" -> {
                 if (!player.hasPermission(REPAIR_STATUS_PERMISSION)) {
                     return error(sender, "You do not have permission to view repair status")
@@ -98,6 +122,7 @@ class CivilizationsCommand(
                 if (args.size != 3) {
                     return error(sender, "Usage: /civ repair status <battle-id>")
                 }
+                val battleId = parseBattleId(sender, args[2]) ?: return
                 info(sender, "Scanning battle damage in bounded batches…")
                 repairCoordinator.status(battleId, membership.civilizationId) { outcome ->
                     when (outcome) {
@@ -120,6 +145,7 @@ class CivilizationsCommand(
                 if (args.size != 4) {
                     return error(sender, "Usage: /civ repair start <battle-id> <target-percent>")
                 }
+                val battleId = parseBattleId(sender, args[2]) ?: return
                 val target = parsePercentage(sender, args[3]) ?: return
                 info(sender, "Scanning current damage before creating the repair…")
                 repairCoordinator.startOrdinary(
@@ -153,7 +179,19 @@ class CivilizationsCommand(
                     }
                 }
             }
-            else -> error(sender, "Usage: /civ repair <status|start> <battle-id> [target-percent]")
+            else -> {
+                if (!player.hasPermission(REPAIR_STATUS_PERMISSION)) {
+                    return error(sender, "You do not have permission to view repair status")
+                }
+                if (args.size != 2) {
+                    return error(
+                        sender,
+                        "Usage: /civ repair [battle-id] or /civ repair <status|start> …",
+                    )
+                }
+                val battleId = parseBattleId(sender, args[1]) ?: return
+                repairMenu.open(player, battleId)
+            }
         }
     }
 
@@ -170,7 +208,7 @@ class CivilizationsCommand(
                 "${assessment.repairableCount} still repairable, " +
                 "${assessment.conflictCount} changed by players.",
         )
-        when (val quote = status.quoteToFull) {
+        when (val quote = status.quote) {
             is ApplicationResult.Applied -> info(
                 sender,
                 "To reach 100%: ${quote.value.selectedCount} blocks cost " +
@@ -496,13 +534,22 @@ class CivilizationsCommand(
             }
     }
 
-    private fun battleReferences(): List<String> =
-        (runtime.state as? CivilizationsRuntimeState.Ready)
-            ?.activeSeason
-            ?.battles
-            ?.filter { it.status == BattleStatus.CLOSED }
-            ?.map { it.id.toString() }
-            .orEmpty()
+    private fun battleReferences(sender: CommandSender): List<String> {
+        val player = sender as? Player ?: return emptyList()
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
+            ?: return emptyList()
+        val civilizationId = active.membershipOf(PlayerId(player.uniqueId))?.civilizationId
+            ?: return emptyList()
+        return active.battles
+            .filter { battle ->
+                battle.status == BattleStatus.CLOSED &&
+                    civilizationId in setOf(
+                        battle.attackingCivilizationId,
+                        battle.defendingCivilizationId,
+                    )
+            }
+            .map { it.id.toString() }
+    }
 
     private fun parseBattleId(sender: CommandSender, value: String): BattleId? = try {
         BattleId(UUID.fromString(value))
@@ -550,6 +597,7 @@ class CivilizationsCommand(
         sender.sendMessage(Component.text("/civ status", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ declare <civilization>", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ surrender", NamedTextColor.GRAY))
+        sender.sendMessage(Component.text("/civ repair [battle-id] (menu)", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ repair status <battle-id>", NamedTextColor.GRAY))
         sender.sendMessage(
             Component.text(

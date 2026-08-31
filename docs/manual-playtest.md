@@ -262,6 +262,22 @@ rather than charged.
 As a player in the damaged civilization:
 
 ```text
+/civ repair
+```
+
+Pass the inventory workflow when it lists only closed battles involving the player's
+civilization. Select the battle and verify that the bounded loading screen becomes a detail
+screen showing the same actual completion, remaining repairable blocks, later-change
+conflicts, treasury balance, 100% price, victor proceeds, and latest job as the command
+path. Select the absolute 50% target, verify a separate exact-price confirmation screen,
+then confirm. Double-clicking or clicking an old inventory must not create a second job or
+payment. The confirmed repair must re-scan before spending and then return to refreshed
+detail status. If the refreshed price rises between preview and confirmation, it must reject
+the start for another review; it may safely charge less when manual repair lowers the price.
+
+Keep the direct command path as a parity and recovery check:
+
+```text
 /civ repair status <BATTLE_ID>
 /civ repair start <BATTLE_ID> 50
 /civ repair status <BATTLE_ID>

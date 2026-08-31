@@ -87,6 +87,15 @@ removal, same-tick batching, per-player pending-life bounds, and deterministic d
 identities. Multi-client PVP, logout, stand-in death, and reconnect remain explicit manual
 playtest checkpoints.
 
+D1 adds a native repair inventory workflow over the same bounded assessment, quote, and
+start operations as the commands. `/civ repair` lists the player's closed battles, scans a
+selected battle across the configured per-tick budget, shows actual manual-plus-paid
+completion, remaining work, conflicts, treasury balance, price, victor proceeds, and the
+latest job, then offers absolute 25/50/75/100% targets. Spending requires a separate exact
+quote confirmation and a final current-world recheck; the menu owns no economic policy.
+The confirmed start may charge a lower refreshed price, but a higher price is rejected for
+another confirmation rather than silently exceeding the amount the player approved.
+
 ## Administration
 
 The native Paper `/civadmin` command requires `civilizations.admin`, which defaults to operators. Run `/civadmin` for help. The current commands support:
@@ -101,7 +110,7 @@ The native Paper `/civadmin` command requires `civilizations.admin`, which defau
 - civilization treasury balance inspection, audited adjustments, and explicit reconciliation of ambiguous player-wallet transfers.
 - repair status/job inspection, payment-free audited sponsorship, and pause/resume/cancel recovery controls.
 
-The player-facing `/civ` command exposes war status/declaration/surrender; `balance`, `deposit <amount>`, and leader-only `withdraw <amount>`; plus `/civ repair status <battle-id>` and `/civ repair start <battle-id> <target-percent>`. Repair status reports actual completion after manual rebuilding, remaining repairable blocks, conflicts, the current 100% price, and victor proceeds. Player wallet operations require server-provided Vault plus an economy plugin; Civilizations never creates a Vault bank account. Its player permissions default to players so LuckPerms can narrow access. Declaration is allowed in `SETUP`, `PEACE`, and `WAR`; a battle can start only during `WAR`. Entering or leaving the global `WAR` phase additionally requires the operator-default `civilizations.admin.phase.war` permission.
+The player-facing `/civ` command exposes war status/declaration/surrender; `balance`, `deposit <amount>`, and leader-only `withdraw <amount>`; plus the `/civ repair` inventory workflow. `/civ repair <battle-id>`, `/civ repair status <battle-id>`, and `/civ repair start <battle-id> <target-percent>` remain available as direct paths. Repair status reports actual completion after manual rebuilding, remaining repairable blocks, conflicts, price, and victor proceeds. Player wallet operations require server-provided Vault plus an economy plugin; Civilizations never creates a Vault bank account. Its player permissions default to players so LuckPerms can narrow access. Declaration is allowed in `SETUP`, `PEACE`, and `WAR`; a battle can start only during `WAR`. Entering or leaving the global `WAR` phase additionally requires the operator-default `civilizations.admin.phase.war` permission.
 
 Claim size/count/connectivity rules, safe gameplay phase gates, repair observation/execution budgets, and the database filename are in `config.yml`; see [docs/configuration.md](docs/configuration.md) for the key reference and configuration contract. Configuration is validated and installed at startup, so changes currently require a server restart. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
 
