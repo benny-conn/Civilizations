@@ -269,11 +269,12 @@ application, persistence, and Paper boundaries are implemented and tested.
 ### Scarcity and specialization
 
 - [ ] **[P2][L] Design regional scarcity as a policy system, not a world-wide entity scan.** Choose a small number of strategically meaningful resources with multiple geographically restricted sources for the first experiment. Initial candidates include livestock habitats, ore deposits, special crops, villager access, and registered Nether portal sites.
-- [ ] **[P2][XL] Add controlled villager/animal/resource registries and spawning rules.** Preserve intentional sources, enforce caps/regions, handle chunks/restarts, and expose admin diagnostics.
-- [ ] **[P2][L] Add anti-bypass rules for farms, breeding, curing, wandering traders, alternate dimensions, loot tables, and generated structures only as each scarce resource requires.**
+- [ ] **[P2][XL] Add finite strategic-species registries and spawning rules.** Seed selected passive species once, deny later ordinary natural spawns, persist births/deaths and wall-clock juvenile maturity, enforce slow habitat-aware breeding cooldowns, optionally disable villager breeding, handle chunks/restarts, and expose population/extinction diagnostics without a world-wide scan.
+- [ ] **[P2][L] Add anti-bypass rules for eggs, spawn eggs, breeding, curing, transformations, wandering traders, alternate dimensions, loot tables, generated structures, and later-generated chunks only as each scarce resource requires.**
 - [ ] **[P2][M] Add admin seeding/rebalancing tools and telemetry.** Scarcity must create interdependence rather than unknowable grind.
 - [ ] **[P2][L] Author a finite asymmetric season world.** Use WorldPainter, a versioned world-generation data pack, or a configurable generator for initial geography, but keep durable resource-zone identities and live enforcement in purpose-built policy that understands Civilizations.
 - [ ] **[P2][M] Add registered Nether portal sites and deny ordinary portal creation elsewhere.** Define several sites, stable linking, admin recovery, and whether controllers may close access, charge tolls, or must preserve a right of passage.
+- [ ] **[P2][L] Design a narrow livestock-raid context.** Current battles continue to protect ordinary entities. A later explicit event may permit eligible participants to attach leads and physically steal registered livestock; killing, affected-headcount limits, costs, warnings, and political consequences remain provisional because finite animal death is not repairable.
 
 ### Government, civic decisions, and economic exchange
 
@@ -288,6 +289,7 @@ application, persistence, and Paper boundaries are implemented and tested.
 - [ ] **[P2][L] Design final-life downed, rescue, and capture as a distinct durable conflict context.** Only eligible active-battle combatants may rescue or capture during a short visible window; ordinary elimination remains the fallback and no leader receives unilateral civil-jail authority.
 - [ ] **[P2][XL] Add bounded POW custody.** Persist captor, prisoner, source battle/war, terms, maximum online and wall-clock duration, camp, and release state. Support escape, exchange, consensual ransom, parole, war closure, timeout, and audited admin release without changing citizenship or claim ownership.
 - [ ] **[P2][L] Make custody playable and abuse-resistant.** Preserve communication and negotiation, provide physical escape or parole paths, cap duration, make custody cost captor attention or upkeep, and introduce any guard pursuit through a narrow `CUSTODY_ESCAPE` capability rather than general PVP.
+- [ ] **[P2][M] Prototype physical escape and in-person exchange before settling POW rules.** Preserve the provisional concepts of contraband/escape routes, a bounded pursuit and head start, no reset of the hard release clock after recapture, and an all-or-none exchange confirmed by both governments at a neutral physical meeting. Decide ceasefire/ambush, transport, ransom escrow, inventory, and safe-condition rules through playtesting rather than treating these notes as approved behavior.
 
 ### Death and semi-hardcore play
 

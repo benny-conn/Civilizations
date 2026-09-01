@@ -115,6 +115,11 @@ not a hidden scheduler side effect.
 
 ## Prisoners of war
 
+Decision status: **provisional concept retained for future design, not an approved rules
+contract.** The downed/rescue/capture direction is promising. Escape, transport, ransom,
+exchange, pursuit, inventory, and duration mechanics still require a dedicated design
+pass and playtest before implementation.
+
 Ordinary civilization leaders do not receive unilateral civil-jail authority. Prisoners
 of war are a separate, explicit conflict context available only to eligible combatants in
 an active war or battle.
@@ -150,6 +155,25 @@ Still-open POW decisions include whether final-life capture is mandatory or opt-
 rescue/capture channel duration, transport versus relocation to a camp, custody caps,
 ransom approval rules, inventory treatment, and the exact escape/pursuit boundary.
 
+Two physical mechanics are worth preserving for that later design pass:
+
+- **Escape:** a registered camp should not be an invisible permanent barrier. Prisoners
+  may obtain contraband, tools, information, or help from visitors; discover or create a
+  bounded escape route; and physically reach an escape boundary. Success changes custody
+  to `ESCAPED`, grants a short configurable head start, and begins a narrow guard-pursuit
+  window. Reaching a defined safe condition or surviving the pursuit closes custody. A
+  recapture never resets the hard wall-clock release limit.
+- **In-person exchange:** governments may create a durable exchange proposal naming the
+  prisoners, representatives, neutral location, and time window. Both sides physically
+  escort their prisoners to the site. Once every required participant is present, the
+  authorized representatives confirm and the repository releases all listed prisoners
+  atomically. This prevents one side from accepting its citizen and then refusing to
+  release the other. Whether the meeting has a ceasefire, can be ambushed, or can include
+  escrowed ransom remains explicitly undecided.
+
+These ideas are recorded so they are not lost; they are examples, not settled acceptance
+criteria.
+
 ## Regional scarcity and strategic infrastructure
 
 Regional resource asymmetry is part of the intended season design, not merely a future
@@ -157,6 +181,9 @@ novelty. The first real season should use a finite authored or configured world 
 small number of strategically meaningful resources have geographically restricted
 sources. Candidate experiments include livestock habitats, diamond or metal deposits,
 special crops, villager access, and a limited set of Nether portal sites.
+
+Decision status: **finite ecology is an intended direction; exact populations, breeding
+times, maturity times, war vulnerability, and recovery events are not yet finalized.**
 
 World generation establishes the initial geography; a Civilizations-owned scarcity
 policy preserves the rules after generation. Generic world generators do not understand
@@ -184,6 +211,39 @@ inside its climate zone. Diamonds or another ore may use several finite regional
 Nether portals may be permanent strategic infrastructure. That mix creates trade,
 industrial change, smuggling, and durable geography without requiring every monopoly to
 last forever.
+
+### Finite animal populations
+
+Strategic passive animals may be seeded once into the pregenerated season world and then
+receive no ordinary natural respawns. Each tracked species has a finite registered
+population. Death is durable, and genuine global or regional extinction is possible.
+Villager breeding may be disabled entirely so the authored starting population is the
+season's population unless a deliberate event introduces more.
+
+Breeding should be slow, restricted, and durable rather than vanilla-spammable:
+
+- each parent has a substantial breeding cooldown;
+- a successful birth may require the correct habitat, food, space, and healthy adults;
+- juveniles mature against a stored wall-clock timestamp so restart and chunk unloading
+  cannot skip or duplicate growth;
+- eggs, spawn eggs, curing, transformations, natural spawning in later chunks, and other
+  species-specific reproduction paths must not bypass the population policy; and
+- diagnostics expose living adults, juveniles, births, deaths, cooldowns, regions, and
+  species at risk without scanning every entity each tick.
+
+Finite livestock creates valuable biological capital. A civilization that kills,
+neglects, loses, trades, or fails to breed its stock may suffer for the rest of the
+season. Rare server events may reintroduce breeding stock, but extinction does not
+automatically trigger a hidden respawn.
+
+The current battle rules protect all ordinary entities. Any livestock vulnerability must
+therefore be a new, narrow `LIVESTOCK_RAID` context rather than a general battle permission
+to harm entities. A provisional raid event could authorize eligible participants to
+attach leads and physically steal registered animals. Whether it also authorizes killing
+livestock—and whether there are headcount limits, warnings, costs, or political
+consequences—is intentionally unresolved. Unlike journaled blocks, a killed finite animal
+cannot be reconstructed by the repair engine, so that choice has much higher permanent
+stakes.
 
 Limited Nether access should use registered portal sites and deny ordinary portal creation
 elsewhere. The design must decide whether a controlling civilization may close access,
