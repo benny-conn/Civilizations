@@ -52,6 +52,7 @@ Parallel agents should use [docs/worktree-roadmap.md](docs/worktree-roadmap.md).
 - [x] **[P0][S] Separate diplomacy from warfare.** “Enemy” status is not an active war. Wars and timed battles have durable identities, parties, rules, roster snapshots, timestamps, and results.
 - [x] **[P0][S] Prefer a copy-on-write pre-war journal over eagerly copying every block in a city.** The journal atomically inserts the original state for a battle/3D coordinate and returns the existing immutable row on later mutation attempts without scanning untouched land.
 - [x] **[P0][S] Make all game-phase gates centralized and durable.** Civilizations persists `SETUP/PEACE/WAR/FINALE/ARCHIVED`; services and protection policy consume that single state.
+- [x] **[P1][S] Make geography consequential by rejecting routine player teleports.** Civilizations will not provide `/home`, `/back`, `/tpa`, random teleport, or equivalent fast travel. Administrative recovery remains available; capitals/homes may later be metadata or respawn destinations rather than teleport commands. Local markets and controlled infrastructure are preferred over a global auction house.
 
 ## What exists today
 
@@ -59,7 +60,7 @@ The project compiles and starts on Paper 26.2. The architecture is covered by do
 
 | Area | Present implementation | Readiness |
 | --- | --- | --- |
-| Civilizations | ID-based records with draft/active/dissolved states and landless provisioning | Live admin path; player-facing creation, homes, descriptions, and economy remain to design |
+| Civilizations | ID-based records with draft/active/dissolved states and landless provisioning | Live admin path; player-facing creation, descriptions, roles, and government remain to design; ordinary home teleportation is intentionally excluded |
 | Membership | Relational one-civilization-per-season membership, offline UUID provisioning, leader transfer | Live admin path; invites/self-service and richer roster inspection are not yet exposed |
 | Land | Immutable inclusive rectangles, explicit edge-connected claim groups, exact geometry, chunk spatial index, atomic treasury pricing, and audited group tiers | Leader rectangular player claim and admin claim paths are live; selection tools, unclaim, and settlement naming remain follow-ups |
 | Protection | Central policy plus thin Paper listeners, configurable treasury upkeep/reserve/grace, and a bounded exposure lifecycle | Protected land, battle overrides, and journal-first exposure are live; exposure keeps containers, block entities, entities, and PVP protected and allows only capped simple block changes by another civilization |
@@ -69,7 +70,7 @@ The project compiles and starts on Paper 26.2. The architecture is covered by do
 | Reconstruction | Durable battle and land-protection repair jobs persist deterministic selections, economic snapshots, payment IDs, lifecycle, result counts, and resumable cursors | Bounded, mutually serialized Paper restoration is live; manual restoration reduces remaining work and land-protection repairs pay no victor; cosmetic animation remains a follow-up |
 | Economy | Exact fixed-point civilization accounts, immutable idempotent ledger postings, opening balances, player deposit/leader withdrawal commands, durable reconciliation, atomic repair payment/victor proceeds, and no-debt battle casualties | Civilizations SQL is authoritative for civilization treasuries; Vault is an optional narrow bridge to an external plugin authoritative for player wallets. Attacker coverage and battle withdrawal locks prevent treasury evacuation after combat starts. |
 | Permissions | Central leader/member/outsider/admin protection policy | Live for claims; richer ranks/plots are intentionally absent from the MVP |
-| Player utilities | None beyond focused administration | Homes, player claim UX, chat, signs, warps, and menus are net-new only if product-prioritized |
+| Player utilities | None beyond focused administration | Player claim UX, chat, signs, and menus are net-new only if product-prioritized; routine player teleports and warps are intentionally absent |
 | Persistence | Versioned relational SQLite with prepared statements, transactions, constraints, WAL, and startup integrity checks | Live through schema 11, including claim groups, upkeep assessments/state, exposure journals, and land-protection repair jobs/items; backup tooling remains |
 | Seasons/scarcity | Durable active-season selection and `SETUP/PEACE/WAR/FINALE/ARCHIVED` phase controls | Phase gate is live; reset and scarcity systems are not implemented |
 | Assassination/occupation/annexation | None | Not implemented |
@@ -145,7 +146,7 @@ The former JSON/SQL hybrid datastore and all of its known persistence defects we
 - [ ] **[P1][S] Add configuration for self-service creation and joining.** Season One can disable `/civ create`, open joining, invites, and leaving while retaining admin roster control.
 - [x] **[P1][M] Make moving a player atomic.** Membership is one relational row per player/season; explicit moves update it transactionally and leaders must transfer first.
 - [x] **[P1][M] Define leader vacancy behavior.** Drafts may have no leader, active civilizations must have exactly one, and the admin adapter exposes deterministic leadership transfer.
-- [ ] **[P1][S] Keep homes optional and fail clearly when absent.** Do not invent a home until a claim exists and a leader/admin sets one.
+- [x] **[P1][S] Keep routine player teleports out of the product.** A future capital/home may be stored for map, history, or respawn policy, but Civilizations will not turn it into `/home`, `/back`, `/tpa`, random teleport, or an equivalent travel bypass. Staff recovery teleports remain administrative tools.
 - [ ] **[P1][S] Add roster inspection and validation commands.** Show UUID, last known name, role, leader, online state, and any invariant violations.
 - [ ] **[P2][L] Add civilization-owned custom roles and granular capabilities.** Leaders may create named roles such as `Knight` and grant plugin-owned actions such as claiming or managing settlement PVP. LuckPerms gates global command access/admin authority; it does not replace durable civilization-scoped role assignments. Start with commands and add an inventory GUI over the same application service rather than putting policy in menu handlers.
 
@@ -174,7 +175,7 @@ The former JSON/SQL hybrid datastore and all of its known persistence defects we
 - [x] **[P1][M] Simplify MVP roles to leader/member/outsider/admin unless playtesting proves custom ranks are necessary.** Protection treats leader/member as owners, all others as outsiders, and uses an explicit operator-default bypass.
 - [x] **[P1][S] Default outsiders/enemies to no build, break, switch, or container access.** The centralized live policy is default-deny on claimed land.
 - [x] **[P2][XL] Add treasury-backed land protection upkeep and bounded exposure.** A distinct configurable lifecycle charges by protected area, preserves a purpose-specific withdrawal reserve, enters grace without debt/dissolution, and exposes capped simple building-block damage only to another civilization after grace. Every permitted change commits its exposure journal first. Containers, block entities, entities, and PVP remain protected; battles suspend exposure and defer new upkeep shortfalls. Treasury restoration is deterministic, manual restoration lowers its remaining count/price, and it has no victor proceeds.
-- [ ] **[P2][L] Add configurable citizen dues over the civilization treasury.** Leaders choose a dues schedule and plugin-owned consequence such as notify-only or removal; automatic imprisonment requires its own durable, escapable gameplay design. Dues must not be smuggled into the land-upkeep scheduler or directly mutate Vault balances without the durable bridge protocol.
+- [ ] **[P2][L] Add configurable citizen dues over the civilization treasury.** The civilization's government approves a prospective, capped schedule; each period creates a public durable invoice and a successful payment enters the treasury through the Vault bridge without a negative player balance. The first version records notification/delinquency rather than compounding debt, automatic disenfranchisement, removal, or imprisonment. Any later consequence is an explicit government action, not a scheduler side effect.
 - [ ] **[P2][M] Add inventory UX for claims, claim-group progression, and land protection.** Present tier requirements, exact purchase/upkeep/reserve values, grace deadlines, exposure cap, manual restoration progress, and repair confirmation over the existing application services. Menus must not own pricing or authorization policy.
 
 The former `Region`, plot, visualization, all-civilization scan, and raid-ratio implementations were deleted. Current claim geometry, indexing, and protection behavior are covered by property/policy tests; new unclaim, settlement, and war-placement behavior remains explicitly listed as feature work above.
@@ -252,6 +253,10 @@ Plots, colonies, custom ranks, player chat, fly, warps/signs, homes, menus, and 
 
 ## After the MVP
 
+The working product direction for the following systems is consolidated in
+[docs/server-design.md](docs/server-design.md). Items remain unchecked until their
+application, persistence, and Paper boundaries are implemented and tested.
+
 ### Season system and persistent history
 
 - [ ] **[P2][XL] Implement the season lifecycle.** Setup, opening peace, war phase, finale, freeze, archive, and next-season provisioning should be explicit, persisted transitions rather than a calendar cron job.
@@ -263,11 +268,26 @@ Plots, colonies, custom ranks, player chat, fly, warps/signs, homes, menus, and 
 
 ### Scarcity and specialization
 
-- [ ] **[P2][L] Design scarcity as a policy system, not a world-wide entity scan.** Choose a small number of strategically meaningful scarce resources for the first experiment.
+- [ ] **[P2][L] Design regional scarcity as a policy system, not a world-wide entity scan.** Choose a small number of strategically meaningful resources with multiple geographically restricted sources for the first experiment. Initial candidates include livestock habitats, ore deposits, special crops, villager access, and registered Nether portal sites.
 - [ ] **[P2][XL] Add controlled villager/animal/resource registries and spawning rules.** Preserve intentional sources, enforce caps/regions, handle chunks/restarts, and expose admin diagnostics.
 - [ ] **[P2][L] Add anti-bypass rules for farms, breeding, curing, wandering traders, alternate dimensions, loot tables, and generated structures only as each scarce resource requires.**
 - [ ] **[P2][M] Add admin seeding/rebalancing tools and telemetry.** Scarcity must create interdependence rather than unknowable grind.
-- [ ] **[P3][XL] Consider geographically asymmetric custom resource generation after manual Season One experiments prove which resources create good politics.**
+- [ ] **[P2][L] Author a finite asymmetric season world.** Use WorldPainter, a versioned world-generation data pack, or a configurable generator for initial geography, but keep durable resource-zone identities and live enforcement in purpose-built policy that understands Civilizations.
+- [ ] **[P2][M] Add registered Nether portal sites and deny ordinary portal creation elsewhere.** Define several sites, stable linking, admin recovery, and whether controllers may close access, charge tolls, or must preserve a right of passage.
+
+### Government, civic decisions, and economic exchange
+
+- [ ] **[P2][L] Persist an explicit government type for each civilization.** The creating admin or authorized creator selects it at provisioning; later changes are audited admin-only operations. Initial candidates are autocracy, council government, and a citizen republic.
+- [ ] **[P2][XL] Add durable binding proposals and votes.** Snapshot the council/citizen electorate, quorum, threshold, closing time, and exact action payload. Candidate actions include leader selection, dues, large spending or repair, war declaration, surrender, expulsion, and custody decisions. A passing proposal invokes one idempotent application operation.
+- [ ] **[P2][M] Add durable non-binding polls.** An authorized officeholder can ask an arbitrary question of the snapshotted council or citizen electorate and record the result without pretending the plugin can enforce the lore outcome.
+- [ ] **[P2][L] Add bounded public purchase orders as the primary money faucet.** Mint currency against capped, time-limited deliveries or public work rather than indefinitely paying for repeatable actions. Record issuance and either consume delivered goods or transfer them to an explicit stockpile.
+- [ ] **[P2][L] Add escrow-backed player and civilization contracts.** Existing money pays for goods, construction, transport, defense, or other measurable work; local physical trade remains preferable to a global auction house.
+
+### Prisoners of war
+
+- [ ] **[P2][L] Design final-life downed, rescue, and capture as a distinct durable conflict context.** Only eligible active-battle combatants may rescue or capture during a short visible window; ordinary elimination remains the fallback and no leader receives unilateral civil-jail authority.
+- [ ] **[P2][XL] Add bounded POW custody.** Persist captor, prisoner, source battle/war, terms, maximum online and wall-clock duration, camp, and release state. Support escape, exchange, consensual ransom, parole, war closure, timeout, and audited admin release without changing citizenship or claim ownership.
+- [ ] **[P2][L] Make custody playable and abuse-resistant.** Preserve communication and negotiation, provide physical escape or parole paths, cap duration, make custody cost captor attention or upkeep, and introduce any guard pursuit through a narrow `CUSTODY_ESCAPE` capability rather than general PVP.
 
 ### Death and semi-hardcore play
 
@@ -301,7 +321,7 @@ Plots, colonies, custom ranks, player chat, fly, warps/signs, homes, menus, and 
 - Automated three-month resets
 - Permanent annexation
 - Assassination/throne combat
-- Custom world generation or broad resource scarcity
+- Complete custom world generation or broad resource scarcity; a small regional-resource prototype remains pre-season work
 - A web application or public server listing
 - Folia, Velocity, or a multi-server network
 - Full custom-rank/plot/colony/menu parity

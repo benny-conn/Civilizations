@@ -71,3 +71,11 @@ No product decision currently blocks the completed E1 slice. Civilization-scoped
 After the MVP loop is complete, separate worktrees can take player-facing roster/claim UX, season reset/history, scarcity experiments, assassination, or occupation. Assassination must be its own persisted conflict context with targeted PVP eligibility and atomic succession; it is not a special case hidden inside ordinary claim protection.
 Teammate-locked post-elimination viewing may be added as a separate bounded Paper UX slice
 after playtesting; unrestricted spectator free-camera remains disallowed.
+
+The working product direction for the next political/economic arc is documented in
+[server-design.md](server-design.md). Its intended order is civilization roles, durable
+binding votes and non-binding polls, government types, citizen dues, bounded public
+purchase orders and private contracts, a regional-resource prototype, and finally a
+distinct downed/capture/POW-custody context. These are not permission-listener shortcuts:
+each durable fact requires its own application service and must enter the serialized
+schema/repository and Paper-integration lanes in dependency order.
