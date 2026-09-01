@@ -402,6 +402,22 @@ class EconomyService(
         }
         val account = findCivilizationAccount(request.civilizationId)
             ?: return ApplicationResult.Rejected(EconomyAccountNotFound(request.civilizationId))
+        if (direction == EconomyBridgeDirection.WITHDRAW_TO_PLAYER) {
+            val reserve = findLandProtectionState(request.civilizationId)?.requiredReserve
+                ?: MoneyAmount.ZERO
+            val remaining = account.balance.minorUnits - request.amount.minorUnits
+            if (request.amount.minorUnits <= account.balance.minorUnits &&
+                remaining < reserve.minorUnits
+            ) {
+                return ApplicationResult.Rejected(
+                    EconomyWithdrawalLockedForLandProtection(
+                        request.civilizationId,
+                        reserve,
+                        account.balance,
+                    ),
+                )
+            }
+        }
         val now = clock.instant()
         val transferId = idGenerator.newEconomyBridgeTransferId()
         val withdrawalLedgerId = if (direction == EconomyBridgeDirection.WITHDRAW_TO_PLAYER) {
@@ -632,6 +648,16 @@ data class EconomyWithdrawalLockedForBattle(
     override val description: String =
         "Civilization $civilizationId cannot withdraw treasury funds while battle $battleId " +
             "is active or resolving"
+}
+
+data class EconomyWithdrawalLockedForLandProtection(
+    val civilizationId: CivilizationId,
+    val requiredReserve: MoneyAmount,
+    val currentBalance: MoneyAmount,
+) : ApplicationFailure {
+    override val description: String =
+        "Civilization $civilizationId must retain ${requiredReserve.minorUnits} for land " +
+            "protection; current balance is ${currentBalance.minorUnits}"
 }
 
 data class PlayerHasOpenEconomyBridgeTransfer(

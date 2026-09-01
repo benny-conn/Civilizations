@@ -126,13 +126,14 @@ The first migrated subsystem is the claim geometry and spatial index under `doma
 - Arbitrarily shaped territory remains a collection of rectangles. It is not converted into a materialized polygon or block set.
 - The index is derived state and is rebuilt from authoritative claims during startup.
 
-The accepted product model permits more than one disconnected territory per civilization.
-Future persistence represents each connected territory as an explicit claim group:
-rectangles inside a group obey edge-connectivity, while creating another group atomically
-checks a configurable group limit, a substantial establishment price, and optional
-membership/treasury progression thresholds. Those thresholds authorize creation; falling
-below one later does not silently delete durable land. The current live claim model still
-supports only a single connected set and must not emulate groups with a boolean bypass.
+The live product model permits more than one disconnected territory per civilization.
+Each edge-connected component is a durable claim group. A new rectangle attaches to every
+edge-adjacent group and merges them when it bridges components; a disconnected rectangle
+atomically checks the next contiguous configured tier, leader authority, member/treasury
+thresholds, establishment price, and ordinary land price before debit and insertion. The
+group row audits the effective founding thresholds/cost. Falling below one later does not
+silently delete durable land. Migration 11 computes existing groups from rectangle
+connectivity rather than treating an old boolean bypass as a group.
 
 The live runtime loads authoritative claim rows, builds this index, and routes Paper protection events through it. The former `Region`, `ClaimUtil`, and full-height materialization implementation have been deleted.
 
@@ -142,7 +143,7 @@ The persistence boundary lives under `application.persistence`; JDBC is an imple
 
 - `CivilizationsRepository` exposes scoped read contexts and atomic write transactions. Application code does not receive JDBC connections or SQL types.
 - Schema changes are ordered, named, and recorded in `schema_migrations`. Startup refuses unknown or renamed migrations instead of guessing.
-- The schema models seasons, civilizations, memberships, claims, wars, timed battles, battle-participant snapshots, battle combat rules/combatants/life events, casualty rules/reserves/immutable charges, immutable block-change journal rows, and sealed per-battle damage reports as separate relational records.
+- The schema models seasons, civilizations, memberships, claim groups/claims, land-protection state/upkeep/exposure/restoration, wars, timed battles, battle-participant snapshots, battle combat rules/combatants/life events, casualty rules/reserves/immutable charges, immutable block-change journal rows, and sealed per-battle damage reports as separate relational records.
 - Civilization display names are normalized before storage and unique within a season.
 - Composite foreign keys prevent a membership or claim from referencing a civilization in a different season.
 - The membership primary key permits one civilization per player per season while retaining membership history across seasons.
@@ -316,13 +317,35 @@ Repair lifecycle/cursor storage uses the runtime's serialized worker without reb
 unrelated hot gameplay snapshot after every batch. New paid jobs still refresh that snapshot
 because their atomic ledger transaction changes a treasury balance.
 
+`LandProtectionService` owns a separate per-civilization `PROTECTED/GRACE/EXPOSED`
+lifecycle. Migration 11 persists its current state and durable scheduled-rule evidence.
+The required withdrawal reserve and recurring charge are recomputed from authoritative
+claimed area; a due charge succeeds only when the treasury can pay it and retain the
+reserve. Failure starts grace, never debt or dissolution. An active/resolving battle on
+either side suppresses exposure and defers a newly due shortfall until combat closes.
+
+Exposed land does not become a battle. The hot runtime snapshot grants only simple
+break/place authorization to a member of another civilization, at a claimed coordinate,
+while neither party has an open battle. The bounded/coalesced Paper adapter commits an
+exposure site/event before revalidating and replaying a supported mutation. Distinct sites
+consume the exposure's snapshotted cap; repeat changes retain the original state. The
+ordinary protection policy continues denying containers, every block entity, entities,
+and PVP. Owners may rebuild manually at any time.
+
+`ProtectionRepairService` observes unresolved exposure sites, treats exact original states
+as manual restoration, prices only still-repairable coordinates needed for an absolute
+target, and creates a durable treasury-paid job with no victor posting. Its Paper
+coordinator shares one mutually exclusive world-work lane with battle repair and is also
+suspended while battle resolution owns world observation. Missing chunks are not
+generated; interrupted work pauses at its durable cursor for explicit resume.
+
 ## Live runtime
 
 `CivilizationsRuntime` is the owner of runtime state and structured background work.
 
 - Startup migrations and reads run on the storage executor. The plugin remains in a visible `Starting` state until a `Ready` snapshot is published on the server thread.
-- Runtime snapshots contain the active season, civilizations, memberships, wars, battles, participant/combatant/casualty snapshots, treasury balances, a read-only-by-convention claim index, derived living-combatant eligibility, and a protection policy built over those values. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
-- Startup verifies that an active season is not archived, every active civilization has exactly one leader, every claim has an active owner, no persisted claims overlap, open wars reference active parties, and open battles/participants match their war and trigger claim. Invalid durable state fails closed with actionable IDs instead of partially enabling gameplay.
+- Runtime snapshots contain the active season, civilizations, memberships, claim groups, land-protection states, wars, battles, participant/combatant/casualty snapshots, treasury balances, a read-only-by-convention claim index, derived living-combatant eligibility, and a protection policy built over those values. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
+- Startup verifies that an active season is not archived, every active civilization has exactly one leader/account/protection state, every claim has an active owner and matching edge-connected group, no persisted claims overlap, open wars reference active parties, and open battles/participants match their war and trigger claim. Invalid durable state fails closed with actionable IDs instead of partially enabling gameplay.
 - Mutations submitted before readiness are rejected. Infrastructure failures move the runtime to `Failed` and disable the plugin rather than falling back to another store.
 - Shutdown stops new work and gives the storage executor a bounded drain period. Civilizations no longer cancels scheduler tasks owned by other plugins.
 

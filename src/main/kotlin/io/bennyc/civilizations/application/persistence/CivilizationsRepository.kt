@@ -4,6 +4,8 @@ import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.civilization.CivilizationName
 import io.bennyc.civilizations.domain.civilization.Membership
 import io.bennyc.civilizations.domain.claim.Claim
+import io.bennyc.civilizations.domain.claim.ClaimGroup
+import io.bennyc.civilizations.domain.claim.ClaimGroupId
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.damage.BattleBlockChange
 import io.bennyc.civilizations.domain.damage.BattleDamageReport
@@ -26,6 +28,17 @@ import io.bennyc.civilizations.domain.repair.RepairJob
 import io.bennyc.civilizations.domain.repair.RepairJobId
 import io.bennyc.civilizations.domain.repair.RepairJobItem
 import io.bennyc.civilizations.domain.repair.RepairJobStatus
+import io.bennyc.civilizations.domain.protection.ExposureDamageEvent
+import io.bennyc.civilizations.domain.protection.ExposureDamageSite
+import io.bennyc.civilizations.domain.protection.ExposureDamageSiteId
+import io.bennyc.civilizations.domain.protection.LandExposureId
+import io.bennyc.civilizations.domain.protection.LandProtectionState
+import io.bennyc.civilizations.domain.protection.LandUpkeepAssessment
+import io.bennyc.civilizations.domain.protection.ProtectionRepairJob
+import io.bennyc.civilizations.domain.protection.ProtectionRepairJobId
+import io.bennyc.civilizations.domain.protection.ProtectionRepairJobItem
+import io.bennyc.civilizations.domain.protection.ProtectionRepairJobStatus
+import io.bennyc.civilizations.domain.protection.ReportedExposureDamage
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.war.Battle
 import io.bennyc.civilizations.domain.war.BattleCombatState
@@ -70,6 +83,12 @@ interface CivilizationsReadContext {
     fun listMemberships(civilizationId: CivilizationId): List<Membership>
 
     fun findClaim(id: ClaimId): Claim?
+
+    fun findClaimGroup(id: ClaimGroupId): ClaimGroup?
+
+    fun listClaimGroups(civilizationId: CivilizationId): List<ClaimGroup>
+
+    fun listClaimGroupsForSeason(seasonId: SeasonId): List<ClaimGroup>
 
     fun listClaims(civilizationId: CivilizationId): List<Claim>
 
@@ -118,6 +137,60 @@ interface CivilizationsReadContext {
     fun findCivilizationAccount(civilizationId: CivilizationId): CivilizationAccount?
 
     fun listCivilizationAccounts(seasonId: SeasonId): List<CivilizationAccount>
+
+    fun findLandProtectionState(civilizationId: CivilizationId): LandProtectionState?
+
+    fun listLandProtectionStates(seasonId: SeasonId): List<LandProtectionState>
+
+    fun findLandUpkeepAssessment(
+        civilizationId: CivilizationId,
+        scheduledAt: java.time.Instant,
+    ): LandUpkeepAssessment?
+
+    fun listLandUpkeepAssessments(
+        civilizationId: CivilizationId,
+        limit: Int,
+    ): List<LandUpkeepAssessment>
+
+    fun findExposureDamageSite(
+        exposureId: LandExposureId,
+        position: BlockPosition3D,
+    ): ExposureDamageSite?
+
+    fun findExposureDamageSite(id: ExposureDamageSiteId): ExposureDamageSite?
+
+    fun findLatestExposureDamageEvent(siteId: ExposureDamageSiteId): ExposureDamageEvent?
+
+    fun listUnresolvedExposureDamage(
+        civilizationId: CivilizationId,
+        afterSiteId: ExposureDamageSiteId?,
+        limit: Int,
+    ): List<ReportedExposureDamage>
+
+    /** Resolved sites belonging to an exposure that still has unresolved work. */
+    fun countResolvedExposureDamageInOpenExposures(civilizationId: CivilizationId): Long
+
+    fun findProtectionRepairJob(id: ProtectionRepairJobId): ProtectionRepairJob?
+
+    fun findProtectionRepairJobByIdempotencyKey(key: String): ProtectionRepairJob?
+
+    fun findOpenProtectionRepairJob(civilizationId: CivilizationId): ProtectionRepairJob?
+
+    fun listProtectionRepairJobs(
+        civilizationId: CivilizationId,
+        limit: Int,
+    ): List<ProtectionRepairJob>
+
+    fun listProtectionRepairJobsByStatus(
+        statuses: Set<ProtectionRepairJobStatus>,
+        limit: Int,
+    ): List<ProtectionRepairJob>
+
+    fun listProtectionRepairJobItems(
+        jobId: ProtectionRepairJobId,
+        afterOrdinal: Long?,
+        limit: Int,
+    ): List<ProtectionRepairJobItem>
 
     fun findLedgerTransaction(id: LedgerTransactionId): LedgerTransaction?
 
@@ -208,6 +281,12 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
 
     fun insertClaim(claim: Claim)
 
+    fun insertClaimGroup(group: ClaimGroup)
+
+    fun reassignClaimsToGroup(from: ClaimGroupId, to: ClaimGroupId): Int
+
+    fun deleteClaimGroup(id: ClaimGroupId): Boolean
+
     fun deleteClaim(id: ClaimId): Boolean
 
     fun insertWar(war: War)
@@ -241,6 +320,28 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
     fun insertSeasonEconomySettings(settings: SeasonEconomySettings)
 
     fun insertCivilizationAccount(account: CivilizationAccount)
+
+    fun insertLandProtectionState(state: LandProtectionState)
+
+    fun updateLandProtectionState(state: LandProtectionState)
+
+    fun insertLandUpkeepAssessment(assessment: LandUpkeepAssessment)
+
+    fun updateLandUpkeepAssessment(assessment: LandUpkeepAssessment)
+
+    fun insertExposureDamageSite(site: ExposureDamageSite)
+
+    fun resolveExposureDamageSite(id: ExposureDamageSiteId, resolvedAt: java.time.Instant)
+
+    fun insertExposureDamageEvent(event: ExposureDamageEvent)
+
+    fun insertProtectionRepairJob(job: ProtectionRepairJob)
+
+    fun updateProtectionRepairJob(job: ProtectionRepairJob)
+
+    fun insertProtectionRepairJobItem(item: ProtectionRepairJobItem)
+
+    fun updateProtectionRepairJobItem(item: ProtectionRepairJobItem)
 
     fun insertLedgerTransaction(transaction: LedgerTransaction)
 

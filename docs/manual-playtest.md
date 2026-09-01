@@ -10,8 +10,10 @@ features as passes. On the current build, civilization setup, claims, protection
 declaration, hostile-entry battle activation, simple battle block mutation, persistence,
 durable online combatant/life state, defender-at-timeout resolution, bounded report
 sealing, targeted participant PVP, Paper death/respawn integration, BattleLock stand-in
-translation, treasuries, no-debt casualty charges, and paid repair are live. Delayed respawn and teammate-locked
-viewing are deliberately deferred rather than treated as current behavior.
+translation, treasuries, explicit claim groups, area-based protection upkeep/reserve/grace,
+bounded exposed-land damage, no-debt casualty charges, and paid battle/protection repair
+are live. Delayed respawn and teammate-locked viewing are deliberately deferred rather
+than treated as current behavior.
 
 ## Test record
 
@@ -27,6 +29,7 @@ Copy this table into the playtest notes and fill it in as the run proceeds.
 | War ID | |
 | Battle ID | |
 | Repair job ID, when available | |
+| Protection repair job ID, when available | |
 | Testers | |
 | Start/end time | |
 
@@ -63,6 +66,14 @@ actual behavior, relevant ID, and the matching section of `server/logs/latest.lo
    life. Attacker coverage is required and withdrawals lock during active/resolving
    battles. Keep those defaults for this path unless the test record explicitly notes an
    override.
+
+   To exercise land protection without waiting a week, also use this recorded temporary
+   profile before restart: set `claims.groups.tiers[1].minimum-members` to `1`, its
+   `minimum-treasury-balance` to `5000.00`, and its `establishment-cost` to `2500.00`;
+   set `gameplay.land-protection.interval-seconds` and `grace-seconds` to `60`,
+   `assessment-interval-seconds` to `10`, `base-charge` to `100.00`, both per-block
+   amounts to `0.00`, `base-reserve` to `500.00`, and the damage limit to `5`. Preserve
+   the edited config with the test evidence. These changes require a restart.
 
 6. For the combat-logging checkpoint, install reviewed
    [BattleLock 1.8](https://hangar.papermc.io/Jelly-Pudding/BattleLock/versions/1.8) in
@@ -126,6 +137,67 @@ Verify all of the following with non-operator players:
 
 Record the exact edge and corner coordinates used. Include at least one action on a claim
 edge because inclusive rectangle errors tend to appear there.
+
+### 3A. Claim-group purchase and land-protection exposure
+
+Use the shortened profile above. As the Aurelia leader, prepare five ordinary stone blocks
+and one container inside Aurelia's first claim, then purchase a disconnected 10×10 group:
+
+```text
+/civ claim 160 100 169 109
+/civ balance
+/civ protection status
+```
+
+Pass when the claim costs exactly `2700.00`: `100.00` base + `100 × 1.00` land +
+`2500.00` group establishment. A member cannot purchase it under the leader-only default.
+A third disconnected group should reject because the unchanged third tier still requires
+eight members and `150000.00`. Verify a rectangle sharing an edge with the new group charges
+only its ordinary land price in a separate run, because buying that extension changes the
+treasury checkpoint below. Do not test group merging across Borealis land or any overlapping
+rectangle.
+
+With Aurelia at `7300.00`, use the console to leave exactly the `500.00` reserve:
+
+```text
+/civadmin economy adjust Aurelia -6800.00 land upkeep exposure checkpoint
+```
+
+A leader withdrawal of any positive amount must now reject because it would cross the land
+reserve. Wait at least 70 seconds, then run `/civ protection status`: the `100.00` charge
+cannot be paid while retaining `500.00`, so status must be `GRACE`, the treasury must remain
+`500.00`, and the grace deadline must be visible. Nothing is damageable during grace.
+
+Wait another 70 seconds. Status must become `EXPOSED` without debt, dissolution, unclaim,
+or a battle. As a Borealis non-operator member:
+
+1. Break five distinct simple stone blocks in Aurelia's exposed claim. Each action should
+   commit after a brief journal delay; a sixth distinct coordinate must be denied by the
+   snapshotted cap.
+2. Change one already-journaled coordinate again. It must retain the same distinct-site
+   count and the original pre-exposure state for restoration.
+3. Confirm the container, every block entity, ordinary entities, and player PVP remain
+   protected. Pistons, fluids, explosions, and multi-block placement remain closed.
+4. Confirm Aurelia members can rebuild their own blocks manually. Restore one of the five
+   damaged coordinates exactly and rerun `/civ protection status`; it must show 20%
+   manually restored and price only the four still-repairable blocks.
+
+Fund and recover the civilization, then start absolute 100% restoration:
+
+```text
+/civadmin economy adjust Aurelia 1000.00 protection recovery funds
+/civ protection pay
+/civ protection status
+/civ protection repair 100
+/civ protection status
+```
+
+Pass when `pay` charges only the missed `100.00`, retains the `500.00` reserve, and returns
+land to `PROTECTED`. The repair must select and charge four blocks at the default `1.00`
+restore price, pay no victor, preserve the manual block, and restore the other four through
+the bounded runner. Record its job ID. If a larger fixture is used, stop during `RUNNING`;
+restart must leave the job `PAUSED` at its cursor and `/civ protection resume <job-id>` must
+continue without a second payment or overwriting later edits.
 
 ## 4. Declare war while battles are disabled
 

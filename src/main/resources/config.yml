@@ -6,8 +6,30 @@ claims:
   # Inclusive X/Z block area of one rectangular claim.
   max-area: 65536
   max-count: 32
-  # Additional rectangles must share a non-zero block edge with existing land.
+  # With only one group tier, additional rectangles must share a non-zero block edge.
+  # The explicit tiers below authorize priced disconnected claim groups.
   require-edge-connection: true
+  # Every ordinary rectangle costs base-price plus price-per-block * inclusive area.
+  base-price: "100.00"
+  price-per-block: "1.00"
+  ordinary-initiator-roles:
+    - LEADER
+  # Each entry authorizes the corresponding total number of disconnected groups.
+  # Thresholds are checked only when founding; later decline never deletes land.
+  groups:
+    tiers:
+      - max-groups: 1
+        minimum-members: 1
+        minimum-treasury-balance: "0.00"
+        establishment-cost: "0.00"
+      - max-groups: 2
+        minimum-members: 4
+        minimum-treasury-balance: "50000.00"
+        establishment-cost: "25000.00"
+      - max-groups: 3
+        minimum-members: 8
+        minimum-treasury-balance: "150000.00"
+        establishment-cost: "75000.00"
 gameplay:
   # Phase gates may disable behavior in any listed phase. Unsafe phases cannot
   # be added: claim changes during war and all archived-state mutation remain
@@ -34,6 +56,19 @@ gameplay:
     # Performance budget only: maximum journal coordinates observed in one server
     # tick while sealing a resolving battle's immutable damage report.
     resolution-observations-per-tick: 200
+  land-protection:
+    # A restart is required for changes. Disabling immediately restores normal protection.
+    enabled: true
+    interval-seconds: 604800
+    grace-seconds: 259200
+    assessment-interval-seconds: 60
+    base-charge: "1000.00"
+    per-block-charge: "0.10"
+    # This purpose-specific reserve cannot be withdrawn while land is protected.
+    base-reserve: "5000.00"
+    per-block-reserve: "0.25"
+    # Distinct journaled coordinates across one exposure episode.
+    damage-limit-per-exposure: 500
 economy:
   # Fixed-point precision for civilization treasuries and the Vault player bridge.
   # It is snapshotted per season and cannot change after that season opens accounts.

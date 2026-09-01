@@ -10,6 +10,7 @@ import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.BattleBlockMutationQueue
+import io.bennyc.civilizations.infrastructure.runtime.ExposureBlockMutationQueue
 import io.bennyc.civilizations.infrastructure.paper.war.BattleLockStandIn
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
@@ -83,10 +84,22 @@ class PaperProtectionListener(
             ready?.activeSeason?.activeBattleAt(target) != null
         },
     )
+    private val exposureMutations = PaperExposureBlockMutationAdapter(
+        server = server,
+        logger = logger,
+        queue = ExposureBlockMutationQueue(runtime::prepareExposureMutation),
+        authorize = { actorId, action, target ->
+            val ready = runtime.state as? CivilizationsRuntimeState.Ready
+            ready?.activeSeason?.authorizeExposureBlockMutation(actorId, action, target)
+        },
+    )
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onBlockBreak(event: BlockBreakEvent) {
         if (battleMutations.intercept(event)) {
+            return
+        }
+        if (exposureMutations.intercept(event)) {
             return
         }
 
@@ -103,6 +116,9 @@ class PaperProtectionListener(
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onBlockPlace(event: BlockPlaceEvent) {
         if (battleMutations.intercept(event)) {
+            return
+        }
+        if (exposureMutations.intercept(event)) {
             return
         }
 
@@ -438,6 +454,8 @@ class PaperProtectionListener(
     }
 
     fun battleMutationMetricsSummary(): String = battleMutations.metricsSummary()
+
+    fun exposureMutationMetricsSummary(): String = exposureMutations.metricsSummary()
 
     private fun allowsBattlePvp(
         player: Player,

@@ -1,10 +1,12 @@
 package io.bennyc.civilizations.infrastructure.paper
 
 import io.bennyc.civilizations.application.claim.ClaimRules
+import io.bennyc.civilizations.application.claim.ClaimGroupTier
 import io.bennyc.civilizations.application.economy.EconomyRules
 import io.bennyc.civilizations.application.economy.BattleCasualtyRules
 import io.bennyc.civilizations.application.economy.RepairEconomyRules
 import io.bennyc.civilizations.application.season.GameplayPhaseRules
+import io.bennyc.civilizations.application.protection.LandProtectionRules
 import io.bennyc.civilizations.application.war.WarService
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.civilization.MembershipRole
@@ -59,6 +61,7 @@ data class CivilizationsConfiguration(
     val battleCombatRules: BattleCombatRulesSnapshot,
     val battleResolutionRules: BattleResolutionRules,
     val economyRules: EconomyRules,
+    val landProtectionRules: LandProtectionRules,
     val repairRunnerRules: RepairRunnerRules,
 ) {
     companion object {
@@ -96,6 +99,18 @@ data class CivilizationsConfiguration(
                         "claims.require-edge-connection",
                         "v2.claims.require-edge-connection",
                     ),
+                    baseClaimPrice = config.requiredMoney(
+                        "claims.base-price",
+                        currencyScale,
+                    ),
+                    pricePerBlock = config.requiredMoney(
+                        "claims.price-per-block",
+                        currencyScale,
+                    ),
+                    ordinaryInitiatorRoles = config.requiredMembershipRoles(
+                        "claims.ordinary-initiator-roles",
+                    ),
+                    groupTiers = config.requiredClaimGroupTiers(currencyScale),
                 ),
                 phaseRules = GameplayPhaseRules(
                     rosterChangesAllowedIn = config.requiredPhases(
@@ -175,6 +190,82 @@ data class CivilizationsConfiguration(
                         ),
                     ),
                 ),
+                landProtectionRules = LandProtectionRules(
+                    enabled = config.requiredBoolean("gameplay.land-protection.enabled"),
+                    intervalSeconds = config.requiredLong(
+                        "gameplay.land-protection.interval-seconds",
+                    ).also { value ->
+                        require(value in 60..LandProtectionRules.MAX_INTERVAL_SECONDS) {
+                            "gameplay.land-protection.interval-seconds must be between 60 and " +
+                                LandProtectionRules.MAX_INTERVAL_SECONDS
+                        }
+                    },
+                    graceSeconds = config.requiredLong(
+                        "gameplay.land-protection.grace-seconds",
+                    ).also { value ->
+                        require(value in 60..LandProtectionRules.MAX_GRACE_SECONDS) {
+                            "gameplay.land-protection.grace-seconds must be between 60 and " +
+                                LandProtectionRules.MAX_GRACE_SECONDS
+                        }
+                    },
+                    baseCharge = config.requiredMoney(
+                        "gameplay.land-protection.base-charge",
+                        currencyScale,
+                    ),
+                    perBlockCharge = config.requiredMoney(
+                        "gameplay.land-protection.per-block-charge",
+                        currencyScale,
+                    ),
+                    baseReserve = config.requiredMoney(
+                        "gameplay.land-protection.base-reserve",
+                        currencyScale,
+                    ),
+                    perBlockReserve = config.requiredMoney(
+                        "gameplay.land-protection.per-block-reserve",
+                        currencyScale,
+                    ),
+                    damageLimitPerExposure = config.requiredInt(
+                        "gameplay.land-protection.damage-limit-per-exposure",
+                    ).also { value ->
+                        require(value in 1..LandProtectionRules.MAX_DAMAGE_LIMIT) {
+                            "gameplay.land-protection.damage-limit-per-exposure must be between " +
+                                "1 and ${LandProtectionRules.MAX_DAMAGE_LIMIT}"
+                        }
+                    },
+                    assessmentIntervalSeconds = config.requiredLong(
+                        "gameplay.land-protection.assessment-interval-seconds",
+                    ).also { value ->
+                        require(value in 10..3_600) {
+                            "gameplay.land-protection.assessment-interval-seconds must be " +
+                                "between 10 and 3600"
+                        }
+                    },
+                ).also { rules ->
+                    val maximumClaimedArea = try {
+                        Math.multiplyExact(maxClaimArea, maxClaimCount.toLong())
+                    } catch (failure: ArithmeticException) {
+                        throw IllegalArgumentException(
+                            "claims.max-area multiplied by claims.max-count must fit in a 64-bit integer",
+                            failure,
+                        )
+                    }
+                    try {
+                        rules.baseCharge.plus(rules.perBlockCharge.times(maximumClaimedArea))
+                    } catch (failure: RuntimeException) {
+                        throw IllegalArgumentException(
+                            "gameplay.land-protection charge must fit at the configured maximum claimed area",
+                            failure,
+                        )
+                    }
+                    try {
+                        rules.baseReserve.plus(rules.perBlockReserve.times(maximumClaimedArea))
+                    } catch (failure: RuntimeException) {
+                        throw IllegalArgumentException(
+                            "gameplay.land-protection reserve must fit at the configured maximum claimed area",
+                            failure,
+                        )
+                    }
+                },
                 repairRunnerRules = RepairRunnerRules(
                     blocksPerTick = config.requiredInt("repair.runner.blocks-per-tick"),
                     assessmentBlocksPerTick = config.requiredInt(
@@ -301,6 +392,56 @@ data class CivilizationsConfiguration(
             require(roles.size == roles.toSet().size) { "$path cannot contain duplicate roles" }
             require(roles.isNotEmpty()) { "$path must contain at least one role" }
             return roles.toSet()
+        }
+
+        private fun FileConfiguration.requiredClaimGroupTiers(
+            currencyScale: CurrencyScale,
+        ): List<ClaimGroupTier> {
+            val path = "claims.groups.tiers"
+            val values = get(path) as? List<*>
+                ?: throw IllegalArgumentException("$path must be a YAML list")
+            require(values.isNotEmpty()) { "$path must contain at least one tier" }
+            return values.mapIndexed { index, raw ->
+                val entry = raw as? Map<*, *>
+                    ?: throw IllegalArgumentException("$path[$index] must be a map")
+                fun integer(key: String): Int {
+                    val value = entry[key]
+                    val long = when (value) {
+                        is Byte -> value.toLong()
+                        is Short -> value.toLong()
+                        is Int -> value.toLong()
+                        is Long -> value
+                        else -> throw IllegalArgumentException("$path[$index].$key must be an integer")
+                    }
+                    require(long in Int.MIN_VALUE..Int.MAX_VALUE) {
+                        "$path[$index].$key must fit in a 32-bit integer"
+                    }
+                    return long.toInt()
+                }
+                fun money(key: String) = try {
+                    val rawMoney = entry[key]
+                        ?: throw IllegalArgumentException("$path[$index].$key is required")
+                    currencyScale.parse(rawMoney.toString()).also {
+                        require(it.minorUnits >= 0) { "$path[$index].$key cannot be negative" }
+                    }
+                } catch (failure: IllegalArgumentException) {
+                    throw IllegalArgumentException("$path[$index].$key ${failure.message}", failure)
+                }
+                val maxGroups = integer("max-groups")
+                require(maxGroups == index + 1) {
+                    "$path[$index].max-groups must equal ${index + 1}"
+                }
+                val minimumMembers = integer("minimum-members")
+                require(minimumMembers >= 0) {
+                    "$path[$index].minimum-members cannot be negative"
+                }
+                ClaimGroupTier(
+                    maxGroups = maxGroups,
+                    minimumMembers = minimumMembers,
+                    minimumTreasuryBalance = money("minimum-treasury-balance"),
+                    establishmentCost = money("establishment-cost"),
+                )
+            }
         }
 
         private fun FileConfiguration.requiredScalarText(path: String): String = when (

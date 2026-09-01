@@ -182,6 +182,15 @@ class ProtectionServiceTest {
         }
         assertFailsWith<IllegalArgumentException> {
             ConflictAuthorization.Active(
+                kind = ConflictKind.LAND_EXPOSURE,
+                actorId = memberB,
+                eligibleClaimIds = setOf(claimA.id),
+                allowedActions = setOf(PlayerProtectionAction.PVP),
+                targetPlayerIds = setOf(memberA),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ConflictAuthorization.Active(
                 kind = ConflictKind.ASSASSINATION,
                 actorId = memberB,
                 eligibleClaimIds = setOf(claimA.id),

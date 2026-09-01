@@ -6,6 +6,7 @@ import io.bennyc.civilizations.infrastructure.paper.CivilizationsCommand
 import io.bennyc.civilizations.infrastructure.paper.economy.PaperEconomyBridgeCoordinator
 import io.bennyc.civilizations.infrastructure.paper.economy.VaultEconomyBootstrap
 import io.bennyc.civilizations.infrastructure.paper.protection.PaperProtectionListener
+import io.bennyc.civilizations.infrastructure.paper.protection.PaperLandProtectionCoordinator
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairMenu
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
@@ -25,6 +26,7 @@ class CivilizationsPlugin : JavaPlugin() {
     private lateinit var battleCombatListener: PaperBattleCombatListener
     private lateinit var battleResolutionCoordinator: PaperBattleResolutionCoordinator
     private lateinit var repairCoordinator: PaperRepairCoordinator
+    private lateinit var landProtectionCoordinator: PaperLandProtectionCoordinator
     private lateinit var repairMenu: PaperRepairMenu
 
     override fun onEnable() {
@@ -43,6 +45,7 @@ class CivilizationsPlugin : JavaPlugin() {
             claimRules = runtimeConfiguration.claimRules,
             phaseRules = runtimeConfiguration.phaseRules,
             economyRules = runtimeConfiguration.economyRules,
+            landProtectionRules = runtimeConfiguration.landProtectionRules,
             serverThread = serverThread,
             fatalFailureHandler = { failure ->
                 logger.log(Level.SEVERE, "Civilizations failed closed", failure)
@@ -72,6 +75,21 @@ class CivilizationsPlugin : JavaPlugin() {
             rules = runtimeConfiguration.repairRunnerRules,
             logger = logger,
         )
+        landProtectionCoordinator = PaperLandProtectionCoordinator(
+            plugin = this,
+            runtime = runtime,
+            server = server,
+            runnerRules = runtimeConfiguration.repairRunnerRules,
+            assessmentIntervalSeconds = runtimeConfiguration.landProtectionRules
+                .assessmentIntervalSeconds,
+            logger = logger,
+        )
+        repairCoordinator.setExternalWorldWorkActive(
+            { landProtectionCoordinator.isWorldWorkActive },
+        )
+        landProtectionCoordinator.setOrdinaryWorldWorkBusy(
+            { repairCoordinator.isWorldWorkActive },
+        )
         battleResolutionCoordinator = PaperBattleResolutionCoordinator(
             plugin = this,
             runtime = runtime,
@@ -79,6 +97,7 @@ class CivilizationsPlugin : JavaPlugin() {
             rules = runtimeConfiguration.battleResolutionRules,
             logger = logger,
             repairCoordinator = repairCoordinator,
+            landProtectionCoordinator = landProtectionCoordinator,
         )
         repairMenu = PaperRepairMenu(
             runtime = runtime,
@@ -112,6 +131,7 @@ class CivilizationsPlugin : JavaPlugin() {
                 repairCoordinator = repairCoordinator,
                 repairMenu = repairMenu,
                 battleResolutionCoordinator = battleResolutionCoordinator,
+                landProtectionCoordinator = landProtectionCoordinator,
             ),
         )
         battleCombatListener = PaperBattleCombatListener(
@@ -141,6 +161,7 @@ class CivilizationsPlugin : JavaPlugin() {
             when (outcome) {
                 is RuntimeStartOutcome.Ready -> {
                     battleResolutionCoordinator.recover(outcome.state)
+                    landProtectionCoordinator.recover()
                     val active = outcome.state.activeSeason
                     logger.info(
                         if (active == null) {
@@ -175,10 +196,17 @@ class CivilizationsPlugin : JavaPlugin() {
             logger.info("Repair runner metrics: ${repairCoordinator.metricsSummary()}")
             repairCoordinator.close()
         }
+        if (::landProtectionCoordinator.isInitialized) {
+            landProtectionCoordinator.close()
+        }
         if (::protectionListener.isInitialized) {
             logger.info(
                 "Battle block mutation metrics: " +
                     protectionListener.battleMutationMetricsSummary(),
+            )
+            logger.info(
+                "Land exposure mutation metrics: " +
+                    protectionListener.exposureMutationMetricsSummary(),
             )
         }
         if (::battleEntryListener.isInitialized) {

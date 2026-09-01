@@ -20,6 +20,11 @@ import io.bennyc.civilizations.application.protection.PlayerProtectionRequest
 import io.bennyc.civilizations.application.protection.ProtectionDecision
 import io.bennyc.civilizations.application.protection.ProtectionReason
 import io.bennyc.civilizations.application.protection.ProtectionService
+import io.bennyc.civilizations.application.protection.LandProtectionRules
+import io.bennyc.civilizations.application.protection.LandProtectionService
+import io.bennyc.civilizations.application.protection.PrepareExposureMutation
+import io.bennyc.civilizations.application.protection.PreparedExposureMutation
+import io.bennyc.civilizations.application.protection.ProtectionRepairService
 import io.bennyc.civilizations.application.repair.RepairJobService
 import io.bennyc.civilizations.application.season.SeasonService
 import io.bennyc.civilizations.application.season.GameplayPhaseRules
@@ -32,9 +37,13 @@ import io.bennyc.civilizations.domain.civilization.Membership
 import io.bennyc.civilizations.domain.civilization.MembershipRole
 import io.bennyc.civilizations.domain.claim.BlockPosition2D
 import io.bennyc.civilizations.domain.claim.Claim
+import io.bennyc.civilizations.domain.claim.ClaimGroup
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.economy.CivilizationAccount
 import io.bennyc.civilizations.domain.economy.SeasonEconomySettings
+import io.bennyc.civilizations.domain.protection.LandExposureId
+import io.bennyc.civilizations.domain.protection.LandProtectionState
+import io.bennyc.civilizations.domain.protection.LandProtectionStatus
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
@@ -77,6 +86,7 @@ class CivilizationsRuntime private constructor(
     claimRules: ClaimRules,
     private val phaseRules: GameplayPhaseRules,
     economyRules: EconomyRules,
+    private val landProtectionRules: LandProtectionRules,
     idGenerator: CivilizationsIdGenerator,
     clock: Clock,
     private val serverThread: Executor,
@@ -89,13 +99,25 @@ class CivilizationsRuntime private constructor(
         repository = repository,
         seasons = SeasonService(repository, idGenerator, clock),
         civilizations = CivilizationService(repository, idGenerator, clock, phaseRules),
-        claims = ClaimService(repository, idGenerator, claimRules, phaseRules),
+        claims = ClaimService(repository, idGenerator, claimRules, phaseRules, clock),
         wars = WarService(repository, idGenerator, clock, economyRules.battleCasualties),
         combat = BattleCombatService(repository, idGenerator, clock),
         damageJournal = DamageJournalService(repository, idGenerator, clock),
         damageReports = DamageReportService(repository, clock),
         economy = EconomyService(repository, idGenerator, clock, economyRules),
         repairs = RepairJobService(repository, idGenerator, clock, economyRules),
+        landProtection = LandProtectionService(
+            repository,
+            idGenerator,
+            clock,
+            landProtectionRules,
+        ),
+        protectionRepairs = ProtectionRepairService(
+            repository,
+            idGenerator,
+            clock,
+            economyRules,
+        ),
     )
 
     @Volatile
@@ -112,6 +134,7 @@ class CivilizationsRuntime private constructor(
                 val migration = migrator.migrate()
                 mutationScope.economy.recoverInterruptedBridgeTransfers()
                 mutationScope.repairs.recoverInterruptedJobs()
+                mutationScope.protectionRepairs.recoverInterruptedJobs()
                 val ready = loadReadyState()
                 dispatchToServer {
                     state = ready
@@ -199,6 +222,74 @@ class CivilizationsRuntime private constructor(
             dispatchToServer {
                 completion(RuntimeMutationOutcome.NotReady(state))
             }
+        }
+    }
+
+    fun <T> submitProtectionRepairOperation(
+        operation: ProtectionRepairService.() -> ApplicationResult<T>,
+        completion: (RuntimeMutationOutcome<T>) -> Unit,
+    ) {
+        val current = state
+        if (closed.get() || current !is CivilizationsRuntimeState.Ready) {
+            dispatchToServer { completion(RuntimeMutationOutcome.NotReady(state)) }
+            return
+        }
+        try {
+            worker.execute {
+                try {
+                    val result = mutationScope.protectionRepairs.operation()
+                    dispatchToServer {
+                        val ready = state as? CivilizationsRuntimeState.Ready
+                        if (ready == null) completion(RuntimeMutationOutcome.NotReady(state))
+                        else completion(RuntimeMutationOutcome.Completed(result, ready))
+                    }
+                } catch (failure: Throwable) {
+                    publishFatal(failure) { completion(RuntimeMutationOutcome.Failed(failure)) }
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            dispatchToServer { completion(RuntimeMutationOutcome.NotReady(state)) }
+        }
+    }
+
+    /** Persists an exposure event and refreshes only the tiny protection-state map. */
+    fun prepareExposureMutation(
+        request: PrepareExposureMutation,
+        completion: (RuntimeMutationOutcome<PreparedExposureMutation>) -> Unit,
+    ) {
+        val current = state
+        if (closed.get() || current !is CivilizationsRuntimeState.Ready) {
+            dispatchToServer { completion(RuntimeMutationOutcome.NotReady(state)) }
+            return
+        }
+        try {
+            worker.execute {
+                try {
+                    val result = mutationScope.landProtection.prepareMutation(request)
+                    val states = repository.read {
+                        val seasonId = findActiveSeasonId()
+                        if (seasonId == null) emptyList()
+                        else listLandProtectionStates(seasonId)
+                    }.associateBy(LandProtectionState::civilizationId)
+                    dispatchToServer {
+                        val ready = state as? CivilizationsRuntimeState.Ready
+                        val active = ready?.activeSeason
+                        if (ready == null || active == null) {
+                            completion(RuntimeMutationOutcome.NotReady(state))
+                        } else {
+                            val refreshed = CivilizationsRuntimeState.Ready(
+                                active.copy(landProtectionStates = states),
+                            )
+                            state = refreshed
+                            completion(RuntimeMutationOutcome.Completed(result, refreshed))
+                        }
+                    }
+                } catch (failure: Throwable) {
+                    publishFatal(failure) { completion(RuntimeMutationOutcome.Failed(failure)) }
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            dispatchToServer { completion(RuntimeMutationOutcome.NotReady(state)) }
         }
     }
 
@@ -313,6 +404,14 @@ class CivilizationsRuntime private constructor(
                     economy.failure.description,
                 )
             }
+            when (val protection = mutationScope.landProtection.synchronize(activeSeasonId)) {
+                is ApplicationResult.Applied,
+                is ApplicationResult.Unchanged,
+                -> Unit
+                is ApplicationResult.Rejected -> throw RuntimeIntegrityException(
+                    protection.failure.description,
+                )
+            }
         }
         val loaded = repository.read {
             val activeSeasonId = findActiveSeasonId()
@@ -330,6 +429,7 @@ class CivilizationsRuntime private constructor(
                     civilization.id to listMemberships(civilization.id)
                 },
                 claims = listClaimsForSeason(activeSeasonId),
+                claimGroups = listClaimGroupsForSeason(activeSeasonId),
                 wars = listWarsForSeason(activeSeasonId),
                 battles = battles,
                 battleParticipants = battles.associate { battle ->
@@ -353,6 +453,8 @@ class CivilizationsRuntime private constructor(
                     ),
                 civilizationAccounts = listCivilizationAccounts(activeSeasonId)
                     .associateBy(CivilizationAccount::civilizationId),
+                landProtectionStates = listLandProtectionStates(activeSeasonId)
+                    .associateBy(LandProtectionState::civilizationId),
             )
         }
 
@@ -375,6 +477,7 @@ class CivilizationsRuntime private constructor(
                         civilizations = loaded.civilizations,
                         memberships = loaded.memberships,
                         claimIndex = index,
+                        claimGroups = loaded.claimGroups,
                         protection = protection,
                         wars = loaded.wars,
                         battles = loaded.battles,
@@ -386,6 +489,7 @@ class CivilizationsRuntime private constructor(
                         battleSurrenders = loaded.battleSurrenders,
                         economySettings = loaded.economySettings,
                         civilizationAccounts = loaded.civilizationAccounts,
+                        landProtectionStates = loaded.landProtectionStates,
                         activeBattleEligibility = buildActiveBattleEligibility(loaded),
                     ),
                 )
@@ -431,6 +535,61 @@ class CivilizationsRuntime private constructor(
                     "Claim ${claim.id} belongs to ${owner.status} civilization ${owner.id}",
                 )
             }
+        }
+        val groupsById = loaded.claimGroups.associateBy(ClaimGroup::id)
+        if (groupsById.size != loaded.claimGroups.size) {
+            throw RuntimeIntegrityException("Season ${loaded.season.id} has duplicate claim groups")
+        }
+        loaded.claimGroups.forEach { group ->
+            val owner = civilizationsById[group.civilizationId]
+                ?: throw RuntimeIntegrityException(
+                    "Claim group ${group.id} references missing civilization ${group.civilizationId}",
+                )
+            if (group.seasonId != loaded.season.id || owner.status != CivilizationStatus.ACTIVE) {
+                throw RuntimeIntegrityException(
+                    "Claim group ${group.id} does not belong to an active civilization in " +
+                        "season ${loaded.season.id}",
+                )
+            }
+        }
+        for (claim in loaded.claims) {
+            val group = groupsById[claim.groupId]
+                ?: throw RuntimeIntegrityException(
+                    "Claim ${claim.id} has no claim group ${claim.groupId}",
+                )
+            if (group.seasonId != claim.seasonId || group.civilizationId != claim.civilizationId) {
+                throw RuntimeIntegrityException(
+                    "Claim ${claim.id} does not match claim group ${group.id}",
+                )
+            }
+        }
+        loaded.claimGroups.forEach { group ->
+            val remaining = loaded.claims
+                .filter { it.groupId == group.id }
+                .toMutableList()
+            if (remaining.isEmpty()) {
+                throw RuntimeIntegrityException("Claim group ${group.id} has no land")
+            }
+            val connected = mutableListOf(remaining.removeAt(0))
+            while (remaining.isNotEmpty()) {
+                val next = remaining.indexOfFirst { candidate ->
+                    connected.any { it.bounds.isEdgeAdjacentTo(candidate.bounds) }
+                }
+                if (next < 0) {
+                    throw RuntimeIntegrityException(
+                        "Claim group ${group.id} is not one edge-connected territory",
+                    )
+                }
+                connected += remaining.removeAt(next)
+            }
+        }
+        val activeCivilizationIds = loaded.civilizations
+            .filter { it.status == CivilizationStatus.ACTIVE }
+            .mapTo(linkedSetOf(), Civilization::id)
+        if (loaded.landProtectionStates.keys != activeCivilizationIds) {
+            throw RuntimeIntegrityException(
+                "Land protection states do not match active civilizations",
+            )
         }
     }
 
@@ -729,6 +888,16 @@ class CivilizationsRuntime private constructor(
             claimRules: ClaimRules,
             phaseRules: GameplayPhaseRules = GameplayPhaseRules(),
             economyRules: EconomyRules,
+            landProtectionRules: LandProtectionRules = LandProtectionRules(
+                enabled = false,
+                intervalSeconds = 86_400,
+                graceSeconds = 86_400,
+                baseCharge = io.bennyc.civilizations.domain.economy.MoneyAmount.ZERO,
+                perBlockCharge = io.bennyc.civilizations.domain.economy.MoneyAmount.ZERO,
+                baseReserve = io.bennyc.civilizations.domain.economy.MoneyAmount.ZERO,
+                perBlockReserve = io.bennyc.civilizations.domain.economy.MoneyAmount.ZERO,
+                damageLimitPerExposure = 1,
+            ),
             serverThread: Executor,
             fatalFailureHandler: (Throwable) -> Unit = {},
             idGenerator: CivilizationsIdGenerator = UuidCivilizationsIdGenerator(),
@@ -744,6 +913,7 @@ class CivilizationsRuntime private constructor(
                 claimRules = claimRules,
                 phaseRules = phaseRules,
                 economyRules = economyRules,
+                landProtectionRules = landProtectionRules,
                 idGenerator = idGenerator,
                 clock = clock,
                 serverThread = serverThread,
@@ -768,6 +938,8 @@ class RuntimeMutationScope internal constructor(
     val damageReports: DamageReportService,
     val economy: EconomyService,
     val repairs: RepairJobService,
+    val landProtection: LandProtectionService,
+    val protectionRepairs: ProtectionRepairService,
 ) {
     fun activeSeasonId(): SeasonId? = repository.read { findActiveSeasonId() }
 
@@ -818,6 +990,7 @@ data class ActiveSeasonRuntimeState(
     val civilizations: List<Civilization>,
     val memberships: Map<CivilizationId, List<Membership>>,
     val claimIndex: ClaimSpatialIndex,
+    val claimGroups: List<ClaimGroup>,
     val protection: ProtectionService,
     val wars: List<War>,
     val battles: List<Battle>,
@@ -829,6 +1002,7 @@ data class ActiveSeasonRuntimeState(
     val battleSurrenders: Map<BattleId, BattleSurrenderRecord>,
     val economySettings: SeasonEconomySettings,
     val civilizationAccounts: Map<CivilizationId, CivilizationAccount>,
+    val landProtectionStates: Map<CivilizationId, LandProtectionState>,
     val activeBattleEligibility: List<ActiveBattleEligibilityRuntimeState>,
 ) {
     private val membershipByPlayer = buildMap {
@@ -1035,7 +1209,65 @@ data class ActiveSeasonRuntimeState(
             target = target,
         )
     }
+
+    /** Grants only simple block break/place to a member of another civilization. */
+    fun authorizeExposureBlockMutation(
+        actorId: PlayerId,
+        action: PlayerProtectionAction,
+        target: BlockPosition2D,
+    ): ActiveExposureBlockMutationAuthorization? {
+        require(
+            action == PlayerProtectionAction.BLOCK_BREAK ||
+                action == PlayerProtectionAction.BLOCK_PLACE,
+        ) { "$action is not an exposure block mutation" }
+        val actorMembership = membershipByPlayer[actorId] ?: return null
+        val claim = claimIndex.claimAt(target) ?: return null
+        if (claim.civilizationId == actorMembership.civilizationId ||
+            openBattleByCivilization.containsKey(claim.civilizationId) ||
+            openBattleByCivilization.containsKey(actorMembership.civilizationId)
+        ) return null
+        val state = landProtectionStates[claim.civilizationId] ?: return null
+        if (state.status != LandProtectionStatus.EXPOSED ||
+            state.exposureDamageCount >= checkNotNull(state.exposureDamageLimit)
+        ) return null
+        val conflict = ConflictAuthorization.Active(
+            kind = ConflictKind.LAND_EXPOSURE,
+            actorId = actorId,
+            eligibleClaimIds = setOf(claim.id),
+            allowedActions = setOf(action),
+        )
+        val decision = protection.decidePlayerAction(
+            PlayerProtectionRequest(
+                actorId = actorId,
+                action = action,
+                target = target,
+                conflictAuthorization = conflict,
+            ),
+        )
+        if (decision !is ProtectionDecision.Allowed ||
+            decision.reason != ProtectionReason.CONFLICT_OVERRIDE
+        ) return null
+        return ActiveExposureBlockMutationAuthorization(
+            exposureId = checkNotNull(state.exposureId),
+            ownerCivilizationId = claim.civilizationId,
+            claimId = claim.id,
+            actorId = actorId,
+            actorCivilizationId = actorMembership.civilizationId,
+            action = action,
+            target = target,
+        )
+    }
 }
+
+data class ActiveExposureBlockMutationAuthorization(
+    val exposureId: LandExposureId,
+    val ownerCivilizationId: CivilizationId,
+    val claimId: ClaimId,
+    val actorId: PlayerId,
+    val actorCivilizationId: CivilizationId,
+    val action: PlayerProtectionAction,
+    val target: BlockPosition2D,
+)
 
 data class HostileClaimEntryRuntimeState(
     val war: War,
@@ -1134,6 +1366,7 @@ private sealed interface LoadedActiveSeason {
         val civilizations: List<Civilization>,
         val memberships: Map<CivilizationId, List<Membership>>,
         val claims: List<Claim>,
+        val claimGroups: List<ClaimGroup>,
         val wars: List<War>,
         val battles: List<Battle>,
         val battleParticipants: Map<BattleId, List<BattleParticipant>>,
@@ -1144,5 +1377,6 @@ private sealed interface LoadedActiveSeason {
         val battleSurrenders: Map<BattleId, BattleSurrenderRecord>,
         val economySettings: SeasonEconomySettings,
         val civilizationAccounts: Map<CivilizationId, CivilizationAccount>,
+        val landProtectionStates: Map<CivilizationId, LandProtectionState>,
     ) : LoadedActiveSeason
 }

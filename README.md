@@ -4,11 +4,16 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The architecture rework is complete. See [TODO.md](TODO.md) for the prioritized product roadmap, [docs/architecture.md](docs/architecture.md) for the stable dependency and persistence boundaries, and [docs/worktree-roadmap.md](docs/worktree-roadmap.md) for the dependency-aware multi-worktree queue for net-new MVP work.
 
-The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, snapshotted combatants and lives, idempotent no-debt casualty economics, a first-write-wins battle damage journal, bounded live-world resolution into immutable damage reports, exact civilization treasury accounts backed by an immutable idempotent ledger, and persisted resumable repair plans with atomic payments.
+The live core includes pure claim geometry and indexing, explicit connected claim groups with atomic treasury pricing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, centralized land protection with upkeep/reserve/grace/exposure, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, snapshotted combatants and lives, idempotent no-debt casualty economics, journal-first battle and exposure damage, bounded live-world resolution, exact civilization treasury accounts backed by an immutable idempotent ledger, and persisted resumable battle/protection repair plans with atomic payments.
 
 The incomplete pre-rework commands, mutable model graph, menus, scheduled tasks, adapters, and JSON-blob datastores have been deleted. Paper listeners protect claims through the application policy. During an active battle in the global `WAR` phase, snapshotted participants may break or place simple single blocks in either side's claimed land. The listener cancels the original event, commits its first-write-wins journal record off-thread, then revalidates and applies the mutation on the server thread. Block entities, multi-place operations, entities, explosions, and unsafe cascading blocks remain protected.
 Living opposing combatants may also PVP in either side's claimed land; teammates,
 non-combatants, and eliminated players receive no battle PVP capability.
+Outside battle, an upkeep-exposed claim permits another civilization to change only a
+bounded number of simple blocks through a separate journal-first path. Containers, block
+entities, ordinary entities, and PVP remain protected. Owners may rebuild manually, and
+treasury restoration charges only the still-repairable blocks needed for an absolute
+target with no victor payment.
 
 ## Current platform
 
@@ -103,6 +108,22 @@ produces at most one immutable casualty record. Direct charges stop at zero and 
 unpaid remainder without debt; casualty money is a sink separate from repair pricing and
 victor proceeds. Only unused attacker coverage returns at terminal battle state.
 
+E1 adds schema 11 claim groups, land-protection state and assessment history, exposure
+journals, and protection repair jobs/items. `/civ claim` performs an ordinary leader
+purchase in the player's current world; disconnected land uses configurable progression
+tiers and a bridge rectangle merges adjacent groups without refunding old founding costs.
+Weekly area-based upkeep and a purpose-specific withdrawal reserve ship enabled, with a
+three-day grace period before capped exposure. `/civ protection` reports the current
+reserve/deadline, exposure cap, manual restoration, conflicts, and remaining 100% price;
+`pay`, `repair <target-percent>`, and `resume <job-id>` use the durable application path.
+Battle resolution, battle repair, and protection restoration share one bounded Paper
+world-work lane and never generate missing chunks.
+
+E1 passed an existing schema-10-to-11 Paper 26.2 build-112 upgrade with BattleLock 1.8
+co-loaded, followed by clean shutdown and restart while preserving the active season. The
+full claim purchase, shortened upkeep/grace/exposure, outsider damage cap, manual rebuild,
+and paid restoration scenario remains in the manual multiplayer checklist.
+
 ## Administration
 
 The native Paper `/civadmin` command requires `civilizations.admin`, which defaults to operators. Run `/civadmin` for help. The current commands support:
@@ -117,9 +138,9 @@ The native Paper `/civadmin` command requires `civilizations.admin`, which defau
 - civilization treasury balance inspection, audited adjustments, and explicit reconciliation of ambiguous player-wallet transfers.
 - repair status/job inspection, payment-free audited sponsorship, and pause/resume/cancel recovery controls.
 
-The player-facing `/civ` command exposes war status/declaration/surrender; `balance`, `deposit <amount>`, and leader-only `withdraw <amount>`; plus the `/civ repair` inventory workflow. `/civ repair <battle-id>`, `/civ repair status <battle-id>`, and `/civ repair start <battle-id> <target-percent>` remain available as direct paths. Repair status reports actual completion after manual rebuilding, remaining repairable blocks, conflicts, price, and victor proceeds. Player wallet operations require server-provided Vault plus an economy plugin; Civilizations never creates a Vault bank account. Its player permissions default to players so LuckPerms can narrow access. Declaration is allowed in `SETUP`, `PEACE`, and `WAR`; a battle can start only during `WAR`. Entering or leaving the global `WAR` phase additionally requires the operator-default `civilizations.admin.phase.war` permission.
+The player-facing `/civ` command exposes war status/declaration/surrender; `balance`, `deposit <amount>`, and leader-only `withdraw <amount>`; leader claim purchases; land-protection status/payment/restoration; plus the `/civ repair` inventory workflow. `/civ repair <battle-id>`, `/civ repair status <battle-id>`, and `/civ repair start <battle-id> <target-percent>` remain available as direct battle paths. Repair status reports actual completion after manual rebuilding, remaining repairable blocks, conflicts, price, and victor proceeds. Player wallet operations require server-provided Vault plus an economy plugin; Civilizations never creates a Vault bank account. Its player permissions default to players so LuckPerms can narrow access. Declaration is allowed in `SETUP`, `PEACE`, and `WAR`; a battle can start only during `WAR`. Entering or leaving the global `WAR` phase additionally requires the operator-default `civilizations.admin.phase.war` permission.
 
-Claim size/count/connectivity rules, safe gameplay phase gates, repair observation/execution budgets, and the database filename are in `config.yml`; see [docs/configuration.md](docs/configuration.md) for the key reference and configuration contract. Configuration is validated and installed at startup, so changes currently require a server restart. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
+Claim size/count/prices/group tiers, land upkeep/reserve/grace/exposure, safe gameplay phase gates, repair observation/execution budgets, and the database filename are in `config.yml`; see [docs/configuration.md](docs/configuration.md) for the key reference and configuration contract. Configuration is validated and installed at startup, so changes currently require a server restart. Mutations are serialized on a plugin-owned storage thread, then a refreshed snapshot and claim index are installed on the Paper thread before completion is reported.
 
 Operators have the explicit `civilizations.admin.bypass` permission. Ordinary members may mutate their own claims; outsiders cannot build, break, use containers/switches, move fluids or pistons across a border, damage protected entities, or PVP inside claimed land. Movement and teleportation are not blocked by land ownership, but a horizontal block transition or teleport into a hostile claim can start an eligible declared battle. Entry candidates are resolved from published memory and coalesced behind a bounded queue before durable work runs off-thread.
 

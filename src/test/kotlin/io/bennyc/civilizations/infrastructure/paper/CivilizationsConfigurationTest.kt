@@ -26,6 +26,10 @@ class CivilizationsConfigurationTest {
             assertEquals(dataFolder.resolve("civilizations-v2.db"), loaded.databasePath)
             assertEquals(65_536, loaded.claimRules.maxArea)
             assertEquals(32, loaded.claimRules.maxClaimsPerCivilization)
+            assertEquals(MoneyAmount(10_000), loaded.claimRules.baseClaimPrice)
+            assertEquals(MoneyAmount(100), loaded.claimRules.pricePerBlock)
+            assertEquals(3, loaded.claimRules.groupTiers.size)
+            assertEquals(MoneyAmount(2_500_000), loaded.claimRules.groupTiers[1].establishmentCost)
             assertEquals(
                 setOf(SeasonStatus.SETUP, SeasonStatus.PEACE, SeasonStatus.WAR),
                 loaded.phaseRules.rosterChangesAllowedIn,
@@ -55,6 +59,12 @@ class CivilizationsConfigurationTest {
             )
             assertEquals(true, loaded.economyRules.battleCasualties.requireAttackerCoverage)
             assertEquals(true, loaded.economyRules.battleCasualties.lockWithdrawalsDuringBattle)
+            assertEquals(true, loaded.landProtectionRules.enabled)
+            assertEquals(604_800, loaded.landProtectionRules.intervalSeconds)
+            assertEquals(259_200, loaded.landProtectionRules.graceSeconds)
+            assertEquals(MoneyAmount(100_000), loaded.landProtectionRules.baseCharge)
+            assertEquals(MoneyAmount(500_000), loaded.landProtectionRules.baseReserve)
+            assertEquals(500, loaded.landProtectionRules.damageLimitPerExposure)
             assertEquals(20, loaded.repairRunnerRules.blocksPerTick)
             assertEquals(200, loaded.repairRunnerRules.assessmentBlocksPerTick)
         } finally {
@@ -223,6 +233,29 @@ class CivilizationsConfigurationTest {
         )
     }
 
+    @Test
+    fun `claim group tiers and land protection bounds are path-validated`() {
+        val tierFailure = assertFailsWith<IllegalArgumentException> {
+            load(validYaml.replace("max-groups: 1", "max-groups: 2"))
+        }
+        assertContains(tierFailure.message.orEmpty(), "claims.groups.tiers")
+
+        val graceFailure = assertFailsWith<IllegalArgumentException> {
+            load(validYaml.replace("grace-seconds: 259200", "grace-seconds: 0"))
+        }
+        assertContains(graceFailure.message.orEmpty(), "gameplay.land-protection")
+
+        val capFailure = assertFailsWith<IllegalArgumentException> {
+            load(validYaml.replace("damage-limit-per-exposure: 500", "damage-limit-per-exposure: 0"))
+        }
+        assertContains(capFailure.message.orEmpty(), "gameplay.land-protection")
+
+        val maximumPriceFailure = assertFailsWith<IllegalArgumentException> {
+            load(validYaml.replace("max-area: 256", "max-area: 1000000000000000"))
+        }
+        assertContains(maximumPriceFailure.message.orEmpty(), "gameplay.land-protection")
+    }
+
     private fun load(yaml: String): CivilizationsConfiguration {
         val dataFolder = Files.createTempDirectory("civilizations-config-test")
         return try {
@@ -248,6 +281,15 @@ class CivilizationsConfigurationTest {
               max-area: 256
               max-count: 4
               require-edge-connection: true
+              base-price: "100.00"
+              price-per-block: "1.00"
+              ordinary-initiator-roles: [LEADER]
+              groups:
+                tiers:
+                  - max-groups: 1
+                    minimum-members: 1
+                    minimum-treasury-balance: "0.00"
+                    establishment-cost: "0.00"
             gameplay:
               phase-gates:
                 roster-changes: [SETUP, PEACE]
@@ -257,6 +299,16 @@ class CivilizationsConfigurationTest {
                 battle-duration-seconds: 1800
                 lives-per-combatant: 1
                 resolution-observations-per-tick: 200
+              land-protection:
+                enabled: true
+                interval-seconds: 604800
+                grace-seconds: 259200
+                assessment-interval-seconds: 60
+                base-charge: "1000.00"
+                per-block-charge: "0.10"
+                base-reserve: "5000.00"
+                per-block-reserve: "0.25"
+                damage-limit-per-exposure: 500
             economy:
               currency-scale: 2
               opening-civilization-balance: "0.00"

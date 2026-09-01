@@ -35,6 +35,7 @@ enum class EnvironmentProtectionAction {
 
 enum class ConflictKind {
     WAR,
+    LAND_EXPOSURE,
     ASSASSINATION,
 }
 
@@ -72,6 +73,14 @@ sealed interface ConflictAuthorization {
                     allowedActions == setOf(PlayerProtectionAction.PVP),
             ) {
                 "Assassination authorization is limited to targeted PVP"
+            }
+            require(
+                kind != ConflictKind.LAND_EXPOSURE || allowedActions.all {
+                    it == PlayerProtectionAction.BLOCK_BREAK ||
+                        it == PlayerProtectionAction.BLOCK_PLACE
+                },
+            ) {
+                "Land exposure authorization is limited to block break and place"
             }
         }
     }
@@ -238,6 +247,10 @@ class ProtectionService(
         }
         val phaseAllowsConflict = when (active.kind) {
             ConflictKind.WAR -> seasonStatus == SeasonStatus.WAR
+            ConflictKind.LAND_EXPOSURE ->
+                seasonStatus == SeasonStatus.SETUP ||
+                    seasonStatus == SeasonStatus.PEACE ||
+                    seasonStatus == SeasonStatus.WAR
             ConflictKind.ASSASSINATION ->
                 seasonStatus == SeasonStatus.PEACE || seasonStatus == SeasonStatus.WAR
         }

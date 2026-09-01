@@ -11,6 +11,8 @@ import io.bennyc.civilizations.domain.civilization.Membership
 import io.bennyc.civilizations.domain.civilization.MembershipRole
 import io.bennyc.civilizations.domain.claim.Claim
 import io.bennyc.civilizations.domain.claim.ClaimBounds
+import io.bennyc.civilizations.domain.claim.ClaimGroup
+import io.bennyc.civilizations.domain.claim.ClaimGroupId
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.damage.BattleBlockChange
@@ -45,6 +47,22 @@ import io.bennyc.civilizations.domain.repair.RepairJobId
 import io.bennyc.civilizations.domain.repair.RepairJobItem
 import io.bennyc.civilizations.domain.repair.RepairJobItemStatus
 import io.bennyc.civilizations.domain.repair.RepairJobStatus
+import io.bennyc.civilizations.domain.protection.ExposureDamageEvent
+import io.bennyc.civilizations.domain.protection.ExposureDamageEventId
+import io.bennyc.civilizations.domain.protection.ExposureDamageSite
+import io.bennyc.civilizations.domain.protection.ExposureDamageSiteId
+import io.bennyc.civilizations.domain.protection.LandExposureId
+import io.bennyc.civilizations.domain.protection.LandProtectionState
+import io.bennyc.civilizations.domain.protection.LandProtectionStatus
+import io.bennyc.civilizations.domain.protection.LandUpkeepAssessment
+import io.bennyc.civilizations.domain.protection.LandUpkeepAssessmentId
+import io.bennyc.civilizations.domain.protection.LandUpkeepAssessmentStatus
+import io.bennyc.civilizations.domain.protection.ProtectionRepairItemStatus
+import io.bennyc.civilizations.domain.protection.ProtectionRepairJob
+import io.bennyc.civilizations.domain.protection.ProtectionRepairJobId
+import io.bennyc.civilizations.domain.protection.ProtectionRepairJobItem
+import io.bennyc.civilizations.domain.protection.ProtectionRepairJobStatus
+import io.bennyc.civilizations.domain.protection.ReportedExposureDamage
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.Battle
@@ -174,6 +192,24 @@ private open class JdbcReadContext(
         sql = "$CLAIM_SELECT WHERE id = ?",
         bind = { setString(1, id.toString()) },
         map = ResultSet::toClaim,
+    )
+
+    override fun findClaimGroup(id: ClaimGroupId): ClaimGroup? = queryOne(
+        sql = "$CLAIM_GROUP_SELECT WHERE id = ?",
+        bind = { setString(1, id.toString()) },
+        map = ResultSet::toClaimGroup,
+    )
+
+    override fun listClaimGroups(civilizationId: CivilizationId): List<ClaimGroup> = queryMany(
+        sql = "$CLAIM_GROUP_SELECT WHERE civilization_id = ? ORDER BY ordinal, id",
+        bind = { setString(1, civilizationId.toString()) },
+        map = ResultSet::toClaimGroup,
+    )
+
+    override fun listClaimGroupsForSeason(seasonId: SeasonId): List<ClaimGroup> = queryMany(
+        sql = "$CLAIM_GROUP_SELECT WHERE season_id = ? ORDER BY civilization_id, ordinal, id",
+        bind = { setString(1, seasonId.toString()) },
+        map = ResultSet::toClaimGroup,
     )
 
     override fun listClaims(civilizationId: CivilizationId): List<Claim> = queryMany(
@@ -359,6 +395,222 @@ private open class JdbcReadContext(
             bind = { setString(1, seasonId.toString()) },
             map = ResultSet::toCivilizationAccount,
         )
+
+    override fun findLandProtectionState(
+        civilizationId: CivilizationId,
+    ): LandProtectionState? = queryOne(
+        sql = "$LAND_PROTECTION_STATE_SELECT WHERE civilization_id = ?",
+        bind = { setString(1, civilizationId.toString()) },
+        map = ResultSet::toLandProtectionState,
+    )
+
+    override fun listLandProtectionStates(seasonId: SeasonId): List<LandProtectionState> =
+        queryMany(
+            sql = "$LAND_PROTECTION_STATE_SELECT WHERE season_id = ? ORDER BY civilization_id",
+            bind = { setString(1, seasonId.toString()) },
+            map = ResultSet::toLandProtectionState,
+        )
+
+    override fun findLandUpkeepAssessment(
+        civilizationId: CivilizationId,
+        scheduledAt: Instant,
+    ): LandUpkeepAssessment? = queryOne(
+        sql = "$LAND_UPKEEP_ASSESSMENT_SELECT WHERE civilization_id = ? AND scheduled_at_ms = ?",
+        bind = {
+            setString(1, civilizationId.toString())
+            setLong(2, scheduledAt.toEpochMilli())
+        },
+        map = ResultSet::toLandUpkeepAssessment,
+    )
+
+    override fun listLandUpkeepAssessments(
+        civilizationId: CivilizationId,
+        limit: Int,
+    ): List<LandUpkeepAssessment> {
+        requireProtectionPageSize(limit)
+        return queryMany(
+            sql = """
+                $LAND_UPKEEP_ASSESSMENT_SELECT
+                WHERE civilization_id = ?
+                ORDER BY scheduled_at_ms DESC, id DESC
+                LIMIT ?
+            """.trimIndent(),
+            bind = {
+                setString(1, civilizationId.toString())
+                setInt(2, limit)
+            },
+            map = ResultSet::toLandUpkeepAssessment,
+        )
+    }
+
+    override fun findExposureDamageSite(
+        exposureId: LandExposureId,
+        position: BlockPosition3D,
+    ): ExposureDamageSite? = queryOne(
+        sql = """
+            $EXPOSURE_DAMAGE_SITE_SELECT
+            WHERE exposure_id = ? AND world_id = ? AND block_x = ? AND block_y = ? AND block_z = ?
+        """.trimIndent(),
+        bind = {
+            setString(1, exposureId.toString())
+            setString(2, position.worldId.value)
+            setInt(3, position.x)
+            setInt(4, position.y)
+            setInt(5, position.z)
+        },
+        map = ResultSet::toExposureDamageSite,
+    )
+
+    override fun findExposureDamageSite(id: ExposureDamageSiteId): ExposureDamageSite? = queryOne(
+        sql = "$EXPOSURE_DAMAGE_SITE_SELECT WHERE id = ?",
+        bind = { setString(1, id.toString()) },
+        map = ResultSet::toExposureDamageSite,
+    )
+
+    override fun findLatestExposureDamageEvent(
+        siteId: ExposureDamageSiteId,
+    ): ExposureDamageEvent? = queryOne(
+        sql = "$EXPOSURE_DAMAGE_EVENT_SELECT WHERE site_id = ? ORDER BY ordinal DESC LIMIT 1",
+        bind = { setString(1, siteId.toString()) },
+        map = ResultSet::toExposureDamageEvent,
+    )
+
+    override fun listUnresolvedExposureDamage(
+        civilizationId: CivilizationId,
+        afterSiteId: ExposureDamageSiteId?,
+        limit: Int,
+    ): List<ReportedExposureDamage> {
+        requireProtectionPageSize(limit)
+        return queryMany(
+            sql = """
+                $REPORTED_EXPOSURE_DAMAGE_SELECT
+                WHERE site.civilization_id = ? AND site.resolved_at_ms IS NULL
+                  AND (? IS NULL OR site.id > ?)
+                ORDER BY site.id
+                LIMIT ?
+            """.trimIndent(),
+            bind = {
+                setString(1, civilizationId.toString())
+                setString(2, afterSiteId?.toString())
+                setString(3, afterSiteId?.toString())
+                setInt(4, limit)
+            },
+            map = ResultSet::toReportedExposureDamage,
+        )
+    }
+
+    override fun countResolvedExposureDamageInOpenExposures(
+        civilizationId: CivilizationId,
+    ): Long = checkNotNull(queryOne(
+        sql = """
+            SELECT COUNT(*) AS resolved_count
+            FROM exposure_damage_sites resolved
+            WHERE resolved.civilization_id = ?
+              AND resolved.resolved_at_ms IS NOT NULL
+              AND EXISTS (
+                  SELECT 1
+                  FROM exposure_damage_sites unresolved
+                  WHERE unresolved.civilization_id = resolved.civilization_id
+                    AND unresolved.exposure_id = resolved.exposure_id
+                    AND unresolved.resolved_at_ms IS NULL
+              )
+        """.trimIndent(),
+        bind = { setString(1, civilizationId.toString()) },
+        map = { getLong("resolved_count") },
+    ))
+
+    override fun findProtectionRepairJob(
+        id: ProtectionRepairJobId,
+    ): ProtectionRepairJob? = queryOne(
+        sql = "$PROTECTION_REPAIR_JOB_SELECT WHERE id = ?",
+        bind = { setString(1, id.toString()) },
+        map = ResultSet::toProtectionRepairJob,
+    )
+
+    override fun findProtectionRepairJobByIdempotencyKey(
+        key: String,
+    ): ProtectionRepairJob? = queryOne(
+        sql = "$PROTECTION_REPAIR_JOB_SELECT WHERE idempotency_key = ?",
+        bind = { setString(1, key) },
+        map = ResultSet::toProtectionRepairJob,
+    )
+
+    override fun findOpenProtectionRepairJob(
+        civilizationId: CivilizationId,
+    ): ProtectionRepairJob? = queryOne(
+        sql = """
+            $PROTECTION_REPAIR_JOB_SELECT
+            WHERE civilization_id = ? AND status IN ('PENDING', 'RUNNING', 'PAUSED')
+        """.trimIndent(),
+        bind = { setString(1, civilizationId.toString()) },
+        map = ResultSet::toProtectionRepairJob,
+    )
+
+    override fun listProtectionRepairJobs(
+        civilizationId: CivilizationId,
+        limit: Int,
+    ): List<ProtectionRepairJob> {
+        requireProtectionPageSize(limit)
+        return queryMany(
+            sql = """
+                $PROTECTION_REPAIR_JOB_SELECT
+                WHERE civilization_id = ? ORDER BY created_at_ms DESC, id DESC LIMIT ?
+            """.trimIndent(),
+            bind = {
+                setString(1, civilizationId.toString())
+                setInt(2, limit)
+            },
+            map = ResultSet::toProtectionRepairJob,
+        )
+    }
+
+    override fun listProtectionRepairJobsByStatus(
+        statuses: Set<ProtectionRepairJobStatus>,
+        limit: Int,
+    ): List<ProtectionRepairJob> {
+        require(statuses.isNotEmpty())
+        requireProtectionPageSize(limit)
+        val ordered = statuses.sortedBy(ProtectionRepairJobStatus::name)
+        val placeholders = ordered.joinToString(",") { "?" }
+        return queryMany(
+            sql = """
+                $PROTECTION_REPAIR_JOB_SELECT
+                WHERE status IN ($placeholders) ORDER BY created_at_ms, id LIMIT ?
+            """.trimIndent(),
+            bind = {
+                ordered.forEachIndexed { index, status -> setString(index + 1, status.name) }
+                setInt(ordered.size + 1, limit)
+            },
+            map = ResultSet::toProtectionRepairJob,
+        )
+    }
+
+    override fun listProtectionRepairJobItems(
+        jobId: ProtectionRepairJobId,
+        afterOrdinal: Long?,
+        limit: Int,
+    ): List<ProtectionRepairJobItem> {
+        requireProtectionPageSize(limit)
+        return queryMany(
+            sql = """
+                $PROTECTION_REPAIR_ITEM_SELECT
+                WHERE repair_job_id = ? AND (? IS NULL OR ordinal > ?)
+                ORDER BY ordinal LIMIT ?
+            """.trimIndent(),
+            bind = {
+                setString(1, jobId.toString())
+                if (afterOrdinal == null) {
+                    setNull(2, Types.BIGINT)
+                    setNull(3, Types.BIGINT)
+                } else {
+                    setLong(2, afterOrdinal)
+                    setLong(3, afterOrdinal)
+                }
+                setInt(4, limit)
+            },
+            map = ResultSet::toProtectionRepairJobItem,
+        )
+    }
 
     override fun findLedgerTransaction(id: LedgerTransactionId): LedgerTransaction? =
         queryOne(
@@ -753,6 +1005,12 @@ private open class JdbcReadContext(
         }
     }
 
+    private fun requireProtectionPageSize(limit: Int) {
+        require(limit in 1..MAX_PROTECTION_PAGE_SIZE) {
+            "Protection page size must be between 1 and $MAX_PROTECTION_PAGE_SIZE"
+        }
+    }
+
     private fun LedgerTransactionHeader.withPostings(): LedgerTransaction {
         val postings = queryMany(
             sql = """
@@ -783,6 +1041,7 @@ private open class JdbcReadContext(
         const val MAX_ECONOMY_BRIDGE_PAGE_SIZE = 1_000
         const val MAX_LEDGER_PAGE_SIZE = 1_000
         const val MAX_REPAIR_PAGE_SIZE = 1_000
+        const val MAX_PROTECTION_PAGE_SIZE = 1_000
 
         const val CIVILIZATION_SELECT = """
             SELECT id, season_id, name, normalized_name, status, created_at_ms, updated_at_ms
@@ -793,8 +1052,15 @@ private open class JdbcReadContext(
             FROM memberships
         """
         const val CLAIM_SELECT = """
-            SELECT id, season_id, civilization_id, world_id, min_x, max_x, min_z, max_z
+            SELECT id, season_id, civilization_id, group_id,
+                   world_id, min_x, max_x, min_z, max_z
             FROM claims
+        """
+        const val CLAIM_GROUP_SELECT = """
+            SELECT id, season_id, civilization_id, ordinal, founded_by_player_id,
+                   establishment_cost_minor, required_member_count,
+                   required_treasury_balance_minor, created_at_ms
+            FROM claim_groups
         """
         const val WAR_SELECT = """
             SELECT id, season_id, declaring_civilization_id, target_civilization_id,
@@ -857,9 +1123,65 @@ private open class JdbcReadContext(
             SELECT season_id, civilization_id, balance_minor, created_at_ms, updated_at_ms
             FROM civilization_accounts
         """
+        const val LAND_PROTECTION_STATE_SELECT = """
+            SELECT season_id, civilization_id, status, next_assessment_at_ms,
+                   required_reserve_minor, delinquent_amount_minor, grace_ends_at_ms,
+                   exposure_id, exposure_started_at_ms, exposure_damage_limit,
+                   exposure_damage_count, updated_at_ms
+            FROM land_protection_states
+        """
+        const val LAND_UPKEEP_ASSESSMENT_SELECT = """
+            SELECT id, season_id, civilization_id, scheduled_at_ms, assessed_at_ms,
+                   claimed_area, base_charge_minor, per_block_charge_minor,
+                   total_charge_minor, required_reserve_minor, interval_seconds,
+                   grace_seconds, damage_limit, status, ledger_transaction_id
+            FROM land_upkeep_assessments
+        """
+        const val EXPOSURE_DAMAGE_SITE_SELECT = """
+            SELECT id, season_id, civilization_id, exposure_id, claim_id,
+                   world_id, block_x, block_y, block_z, original_block_data,
+                   created_at_ms, resolved_at_ms
+            FROM exposure_damage_sites
+        """
+        const val EXPOSURE_DAMAGE_EVENT_SELECT = """
+            SELECT id, site_id, ordinal, actor_player_id, actor_civilization_id,
+                   cause, observed_block_data, expected_block_data, recorded_at_ms
+            FROM exposure_damage_events
+        """
+        const val REPORTED_EXPOSURE_DAMAGE_SELECT = """
+            SELECT site.id, site.season_id, site.civilization_id, site.exposure_id,
+                   site.claim_id, site.world_id, site.block_x, site.block_y, site.block_z,
+                   site.original_block_data, site.created_at_ms, site.resolved_at_ms,
+                   event.id AS event_id, event.ordinal, event.actor_player_id,
+                   event.actor_civilization_id, event.cause, event.observed_block_data,
+                   event.expected_block_data, event.recorded_at_ms
+            FROM exposure_damage_sites site
+            JOIN exposure_damage_events event ON event.site_id = site.id
+             AND event.ordinal = (
+                SELECT MAX(latest.ordinal) FROM exposure_damage_events latest
+                WHERE latest.site_id = site.id
+             )
+        """
+        const val PROTECTION_REPAIR_JOB_SELECT = """
+            SELECT id, season_id, civilization_id, initiated_by_player_id,
+                   idempotency_key, target_completion_basis_points, total_damage_count,
+                   observed_restored_count, observed_repairable_count,
+                   observed_conflict_count, selected_count,
+                   restore_original_unit_price_minor, remove_placement_unit_price_minor,
+                   gross_cost_minor, payment_ledger_transaction_id, status,
+                   next_item_ordinal, restored_count, skipped_conflict_count, failed_count,
+                   created_at_ms, updated_at_ms, completed_at_ms, failure_message
+            FROM protection_repair_jobs
+        """
+        const val PROTECTION_REPAIR_ITEM_SELECT = """
+            SELECT repair_job_id, site_id, ordinal, world_id, block_x, block_y, block_z,
+                   expected_block_data, restore_block_data, unit_price_minor,
+                   status, processed_at_ms, failure_message
+            FROM protection_repair_job_items
+        """
         const val LEDGER_TRANSACTION_SELECT = """
             SELECT id, season_id, idempotency_key,
-                   COALESCE(extended_kind, kind) AS kind,
+                   COALESCE(feature_kind, extended_kind, kind) AS kind,
                    reference_type, reference_id,
                    actor_player_id, description, currency_scale, created_at_ms
             FROM economy_ledger_transactions
@@ -1040,23 +1362,79 @@ private class JdbcWriteContext(
         } > 0
 
     override fun insertClaim(claim: Claim) {
+        if (findClaimGroup(claim.groupId) == null &&
+            claim.groupId.value == claim.civilizationId.value
+        ) {
+            val civilization = findCivilization(claim.civilizationId)
+                ?: throw PersistenceRecordNotFoundException(
+                    "Civilization ${claim.civilizationId} does not exist",
+                )
+            insertClaimGroup(
+                ClaimGroup(
+                    id = claim.groupId,
+                    seasonId = claim.seasonId,
+                    civilizationId = claim.civilizationId,
+                    ordinal = 1,
+                    foundedByPlayerId = null,
+                    establishmentCost = MoneyAmount.ZERO,
+                    requiredMemberCount = 0,
+                    requiredTreasuryBalance = MoneyAmount.ZERO,
+                    createdAt = civilization.createdAt,
+                ),
+            )
+        }
         executeUpdate(
             sql = """
                 INSERT INTO claims(
-                    id, season_id, civilization_id, world_id, min_x, max_x, min_z, max_z
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    id, season_id, civilization_id, group_id,
+                    world_id, min_x, max_x, min_z, max_z
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
         ) {
             setString(1, claim.id.toString())
             setString(2, claim.seasonId.toString())
             setString(3, claim.civilizationId.toString())
-            setString(4, claim.bounds.worldId.value)
-            setInt(5, claim.bounds.minX)
-            setInt(6, claim.bounds.maxX)
-            setInt(7, claim.bounds.minZ)
-            setInt(8, claim.bounds.maxZ)
+            setString(4, claim.groupId.toString())
+            setString(5, claim.bounds.worldId.value)
+            setInt(6, claim.bounds.minX)
+            setInt(7, claim.bounds.maxX)
+            setInt(8, claim.bounds.minZ)
+            setInt(9, claim.bounds.maxZ)
         }
     }
+
+    override fun insertClaimGroup(group: ClaimGroup) {
+        executeUpdate(
+            sql = """
+                INSERT INTO claim_groups(
+                    id, season_id, civilization_id, ordinal, founded_by_player_id,
+                    establishment_cost_minor, required_member_count,
+                    required_treasury_balance_minor, created_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, group.id.toString())
+            setString(2, group.seasonId.toString())
+            setString(3, group.civilizationId.toString())
+            setInt(4, group.ordinal)
+            setString(5, group.foundedByPlayerId?.toString())
+            setLong(6, group.establishmentCost.minorUnits)
+            setInt(7, group.requiredMemberCount)
+            setLong(8, group.requiredTreasuryBalance.minorUnits)
+            setLong(9, group.createdAt.toEpochMilli())
+        }
+    }
+
+    override fun reassignClaimsToGroup(from: ClaimGroupId, to: ClaimGroupId): Int =
+        executeUpdate("UPDATE claims SET group_id = ? WHERE group_id = ?") {
+            setString(1, to.toString())
+            setString(2, from.toString())
+        }
+
+    override fun deleteClaimGroup(id: ClaimGroupId): Boolean =
+        executeUpdate("DELETE FROM claim_groups WHERE id = ?") {
+            setString(1, id.toString())
+        } > 0
 
     override fun deleteClaim(id: ClaimId): Boolean =
         executeUpdate(
@@ -1388,9 +1766,216 @@ private class JdbcWriteContext(
         }
     }
 
+    override fun insertLandProtectionState(state: LandProtectionState) {
+        executeUpdate(
+            """
+            INSERT INTO land_protection_states(
+                season_id, civilization_id, status, next_assessment_at_ms,
+                required_reserve_minor, delinquent_amount_minor, grace_ends_at_ms,
+                exposure_id, exposure_started_at_ms, exposure_damage_limit,
+                exposure_damage_count, updated_at_ms
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) { bindLandProtectionState(state) }
+    }
+
+    override fun updateLandProtectionState(state: LandProtectionState) {
+        val updated = executeUpdate(
+            """
+            UPDATE land_protection_states
+            SET season_id = ?, status = ?, next_assessment_at_ms = ?,
+                required_reserve_minor = ?, delinquent_amount_minor = ?,
+                grace_ends_at_ms = ?, exposure_id = ?, exposure_started_at_ms = ?,
+                exposure_damage_limit = ?, exposure_damage_count = ?, updated_at_ms = ?
+            WHERE civilization_id = ?
+            """.trimIndent(),
+        ) {
+            setString(1, state.seasonId.toString())
+            setString(2, state.status.name)
+            setInstantOrNull(3, state.nextAssessmentAt)
+            setLong(4, state.requiredReserve.minorUnits)
+            setLong(5, state.delinquentAmount.minorUnits)
+            setInstantOrNull(6, state.graceEndsAt)
+            setString(7, state.exposureId?.toString())
+            setInstantOrNull(8, state.exposureStartedAt)
+            if (state.exposureDamageLimit == null) setNull(9, Types.INTEGER)
+            else setInt(9, state.exposureDamageLimit)
+            setInt(10, state.exposureDamageCount)
+            setLong(11, state.updatedAt.toEpochMilli())
+            setString(12, state.civilizationId.toString())
+        }
+        requireUpdated(updated, "Land protection state ${state.civilizationId}")
+    }
+
+    override fun insertLandUpkeepAssessment(assessment: LandUpkeepAssessment) {
+        executeUpdate(
+            """
+            INSERT INTO land_upkeep_assessments(
+                id, season_id, civilization_id, scheduled_at_ms, assessed_at_ms,
+                claimed_area, base_charge_minor, per_block_charge_minor,
+                total_charge_minor, required_reserve_minor, interval_seconds,
+                grace_seconds, damage_limit, status, ledger_transaction_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) { bindLandUpkeepAssessment(assessment) }
+    }
+
+    override fun updateLandUpkeepAssessment(assessment: LandUpkeepAssessment) {
+        val updated = executeUpdate(
+            """
+            UPDATE land_upkeep_assessments
+            SET assessed_at_ms = ?, claimed_area = ?, base_charge_minor = ?,
+                per_block_charge_minor = ?, total_charge_minor = ?,
+                required_reserve_minor = ?, interval_seconds = ?, grace_seconds = ?,
+                damage_limit = ?, status = ?, ledger_transaction_id = ?
+            WHERE id = ?
+            """.trimIndent(),
+        ) {
+            setLong(1, assessment.assessedAt.toEpochMilli())
+            setLong(2, assessment.claimedArea)
+            setLong(3, assessment.baseCharge.minorUnits)
+            setLong(4, assessment.perBlockCharge.minorUnits)
+            setLong(5, assessment.totalCharge.minorUnits)
+            setLong(6, assessment.requiredReserve.minorUnits)
+            setLong(7, assessment.intervalSeconds)
+            setLong(8, assessment.graceSeconds)
+            setInt(9, assessment.damageLimit)
+            setString(10, assessment.status.name)
+            setString(11, assessment.ledgerTransactionId?.toString())
+            setString(12, assessment.id.toString())
+        }
+        requireUpdated(updated, "Land upkeep assessment ${assessment.id}")
+    }
+
+    override fun insertExposureDamageSite(site: ExposureDamageSite) {
+        executeUpdate(
+            """
+            INSERT INTO exposure_damage_sites(
+                id, season_id, civilization_id, exposure_id, claim_id,
+                world_id, block_x, block_y, block_z, original_block_data,
+                created_at_ms, resolved_at_ms
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, site.id.toString())
+            setString(2, site.seasonId.toString())
+            setString(3, site.civilizationId.toString())
+            setString(4, site.exposureId.toString())
+            setString(5, site.claimId.toString())
+            setString(6, site.position.worldId.value)
+            setInt(7, site.position.x)
+            setInt(8, site.position.y)
+            setInt(9, site.position.z)
+            setString(10, site.originalState.blockData)
+            setLong(11, site.createdAt.toEpochMilli())
+            setInstantOrNull(12, site.resolvedAt)
+        }
+    }
+
+    override fun resolveExposureDamageSite(id: ExposureDamageSiteId, resolvedAt: Instant) {
+        val updated = executeUpdate(
+            "UPDATE exposure_damage_sites SET resolved_at_ms = ? WHERE id = ? AND resolved_at_ms IS NULL",
+        ) {
+            setLong(1, resolvedAt.toEpochMilli())
+            setString(2, id.toString())
+        }
+        if (updated !in 0..1) error("Resolved multiple exposure damage sites $id")
+    }
+
+    override fun insertExposureDamageEvent(event: ExposureDamageEvent) {
+        executeUpdate(
+            """
+            INSERT INTO exposure_damage_events(
+                id, site_id, ordinal, actor_player_id, actor_civilization_id,
+                cause, observed_block_data, expected_block_data, recorded_at_ms
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, event.id.toString())
+            setString(2, event.siteId.toString())
+            setInt(3, event.ordinal)
+            setString(4, event.actorPlayerId.toString())
+            setString(5, event.actorCivilizationId.toString())
+            setString(6, event.cause.name)
+            setString(7, event.observedState.blockData)
+            setString(8, event.expectedState.blockData)
+            setLong(9, event.recordedAt.toEpochMilli())
+        }
+    }
+
+    override fun insertProtectionRepairJob(job: ProtectionRepairJob) {
+        executeUpdate(
+            """
+            INSERT INTO protection_repair_jobs(
+                id, season_id, civilization_id, initiated_by_player_id,
+                idempotency_key, target_completion_basis_points, total_damage_count,
+                observed_restored_count, observed_repairable_count, observed_conflict_count,
+                selected_count, restore_original_unit_price_minor,
+                remove_placement_unit_price_minor, gross_cost_minor,
+                payment_ledger_transaction_id, status, next_item_ordinal,
+                restored_count, skipped_conflict_count, failed_count,
+                created_at_ms, updated_at_ms, completed_at_ms, failure_message
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) { bindProtectionRepairJob(job) }
+    }
+
+    override fun updateProtectionRepairJob(job: ProtectionRepairJob) {
+        val updated = executeUpdate(
+            """
+            UPDATE protection_repair_jobs
+            SET status = ?, next_item_ordinal = ?, restored_count = ?,
+                skipped_conflict_count = ?, failed_count = ?, updated_at_ms = ?,
+                completed_at_ms = ?, failure_message = ?
+            WHERE id = ?
+            """.trimIndent(),
+        ) {
+            setString(1, job.status.name)
+            setLong(2, job.nextItemOrdinal)
+            setLong(3, job.restoredCount)
+            setLong(4, job.skippedConflictCount)
+            setLong(5, job.failedCount)
+            setLong(6, job.updatedAt.toEpochMilli())
+            setInstantOrNull(7, job.completedAt)
+            setString(8, job.failureMessage)
+            setString(9, job.id.toString())
+        }
+        requireUpdated(updated, "Protection repair job ${job.id}")
+    }
+
+    override fun insertProtectionRepairJobItem(item: ProtectionRepairJobItem) {
+        executeUpdate(
+            """
+            INSERT INTO protection_repair_job_items(
+                repair_job_id, site_id, ordinal, world_id, block_x, block_y, block_z,
+                expected_block_data, restore_block_data, unit_price_minor,
+                status, processed_at_ms, failure_message
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) { bindProtectionRepairItem(item) }
+    }
+
+    override fun updateProtectionRepairJobItem(item: ProtectionRepairJobItem) {
+        val updated = executeUpdate(
+            """
+            UPDATE protection_repair_job_items
+            SET status = ?, processed_at_ms = ?, failure_message = ?
+            WHERE repair_job_id = ? AND ordinal = ?
+            """.trimIndent(),
+        ) {
+            setString(1, item.status.name)
+            setInstantOrNull(2, item.processedAt)
+            setString(3, item.failureMessage)
+            setString(4, item.jobId.toString())
+            setLong(5, item.ordinal)
+        }
+        requireUpdated(updated, "Protection repair item ${item.jobId}/${item.ordinal}")
+    }
+
     override fun insertLedgerTransaction(transaction: LedgerTransaction) {
         val extendedKind = transaction.kind.takeIf { it.isExtendedLedgerKind }
-        val storedKind = if (extendedKind == null) {
+        val featureKind = transaction.kind.takeIf { it.isFeatureLedgerKind }
+        val storedKind = if (extendedKind == null && featureKind == null) {
             transaction.kind
         } else {
             LedgerTransactionKind.ADMIN_ADJUSTMENT
@@ -1400,8 +1985,8 @@ private class JdbcWriteContext(
                 INSERT INTO economy_ledger_transactions(
                     id, season_id, idempotency_key, kind, reference_type, reference_id,
                     actor_player_id, description, currency_scale, posting_count, created_at_ms,
-                    extended_kind
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    extended_kind, feature_kind
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
         ) {
             setString(1, transaction.id.toString())
@@ -1416,6 +2001,7 @@ private class JdbcWriteContext(
             setInt(10, transaction.postings.size)
             setLong(11, transaction.createdAt.toEpochMilli())
             setString(12, extendedKind?.name)
+            setString(13, featureKind?.name)
         }
         transaction.postings.forEach { posting ->
             executeUpdate(
@@ -1712,6 +2298,83 @@ private class JdbcWriteContext(
         }
     }
 
+    private fun PreparedStatement.bindLandProtectionState(state: LandProtectionState) {
+        setString(1, state.seasonId.toString())
+        setString(2, state.civilizationId.toString())
+        setString(3, state.status.name)
+        setInstantOrNull(4, state.nextAssessmentAt)
+        setLong(5, state.requiredReserve.minorUnits)
+        setLong(6, state.delinquentAmount.minorUnits)
+        setInstantOrNull(7, state.graceEndsAt)
+        setString(8, state.exposureId?.toString())
+        setInstantOrNull(9, state.exposureStartedAt)
+        if (state.exposureDamageLimit == null) setNull(10, Types.INTEGER)
+        else setInt(10, state.exposureDamageLimit)
+        setInt(11, state.exposureDamageCount)
+        setLong(12, state.updatedAt.toEpochMilli())
+    }
+
+    private fun PreparedStatement.bindLandUpkeepAssessment(assessment: LandUpkeepAssessment) {
+        setString(1, assessment.id.toString())
+        setString(2, assessment.seasonId.toString())
+        setString(3, assessment.civilizationId.toString())
+        setLong(4, assessment.scheduledAt.toEpochMilli())
+        setLong(5, assessment.assessedAt.toEpochMilli())
+        setLong(6, assessment.claimedArea)
+        setLong(7, assessment.baseCharge.minorUnits)
+        setLong(8, assessment.perBlockCharge.minorUnits)
+        setLong(9, assessment.totalCharge.minorUnits)
+        setLong(10, assessment.requiredReserve.minorUnits)
+        setLong(11, assessment.intervalSeconds)
+        setLong(12, assessment.graceSeconds)
+        setInt(13, assessment.damageLimit)
+        setString(14, assessment.status.name)
+        setString(15, assessment.ledgerTransactionId?.toString())
+    }
+
+    private fun PreparedStatement.bindProtectionRepairJob(job: ProtectionRepairJob) {
+        setString(1, job.id.toString())
+        setString(2, job.seasonId.toString())
+        setString(3, job.civilizationId.toString())
+        setString(4, job.initiatedByPlayerId?.toString())
+        setString(5, job.idempotencyKey)
+        setInt(6, job.targetCompletionBasisPoints)
+        setLong(7, job.totalDamageCount)
+        setLong(8, job.observedRestoredCount)
+        setLong(9, job.observedRepairableCount)
+        setLong(10, job.observedConflictCount)
+        setLong(11, job.selectedCount)
+        setLong(12, job.restoreOriginalUnitPrice.minorUnits)
+        setLong(13, job.removePlacementUnitPrice.minorUnits)
+        setLong(14, job.grossCost.minorUnits)
+        setString(15, job.paymentLedgerTransactionId?.toString())
+        setString(16, job.status.name)
+        setLong(17, job.nextItemOrdinal)
+        setLong(18, job.restoredCount)
+        setLong(19, job.skippedConflictCount)
+        setLong(20, job.failedCount)
+        setLong(21, job.createdAt.toEpochMilli())
+        setLong(22, job.updatedAt.toEpochMilli())
+        setInstantOrNull(23, job.completedAt)
+        setString(24, job.failureMessage)
+    }
+
+    private fun PreparedStatement.bindProtectionRepairItem(item: ProtectionRepairJobItem) {
+        setString(1, item.jobId.toString())
+        setString(2, item.siteId.toString())
+        setLong(3, item.ordinal)
+        setString(4, item.position.worldId.value)
+        setInt(5, item.position.x)
+        setInt(6, item.position.y)
+        setInt(7, item.position.z)
+        setString(8, item.expectedState.blockData)
+        setString(9, item.restoreState.blockData)
+        setLong(10, item.unitPrice.minorUnits)
+        setString(11, item.status.name)
+        setInstantOrNull(12, item.processedAt)
+        setString(13, item.failureMessage)
+    }
+
     private fun requireUpdated(updated: Int, description: String) {
         if (updated != 1) {
             throw PersistenceRecordNotFoundException("$description does not exist")
@@ -1731,6 +2394,11 @@ private val LedgerTransactionKind.isExtendedLedgerKind: Boolean
     get() = this == LedgerTransactionKind.BATTLE_CASUALTY_RESERVE ||
         this == LedgerTransactionKind.BATTLE_CASUALTY_CHARGE ||
         this == LedgerTransactionKind.BATTLE_CASUALTY_RELEASE
+
+private val LedgerTransactionKind.isFeatureLedgerKind: Boolean
+    get() = this == LedgerTransactionKind.CLAIM_PURCHASE ||
+        this == LedgerTransactionKind.LAND_UPKEEP ||
+        this == LedgerTransactionKind.LAND_PROTECTION_REPAIR
 
 private fun ResultSet.toSeason(): Season = Season(
     id = SeasonId(uuid("id")),
@@ -1767,6 +2435,7 @@ private fun ResultSet.toClaim(): Claim = Claim(
     id = ClaimId(uuid("id")),
     seasonId = SeasonId(uuid("season_id")),
     civilizationId = CivilizationId(uuid("civilization_id")),
+    groupId = ClaimGroupId(uuid("group_id")),
     bounds = ClaimBounds.between(
         worldId = WorldId(getString("world_id")),
         firstX = getInt("min_x"),
@@ -1774,6 +2443,20 @@ private fun ResultSet.toClaim(): Claim = Claim(
         secondX = getInt("max_x"),
         secondZ = getInt("max_z"),
     ),
+)
+
+private fun ResultSet.toClaimGroup(): ClaimGroup = ClaimGroup(
+    id = ClaimGroupId(uuid("id")),
+    seasonId = SeasonId(uuid("season_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    ordinal = getInt("ordinal"),
+    foundedByPlayerId = getString("founded_by_player_id")?.let {
+        PlayerId(UUID.fromString(it))
+    },
+    establishmentCost = MoneyAmount(getLong("establishment_cost_minor")),
+    requiredMemberCount = getInt("required_member_count"),
+    requiredTreasuryBalance = MoneyAmount(getLong("required_treasury_balance_minor")),
+    createdAt = instant("created_at_ms"),
 )
 
 private fun ResultSet.toWar(): War = War(
@@ -1919,6 +2602,138 @@ private fun ResultSet.toCivilizationAccount(): CivilizationAccount = Civilizatio
     createdAt = instant("created_at_ms"),
     updatedAt = instant("updated_at_ms"),
 )
+
+private fun ResultSet.toLandProtectionState(): LandProtectionState = LandProtectionState(
+    seasonId = SeasonId(uuid("season_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    status = LandProtectionStatus.valueOf(getString("status")),
+    nextAssessmentAt = nullableInstant("next_assessment_at_ms"),
+    requiredReserve = MoneyAmount(getLong("required_reserve_minor")),
+    delinquentAmount = MoneyAmount(getLong("delinquent_amount_minor")),
+    graceEndsAt = nullableInstant("grace_ends_at_ms"),
+    exposureId = getString("exposure_id")?.let { LandExposureId(UUID.fromString(it)) },
+    exposureStartedAt = nullableInstant("exposure_started_at_ms"),
+    exposureDamageLimit = nullableInt("exposure_damage_limit"),
+    exposureDamageCount = getInt("exposure_damage_count"),
+    updatedAt = instant("updated_at_ms"),
+)
+
+private fun ResultSet.toLandUpkeepAssessment(): LandUpkeepAssessment = LandUpkeepAssessment(
+    id = LandUpkeepAssessmentId(uuid("id")),
+    seasonId = SeasonId(uuid("season_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    scheduledAt = instant("scheduled_at_ms"),
+    assessedAt = instant("assessed_at_ms"),
+    claimedArea = getLong("claimed_area"),
+    baseCharge = MoneyAmount(getLong("base_charge_minor")),
+    perBlockCharge = MoneyAmount(getLong("per_block_charge_minor")),
+    totalCharge = MoneyAmount(getLong("total_charge_minor")),
+    requiredReserve = MoneyAmount(getLong("required_reserve_minor")),
+    intervalSeconds = getLong("interval_seconds"),
+    graceSeconds = getLong("grace_seconds"),
+    damageLimit = getInt("damage_limit"),
+    status = LandUpkeepAssessmentStatus.valueOf(getString("status")),
+    ledgerTransactionId = getString("ledger_transaction_id")?.let {
+        LedgerTransactionId(UUID.fromString(it))
+    },
+)
+
+private fun ResultSet.toExposureDamageSite(): ExposureDamageSite = ExposureDamageSite(
+    id = ExposureDamageSiteId(uuid("id")),
+    seasonId = SeasonId(uuid("season_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    exposureId = LandExposureId(uuid("exposure_id")),
+    claimId = ClaimId(uuid("claim_id")),
+    position = BlockPosition3D(
+        WorldId(getString("world_id")),
+        getInt("block_x"),
+        getInt("block_y"),
+        getInt("block_z"),
+    ),
+    originalState = SimpleBlockSnapshot(getString("original_block_data")),
+    createdAt = instant("created_at_ms"),
+    resolvedAt = nullableInstant("resolved_at_ms"),
+)
+
+private fun ResultSet.toExposureDamageEvent(): ExposureDamageEvent = ExposureDamageEvent(
+    id = ExposureDamageEventId(uuid("id")),
+    siteId = ExposureDamageSiteId(uuid("site_id")),
+    ordinal = getInt("ordinal"),
+    actorPlayerId = PlayerId(uuid("actor_player_id")),
+    actorCivilizationId = CivilizationId(uuid("actor_civilization_id")),
+    cause = BlockMutationCause.valueOf(getString("cause")),
+    observedState = SimpleBlockSnapshot(getString("observed_block_data")),
+    expectedState = SimpleBlockSnapshot(getString("expected_block_data")),
+    recordedAt = instant("recorded_at_ms"),
+)
+
+private fun ResultSet.toReportedExposureDamage(): ReportedExposureDamage {
+    val site = toExposureDamageSite()
+    return ReportedExposureDamage(
+        site = site,
+        latestEvent = ExposureDamageEvent(
+            id = ExposureDamageEventId(uuid("event_id")),
+            siteId = site.id,
+            ordinal = getInt("ordinal"),
+            actorPlayerId = PlayerId(uuid("actor_player_id")),
+            actorCivilizationId = CivilizationId(uuid("actor_civilization_id")),
+            cause = BlockMutationCause.valueOf(getString("cause")),
+            observedState = SimpleBlockSnapshot(getString("observed_block_data")),
+            expectedState = SimpleBlockSnapshot(getString("expected_block_data")),
+            recordedAt = instant("recorded_at_ms"),
+        ),
+    )
+}
+
+private fun ResultSet.toProtectionRepairJob(): ProtectionRepairJob = ProtectionRepairJob(
+    id = ProtectionRepairJobId(uuid("id")),
+    seasonId = SeasonId(uuid("season_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    initiatedByPlayerId = getString("initiated_by_player_id")?.let {
+        PlayerId(UUID.fromString(it))
+    },
+    idempotencyKey = getString("idempotency_key"),
+    targetCompletionBasisPoints = getInt("target_completion_basis_points"),
+    totalDamageCount = getLong("total_damage_count"),
+    observedRestoredCount = getLong("observed_restored_count"),
+    observedRepairableCount = getLong("observed_repairable_count"),
+    observedConflictCount = getLong("observed_conflict_count"),
+    selectedCount = getLong("selected_count"),
+    restoreOriginalUnitPrice = MoneyAmount(getLong("restore_original_unit_price_minor")),
+    removePlacementUnitPrice = MoneyAmount(getLong("remove_placement_unit_price_minor")),
+    grossCost = MoneyAmount(getLong("gross_cost_minor")),
+    paymentLedgerTransactionId = getString("payment_ledger_transaction_id")?.let {
+        LedgerTransactionId(UUID.fromString(it))
+    },
+    status = ProtectionRepairJobStatus.valueOf(getString("status")),
+    nextItemOrdinal = getLong("next_item_ordinal"),
+    restoredCount = getLong("restored_count"),
+    skippedConflictCount = getLong("skipped_conflict_count"),
+    failedCount = getLong("failed_count"),
+    createdAt = instant("created_at_ms"),
+    updatedAt = instant("updated_at_ms"),
+    completedAt = nullableInstant("completed_at_ms"),
+    failureMessage = getString("failure_message"),
+)
+
+private fun ResultSet.toProtectionRepairJobItem(): ProtectionRepairJobItem =
+    ProtectionRepairJobItem(
+        jobId = ProtectionRepairJobId(uuid("repair_job_id")),
+        siteId = ExposureDamageSiteId(uuid("site_id")),
+        ordinal = getLong("ordinal"),
+        position = BlockPosition3D(
+            WorldId(getString("world_id")),
+            getInt("block_x"),
+            getInt("block_y"),
+            getInt("block_z"),
+        ),
+        expectedState = SimpleBlockSnapshot(getString("expected_block_data")),
+        restoreState = SimpleBlockSnapshot(getString("restore_block_data")),
+        unitPrice = MoneyAmount(getLong("unit_price_minor")),
+        status = ProtectionRepairItemStatus.valueOf(getString("status")),
+        processedAt = nullableInstant("processed_at_ms"),
+        failureMessage = getString("failure_message"),
+    )
 
 private data class LedgerTransactionHeader(
     val id: LedgerTransactionId,
@@ -2079,6 +2894,11 @@ private fun ResultSet.nullableInstant(column: String): Instant? {
 
 private fun ResultSet.nullableLong(column: String): Long? {
     val value = getLong(column)
+    return if (wasNull()) null else value
+}
+
+private fun ResultSet.nullableInt(column: String): Int? {
+    val value = getInt(column)
     return if (wasNull()) null else value
 }
 

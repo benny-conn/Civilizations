@@ -58,6 +58,7 @@ class PaperRepairCoordinator(
     private var activeBatch: RepairWorkBatch? = null
     private var storageBusy = false
     private var battleResolutionSuspended = false
+    private var externalWorldWorkActive: () -> Boolean = { false }
     private var closed = false
     private var heldChunk: HeldChunk? = null
     private var pendingChunkLoad: PendingChunkLoad? = null
@@ -75,6 +76,13 @@ class PaperRepairCoordinator(
 
     val configuredBlocksPerSecond: Int
         get() = Math.multiplyExact(rules.blocksPerTick, SERVER_TICKS_PER_SECOND)
+
+    val isWorldWorkActive: Boolean
+        get() = activeScan != null || activeJobId != null || pendingChunkLoad != null
+
+    fun setExternalWorldWorkActive(provider: () -> Boolean) {
+        externalWorldWorkActive = provider
+    }
 
     /**
      * Serializes plugin chunk-ticket ownership with the battle-resolution scanner.
@@ -347,7 +355,7 @@ class PaperRepairCoordinator(
     }
 
     private fun tick() {
-        if (closed || battleResolutionSuspended) return
+        if (closed || battleResolutionSuspended || externalWorldWorkActive()) return
         try {
             if (activeScan != null || scanQueue.isNotEmpty()) {
                 tickScan()

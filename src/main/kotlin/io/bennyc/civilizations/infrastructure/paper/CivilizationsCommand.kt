@@ -3,11 +3,14 @@ package io.bennyc.civilizations.infrastructure.paper
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.repair.RepairTargetAlreadyReached
 import io.bennyc.civilizations.application.repair.RepairTargetUnreachable
+import io.bennyc.civilizations.application.claim.PlaceClaim
 import io.bennyc.civilizations.application.war.DeclareWar
 import io.bennyc.civilizations.application.war.BattleSurrender
 import io.bennyc.civilizations.application.war.SurrenderBattle
 import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.economy.EconomyBridgeDirection
+import io.bennyc.civilizations.domain.claim.ClaimBounds
+import io.bennyc.civilizations.domain.claim.WorldId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.repair.RepairJob
@@ -25,6 +28,9 @@ import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinato
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairMenu
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairOutcome
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairStatus
+import io.bennyc.civilizations.infrastructure.paper.protection.LandProtectionPaperOutcome
+import io.bennyc.civilizations.infrastructure.paper.protection.PaperLandProtectionCoordinator
+import io.bennyc.civilizations.domain.protection.ProtectionRepairJobId
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionCoordinator
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionOutcome
 import io.papermc.paper.command.brigadier.BasicCommand
@@ -50,6 +56,7 @@ class CivilizationsCommand(
     private val repairCoordinator: PaperRepairCoordinator,
     private val repairMenu: PaperRepairMenu,
     private val battleResolutionCoordinator: PaperBattleResolutionCoordinator,
+    private val landProtectionCoordinator: PaperLandProtectionCoordinator,
 ) : BasicCommand {
     override fun execute(source: CommandSourceStack, args: Array<out String>) {
         val sender = source.sender
@@ -60,6 +67,8 @@ class CivilizationsCommand(
             "balance" -> showBalance(sender)
             "deposit" -> transferMoney(sender, args, EconomyBridgeDirection.DEPOSIT_TO_CIVILIZATION)
             "withdraw" -> transferMoney(sender, args, EconomyBridgeDirection.WITHDRAW_TO_PLAYER)
+            "claim" -> claim(sender, args)
+            "protection" -> handleLandProtection(sender, args)
             "repair" -> handleRepair(sender, args)
             else -> showHelp(sender)
         }
@@ -71,11 +80,16 @@ class CivilizationsCommand(
     ): Collection<String> {
         val choices = when {
             args.size <= 1 ->
-                listOf("status", "declare", "surrender", "balance", "deposit", "withdraw", "repair")
+                listOf(
+                    "status", "declare", "surrender", "balance", "deposit", "withdraw",
+                    "claim", "protection", "repair",
+                )
             args.firstOrNull().equals("declare", true) && args.size == 2 ->
                 targetCivilizationReferences(source.sender)
             args.firstOrNull().equals("repair", true) && args.size == 2 ->
                 listOf("menu", "status", "start")
+            args.firstOrNull().equals("protection", true) && args.size == 2 ->
+                listOf("status", "pay", "repair", "resume")
             args.firstOrNull().equals("repair", true) &&
                 args.getOrNull(1).equals("menu", true) && args.size == 3 ->
                 battleReferences(source.sender)
@@ -89,6 +103,198 @@ class CivilizationsCommand(
     }
 
     override fun permission(): String = USE_PERMISSION
+
+    private fun handleLandProtection(sender: CommandSender, args: Array<out String>) {
+        val player = sender as? Player
+            ?: return error(sender, "Only a player has civilization land protection")
+        if (!player.hasPermission(LAND_PROTECTION_PERMISSION)) {
+            return error(sender, "You do not have permission to manage land protection")
+        }
+        val active = activeSeason(sender) ?: return
+        val membership = active.membershipOf(PlayerId(player.uniqueId))
+            ?: return error(sender, "You are not in a civilization this season")
+        when (args.getOrNull(1)?.lowercase(Locale.ROOT) ?: "status") {
+            "status" -> {
+                if (args.size > 2) return error(sender, "Usage: /civ protection [status]")
+                val state = active.landProtectionStates[membership.civilizationId]
+                    ?: return error(sender, "Land protection state is unavailable")
+                val scale = active.economySettings.currencyScale
+                info(
+                    sender,
+                    "Land protection is ${state.status}; required treasury reserve " +
+                        "${scale.format(state.requiredReserve)}, next assessment " +
+                        "${state.nextAssessmentAt ?: "not scheduled"}.",
+                )
+                if (state.delinquentAmount.minorUnits > 0) {
+                    info(
+                        sender,
+                        "Unpaid upkeep is ${scale.format(state.delinquentAmount)}; " +
+                            "grace ends ${state.graceEndsAt}.",
+                    )
+                }
+                state.exposureDamageLimit?.let { limit ->
+                    info(
+                        sender,
+                        "This exposure has journaled ${state.exposureDamageCount}/$limit " +
+                            "distinct damaged blocks.",
+                    )
+                }
+                info(sender, "Scanning current journaled damage in bounded batches…")
+                landProtectionCoordinator.status(membership.civilizationId) { outcome ->
+                    when (outcome) {
+                        is LandProtectionPaperOutcome.Completed -> {
+                            val assessment = outcome.value
+                            info(
+                                sender,
+                                "Restoration is ${formatPercentage(assessment.completionBasisPoints)}: " +
+                                "${assessment.restoredCount}/${assessment.totalDamageCount} already " +
+                                    "restored, ${assessment.repairable.size} repairable, " +
+                                    "${assessment.conflictCount} changed again. Restoring every " +
+                                    "currently repairable block costs " +
+                                    active.economySettings.currencyScale.format(
+                                        assessment.repairableCost,
+                                    ) + ".",
+                            )
+                        }
+                        is LandProtectionPaperOutcome.Rejected -> error(sender, outcome.description)
+                        is LandProtectionPaperOutcome.Unavailable -> error(sender, outcome.description)
+                        is LandProtectionPaperOutcome.Failed -> error(
+                            sender,
+                            "Protection scan failed: ${outcome.failure.message}",
+                        )
+                    }
+                }
+            }
+            "pay" -> {
+                if (args.size != 2) return error(sender, "Usage: /civ protection pay")
+                info(sender, "Checking upkeep and treasury reserve…")
+                landProtectionCoordinator.assessNow(membership.civilizationId) { outcome ->
+                    when (outcome) {
+                        is LandProtectionPaperOutcome.Completed -> success(
+                            sender,
+                            "Land protection is now ${outcome.value.status}.",
+                        )
+                        is LandProtectionPaperOutcome.Rejected -> error(sender, outcome.description)
+                        is LandProtectionPaperOutcome.Unavailable -> error(sender, outcome.description)
+                        is LandProtectionPaperOutcome.Failed -> error(
+                            sender,
+                            "Upkeep payment failed: ${outcome.failure.message}",
+                        )
+                    }
+                }
+            }
+            "repair" -> {
+                if (args.size != 3) {
+                    return error(sender, "Usage: /civ protection repair <target-percent>")
+                }
+                val target = parsePercentage(sender, args[2]) ?: return
+                info(sender, "Scanning current damage before pricing restoration…")
+                landProtectionCoordinator.start(
+                    civilizationId = membership.civilizationId,
+                    playerId = PlayerId(player.uniqueId),
+                    targetBasisPoints = target,
+                ) { outcome ->
+                    when (outcome) {
+                        is LandProtectionPaperOutcome.Completed -> success(
+                            sender,
+                            "Protection repair ${outcome.value.id} started: " +
+                                "${outcome.value.selectedCount} blocks for " +
+                                active.economySettings.currencyScale.format(outcome.value.grossCost) +
+                                "; target ${formatPercentage(target)}.",
+                        )
+                        is LandProtectionPaperOutcome.Rejected -> error(sender, outcome.description)
+                        is LandProtectionPaperOutcome.Unavailable -> error(sender, outcome.description)
+                        is LandProtectionPaperOutcome.Failed -> error(
+                            sender,
+                            "Protection repair failed: ${outcome.failure.message}",
+                        )
+                    }
+                }
+            }
+            "resume" -> {
+                if (args.size != 3) {
+                    return error(sender, "Usage: /civ protection resume <job-id>")
+                }
+                val jobId = try {
+                    ProtectionRepairJobId(UUID.fromString(args[2]))
+                } catch (_: IllegalArgumentException) {
+                    return error(sender, "'${args[2]}' is not a valid protection repair UUID")
+                }
+                landProtectionCoordinator.resume(jobId, membership.civilizationId) { outcome ->
+                    when (outcome) {
+                        is LandProtectionPaperOutcome.Completed -> success(
+                            sender,
+                            "Protection repair ${outcome.value.id} queued to resume.",
+                        )
+                        is LandProtectionPaperOutcome.Rejected -> error(sender, outcome.description)
+                        is LandProtectionPaperOutcome.Unavailable -> error(sender, outcome.description)
+                        is LandProtectionPaperOutcome.Failed -> error(
+                            sender,
+                            "Protection repair resume failed: ${outcome.failure.message}",
+                        )
+                    }
+                }
+            }
+            else -> error(sender, "Usage: /civ protection <status|pay|repair|resume> …")
+        }
+    }
+
+    private fun claim(sender: CommandSender, args: Array<out String>) {
+        val player = sender as? Player ?: return error(sender, "Only a player can claim land")
+        if (!player.hasPermission(CLAIM_PERMISSION)) {
+            return error(sender, "You do not have permission to claim land")
+        }
+        if (args.size != 5) {
+            return error(sender, "Usage: /civ claim <x1> <z1> <x2> <z2>")
+        }
+        val coordinates = args.drop(1).map { value ->
+            value.toIntOrNull() ?: return error(sender, "Claim coordinates must be integers")
+        }
+        val active = activeSeason(sender) ?: return
+        val membership = active.membershipOf(PlayerId(player.uniqueId))
+            ?: return error(sender, "You are not in a civilization this season")
+        val bounds = try {
+            ClaimBounds.between(
+                WorldId(player.world.key.asString()),
+                coordinates[0],
+                coordinates[1],
+                coordinates[2],
+                coordinates[3],
+            )
+        } catch (failure: IllegalArgumentException) {
+            return error(sender, failure.message ?: "Invalid claim bounds")
+        }
+        info(sender, "Validating and purchasing the claim…")
+        runtime.submitMutation(
+            operation = {
+                claims.place(
+                    PlaceClaim(
+                        civilizationId = membership.civilizationId,
+                        bounds = bounds,
+                        actorPlayerId = PlayerId(player.uniqueId),
+                        adminSponsored = false,
+                        idempotencyKey = "player-claim:${UUID.randomUUID()}",
+                    ),
+                )
+            },
+            completion = { outcome ->
+                when (outcome) {
+                    is RuntimeMutationOutcome.Completed -> when (val result = outcome.result) {
+                        is ApplicationResult.Applied -> success(
+                            sender,
+                            "Claim ${result.value.id} purchased: ${result.value.bounds.area} " +
+                                "blocks in group ${result.value.groupId}.",
+                        )
+                        is ApplicationResult.Unchanged -> info(sender, "Claim already exists")
+                        is ApplicationResult.Rejected -> error(sender, result.failure.description)
+                    }
+                    is RuntimeMutationOutcome.NotReady -> error(sender, "Civilizations is not ready")
+                    is RuntimeMutationOutcome.Failed ->
+                        error(sender, "Claim purchase failed: ${outcome.failure.message}")
+                }
+            },
+        )
+    }
 
     private fun handleRepair(sender: CommandSender, args: Array<out String>) {
         val player = sender as? Player ?: return error(sender, "Only a player can repair")
@@ -594,6 +800,12 @@ class CivilizationsCommand(
         sender.sendMessage(Component.text("/civ balance", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ deposit <amount>", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ withdraw <amount> (leader)", NamedTextColor.GRAY))
+        sender.sendMessage(Component.text("/civ claim <x1> <z1> <x2> <z2> (leader)", NamedTextColor.GRAY))
+        sender.sendMessage(Component.text("/civ protection [status|pay]", NamedTextColor.GRAY))
+        sender.sendMessage(
+            Component.text("/civ protection repair <target-percent>", NamedTextColor.GRAY),
+        )
+        sender.sendMessage(Component.text("/civ protection resume <job-id>", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ status", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ declare <civilization>", NamedTextColor.GRAY))
         sender.sendMessage(Component.text("/civ surrender", NamedTextColor.GRAY))
@@ -630,6 +842,8 @@ class CivilizationsCommand(
         const val BALANCE_PERMISSION = "civilizations.economy.balance"
         const val DEPOSIT_PERMISSION = "civilizations.economy.deposit"
         const val WITHDRAW_PERMISSION = "civilizations.economy.withdraw"
+        const val CLAIM_PERMISSION = "civilizations.land.claim"
+        const val LAND_PROTECTION_PERMISSION = "civilizations.land.protection"
         const val REPAIR_STATUS_PERMISSION = "civilizations.repair.status"
         const val REPAIR_START_PERMISSION = "civilizations.repair.start"
     }

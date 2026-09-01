@@ -1954,5 +1954,712 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        SchemaMigration(
+            version = 11,
+            name = "claim_groups_land_upkeep_exposure_and_restoration",
+            statements = listOf(
+                """
+                ALTER TABLE economy_ledger_transactions
+                ADD COLUMN feature_kind TEXT CHECK (
+                    feature_kind IS NULL OR feature_kind IN (
+                        'CLAIM_PURCHASE', 'LAND_UPKEEP', 'LAND_PROTECTION_REPAIR'
+                    )
+                )
+                """.trimIndent(),
+                """
+                CREATE TABLE claim_groups (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    ordinal INTEGER NOT NULL CHECK (ordinal > 0),
+                    founded_by_player_id TEXT,
+                    establishment_cost_minor INTEGER NOT NULL CHECK (
+                        establishment_cost_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    required_member_count INTEGER NOT NULL CHECK (required_member_count >= 0),
+                    required_treasury_balance_minor INTEGER NOT NULL CHECK (
+                        required_treasury_balance_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    CHECK (founded_by_player_id IS NULL OR length(founded_by_player_id) = 36),
+                    UNIQUE (civilization_id, ordinal),
+                    UNIQUE (season_id, id),
+                    FOREIGN KEY (season_id, civilization_id)
+                        REFERENCES civilizations(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, founded_by_player_id)
+                        REFERENCES memberships(season_id, player_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE TEMP TABLE claim_group_backfill (
+                    claim_id TEXT PRIMARY KEY,
+                    group_id TEXT NOT NULL
+                )
+                """.trimIndent(),
+                """
+                INSERT INTO claim_group_backfill(claim_id, group_id)
+                WITH RECURSIVE
+                edges(left_id, right_id) AS (
+                    SELECT left_claim.id, right_claim.id
+                    FROM claims left_claim
+                    JOIN claims right_claim
+                      ON right_claim.season_id = left_claim.season_id
+                     AND right_claim.civilization_id = left_claim.civilization_id
+                     AND right_claim.world_id = left_claim.world_id
+                     AND right_claim.id <> left_claim.id
+                     AND (
+                        ((left_claim.max_x + 1 = right_claim.min_x OR
+                          right_claim.max_x + 1 = left_claim.min_x) AND
+                         left_claim.min_z <= right_claim.max_z AND
+                         left_claim.max_z >= right_claim.min_z) OR
+                        ((left_claim.max_z + 1 = right_claim.min_z OR
+                          right_claim.max_z + 1 = left_claim.min_z) AND
+                         left_claim.min_x <= right_claim.max_x AND
+                         left_claim.max_x >= right_claim.min_x)
+                     )
+                ),
+                reach(origin_id, member_id) AS (
+                    SELECT id, id FROM claims
+                    UNION
+                    SELECT reach.origin_id, edges.right_id
+                    FROM reach JOIN edges ON edges.left_id = reach.member_id
+                )
+                SELECT member_id, MIN(origin_id)
+                FROM reach
+                GROUP BY member_id
+                """.trimIndent(),
+                """
+                INSERT INTO claim_groups(
+                    id, season_id, civilization_id, ordinal, founded_by_player_id,
+                    establishment_cost_minor, required_member_count,
+                    required_treasury_balance_minor, created_at_ms
+                )
+                SELECT component.group_id,
+                       component.season_id,
+                       component.civilization_id,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY component.civilization_id
+                           ORDER BY component.group_id
+                       ),
+                       NULL, 0, 0, 0, component.created_at_ms
+                FROM (
+                    SELECT DISTINCT backfill.group_id,
+                           claim.season_id,
+                           claim.civilization_id,
+                           civilization.created_at_ms
+                    FROM claim_group_backfill backfill
+                    JOIN claims claim ON claim.id = backfill.claim_id
+                    JOIN civilizations civilization
+                      ON civilization.id = claim.civilization_id
+                     AND civilization.season_id = claim.season_id
+                ) component
+                """.trimIndent(),
+                "ALTER TABLE claims ADD COLUMN group_id TEXT",
+                """
+                UPDATE claims
+                SET group_id = (
+                    SELECT backfill.group_id
+                    FROM claim_group_backfill backfill
+                    WHERE backfill.claim_id = claims.id
+                )
+                """.trimIndent(),
+                "DROP TABLE claim_group_backfill",
+                """
+                CREATE INDEX claims_by_group ON claims(group_id, world_id, min_x, min_z, id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER claims_validate_group_insert
+                BEFORE INSERT ON claims
+                WHEN NEW.group_id IS NULL OR NOT EXISTS (
+                    SELECT 1 FROM claim_groups claim_group
+                    WHERE claim_group.id = NEW.group_id
+                      AND claim_group.season_id = NEW.season_id
+                      AND claim_group.civilization_id = NEW.civilization_id
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'claim must reference its civilization claim group');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER claims_validate_group_update
+                BEFORE UPDATE OF group_id ON claims
+                WHEN NEW.group_id IS NULL OR NOT EXISTS (
+                    SELECT 1 FROM claim_groups claim_group
+                    WHERE claim_group.id = NEW.group_id
+                      AND claim_group.season_id = NEW.season_id
+                      AND claim_group.civilization_id = NEW.civilization_id
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'claim must reference its civilization claim group');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE land_protection_states (
+                    season_id TEXT NOT NULL,
+                    civilization_id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL CHECK (status IN ('PROTECTED', 'GRACE', 'EXPOSED')),
+                    next_assessment_at_ms INTEGER,
+                    required_reserve_minor INTEGER NOT NULL CHECK (
+                        required_reserve_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    delinquent_amount_minor INTEGER NOT NULL CHECK (
+                        delinquent_amount_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    grace_ends_at_ms INTEGER,
+                    exposure_id TEXT,
+                    exposure_started_at_ms INTEGER,
+                    exposure_damage_limit INTEGER CHECK (exposure_damage_limit > 0),
+                    exposure_damage_count INTEGER NOT NULL CHECK (exposure_damage_count >= 0),
+                    updated_at_ms INTEGER NOT NULL CHECK (updated_at_ms >= 0),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    CHECK (exposure_id IS NULL OR length(exposure_id) = 36),
+                    CHECK (
+                        (status = 'PROTECTED' AND grace_ends_at_ms IS NULL AND
+                            exposure_id IS NULL AND exposure_started_at_ms IS NULL AND
+                            exposure_damage_limit IS NULL AND exposure_damage_count = 0 AND
+                            delinquent_amount_minor = 0) OR
+                        (status = 'GRACE' AND grace_ends_at_ms IS NOT NULL AND
+                            exposure_id IS NULL AND exposure_started_at_ms IS NULL AND
+                            exposure_damage_limit IS NOT NULL AND
+                            exposure_damage_count = 0) OR
+                        (status = 'EXPOSED' AND grace_ends_at_ms IS NOT NULL AND
+                            exposure_id IS NOT NULL AND exposure_started_at_ms IS NOT NULL AND
+                            exposure_damage_limit IS NOT NULL AND
+                            exposure_damage_count <= exposure_damage_limit)
+                    ),
+                    UNIQUE (season_id, civilization_id),
+                    UNIQUE (exposure_id),
+                    FOREIGN KEY (season_id, civilization_id)
+                        REFERENCES civilization_accounts(season_id, civilization_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX land_protection_states_due
+                ON land_protection_states(season_id, status, next_assessment_at_ms)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER land_protection_states_validate_update
+                BEFORE UPDATE ON land_protection_states
+                WHEN NEW.season_id <> OLD.season_id OR
+                     NEW.civilization_id <> OLD.civilization_id OR
+                     NEW.updated_at_ms < OLD.updated_at_ms OR
+                     NEW.exposure_damage_count <> CASE
+                        WHEN NEW.exposure_id IS NULL THEN 0
+                        ELSE (SELECT COUNT(*) FROM exposure_damage_sites site
+                              WHERE site.exposure_id = NEW.exposure_id)
+                     END
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid land protection state update');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER land_protection_states_cannot_be_deleted
+                BEFORE DELETE ON land_protection_states
+                BEGIN
+                    SELECT RAISE(ABORT, 'land protection states cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE land_upkeep_assessments (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    scheduled_at_ms INTEGER NOT NULL CHECK (scheduled_at_ms >= 0),
+                    assessed_at_ms INTEGER NOT NULL CHECK (assessed_at_ms >= 0),
+                    claimed_area INTEGER NOT NULL CHECK (claimed_area >= 0),
+                    base_charge_minor INTEGER NOT NULL CHECK (base_charge_minor >= 0),
+                    per_block_charge_minor INTEGER NOT NULL CHECK (per_block_charge_minor >= 0),
+                    total_charge_minor INTEGER NOT NULL CHECK (total_charge_minor >= 0),
+                    required_reserve_minor INTEGER NOT NULL CHECK (required_reserve_minor >= 0),
+                    interval_seconds INTEGER NOT NULL CHECK (interval_seconds > 0),
+                    grace_seconds INTEGER NOT NULL CHECK (grace_seconds > 0),
+                    damage_limit INTEGER NOT NULL CHECK (damage_limit > 0),
+                    status TEXT NOT NULL CHECK (status IN (
+                        'PAID', 'GRACE_STARTED', 'DEFERRED_FOR_BATTLE', 'RECOVERED'
+                    )),
+                    ledger_transaction_id TEXT,
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    UNIQUE (civilization_id, scheduled_at_ms),
+                    FOREIGN KEY (season_id, civilization_id)
+                        REFERENCES civilization_accounts(season_id, civilization_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, ledger_transaction_id)
+                        REFERENCES economy_ledger_transactions(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE TRIGGER land_upkeep_assessments_validate_update
+                BEFORE UPDATE ON land_upkeep_assessments
+                WHEN NEW.id <> OLD.id OR NEW.season_id <> OLD.season_id OR
+                     NEW.civilization_id <> OLD.civilization_id OR
+                     NEW.scheduled_at_ms <> OLD.scheduled_at_ms OR
+                     NEW.claimed_area <> OLD.claimed_area OR
+                     NEW.base_charge_minor <> OLD.base_charge_minor OR
+                     NEW.per_block_charge_minor <> OLD.per_block_charge_minor OR
+                     NEW.total_charge_minor <> OLD.total_charge_minor OR
+                     NEW.required_reserve_minor <> OLD.required_reserve_minor OR
+                     NEW.interval_seconds <> OLD.interval_seconds OR
+                     NEW.grace_seconds <> OLD.grace_seconds OR
+                     NEW.damage_limit <> OLD.damage_limit OR
+                     NEW.assessed_at_ms < OLD.assessed_at_ms OR
+                     NOT (
+                        (OLD.status = 'DEFERRED_FOR_BATTLE' AND
+                         NEW.status IN ('PAID', 'GRACE_STARTED')) OR
+                        (OLD.status = 'GRACE_STARTED' AND NEW.status = 'RECOVERED')
+                     )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid land upkeep assessment update');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER land_upkeep_assessments_validate_ledger_insert
+                BEFORE INSERT ON land_upkeep_assessments
+                WHEN (
+                    NEW.status IN ('PAID', 'RECOVERED') AND NEW.total_charge_minor > 0 AND
+                    NOT EXISTS (
+                        SELECT 1
+                        FROM economy_ledger_transactions header
+                        JOIN economy_ledger_postings posting
+                          ON posting.transaction_id = header.id
+                        WHERE header.id = NEW.ledger_transaction_id
+                          AND header.season_id = NEW.season_id
+                          AND header.feature_kind = 'LAND_UPKEEP'
+                          AND header.posting_count = 1
+                          AND posting.civilization_id = NEW.civilization_id
+                          AND posting.amount_minor = -NEW.total_charge_minor
+                    )
+                ) OR (
+                    NEW.status IN ('GRACE_STARTED', 'DEFERRED_FOR_BATTLE') AND
+                    NEW.ledger_transaction_id IS NOT NULL
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid land upkeep assessment ledger');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER land_upkeep_assessments_validate_ledger_update
+                BEFORE UPDATE ON land_upkeep_assessments
+                WHEN NEW.status IN ('PAID', 'RECOVERED') AND NEW.total_charge_minor > 0 AND
+                     NOT EXISTS (
+                        SELECT 1
+                        FROM economy_ledger_transactions header
+                        JOIN economy_ledger_postings posting
+                          ON posting.transaction_id = header.id
+                        WHERE header.id = NEW.ledger_transaction_id
+                          AND header.season_id = NEW.season_id
+                          AND header.feature_kind = 'LAND_UPKEEP'
+                          AND header.posting_count = 1
+                          AND posting.civilization_id = NEW.civilization_id
+                          AND posting.amount_minor = -NEW.total_charge_minor
+                     )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid land upkeep recovery ledger');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER land_upkeep_assessments_cannot_be_deleted
+                BEFORE DELETE ON land_upkeep_assessments
+                BEGIN
+                    SELECT RAISE(ABORT, 'land upkeep assessments cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE exposure_damage_sites (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    exposure_id TEXT NOT NULL,
+                    claim_id TEXT NOT NULL,
+                    world_id TEXT NOT NULL,
+                    block_x INTEGER NOT NULL,
+                    block_y INTEGER NOT NULL,
+                    block_z INTEGER NOT NULL,
+                    original_block_data TEXT NOT NULL,
+                    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
+                    resolved_at_ms INTEGER,
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    CHECK (length(exposure_id) = 36),
+                    CHECK (length(claim_id) = 36),
+                    CHECK (length(trim(world_id)) > 0),
+                    CHECK (length(trim(original_block_data)) > 0),
+                    CHECK (resolved_at_ms IS NULL OR resolved_at_ms >= created_at_ms),
+                    UNIQUE (exposure_id, world_id, block_x, block_y, block_z),
+                    FOREIGN KEY (civilization_id) REFERENCES land_protection_states(civilization_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (claim_id) REFERENCES claims(id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE TRIGGER exposure_damage_sites_validate_insert
+                BEFORE INSERT ON exposure_damage_sites
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM land_protection_states protection
+                    JOIN claims claim ON claim.id = NEW.claim_id
+                    WHERE protection.season_id = NEW.season_id
+                      AND protection.civilization_id = NEW.civilization_id
+                      AND protection.status = 'EXPOSED'
+                      AND protection.exposure_id = NEW.exposure_id
+                      AND protection.exposure_damage_count < protection.exposure_damage_limit
+                      AND claim.season_id = NEW.season_id
+                      AND claim.civilization_id = NEW.civilization_id
+                      AND claim.world_id = NEW.world_id
+                      AND NEW.block_x BETWEEN claim.min_x AND claim.max_x
+                      AND NEW.block_z BETWEEN claim.min_z AND claim.max_z
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid exposed damage site');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER exposure_damage_sites_validate_update
+                BEFORE UPDATE ON exposure_damage_sites
+                WHEN NEW.id <> OLD.id OR NEW.season_id <> OLD.season_id OR
+                     NEW.civilization_id <> OLD.civilization_id OR
+                     NEW.exposure_id <> OLD.exposure_id OR NEW.claim_id <> OLD.claim_id OR
+                     NEW.world_id <> OLD.world_id OR NEW.block_x <> OLD.block_x OR
+                     NEW.block_y <> OLD.block_y OR NEW.block_z <> OLD.block_z OR
+                     NEW.original_block_data <> OLD.original_block_data OR
+                     NEW.created_at_ms <> OLD.created_at_ms OR
+                     OLD.resolved_at_ms IS NOT NULL OR NEW.resolved_at_ms IS NULL
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid exposed damage site update');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER exposure_damage_sites_cannot_be_deleted
+                BEFORE DELETE ON exposure_damage_sites
+                BEGIN
+                    SELECT RAISE(ABORT, 'exposed damage sites cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE INDEX exposure_damage_sites_unresolved
+                ON exposure_damage_sites(civilization_id, resolved_at_ms, id)
+                """.trimIndent(),
+                """
+                CREATE TABLE exposure_damage_events (
+                    id TEXT PRIMARY KEY,
+                    site_id TEXT NOT NULL,
+                    ordinal INTEGER NOT NULL CHECK (ordinal > 0),
+                    actor_player_id TEXT NOT NULL,
+                    actor_civilization_id TEXT NOT NULL,
+                    cause TEXT NOT NULL CHECK (cause IN ('PLAYER_BREAK', 'PLAYER_PLACE')),
+                    observed_block_data TEXT NOT NULL,
+                    expected_block_data TEXT NOT NULL,
+                    recorded_at_ms INTEGER NOT NULL CHECK (recorded_at_ms >= 0),
+                    CHECK (length(id) = 36),
+                    CHECK (length(site_id) = 36),
+                    CHECK (length(actor_player_id) = 36),
+                    CHECK (length(actor_civilization_id) = 36),
+                    UNIQUE (site_id, ordinal),
+                    FOREIGN KEY (site_id) REFERENCES exposure_damage_sites(id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE TRIGGER exposure_damage_events_validate_insert
+                BEFORE INSERT ON exposure_damage_events
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM exposure_damage_sites site
+                    JOIN land_protection_states protection
+                      ON protection.civilization_id = site.civilization_id
+                    JOIN memberships actor
+                      ON actor.season_id = site.season_id
+                     AND actor.player_id = NEW.actor_player_id
+                    WHERE site.id = NEW.site_id
+                      AND site.resolved_at_ms IS NULL
+                      AND protection.status = 'EXPOSED'
+                      AND protection.exposure_id = site.exposure_id
+                      AND actor.civilization_id = NEW.actor_civilization_id
+                      AND actor.civilization_id <> site.civilization_id
+                      AND NEW.ordinal = 1 + (
+                          SELECT COUNT(*) FROM exposure_damage_events prior
+                          WHERE prior.site_id = NEW.site_id
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid exposed damage event');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER exposure_damage_events_are_immutable
+                BEFORE UPDATE ON exposure_damage_events
+                BEGIN
+                    SELECT RAISE(ABORT, 'exposure damage events are immutable');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER exposure_damage_events_cannot_be_deleted
+                BEFORE DELETE ON exposure_damage_events
+                BEGIN
+                    SELECT RAISE(ABORT, 'exposure damage events cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE protection_repair_jobs (
+                    id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    initiated_by_player_id TEXT,
+                    idempotency_key TEXT NOT NULL UNIQUE,
+                    target_completion_basis_points INTEGER NOT NULL CHECK (
+                        target_completion_basis_points BETWEEN 1 AND 10000
+                    ),
+                    total_damage_count INTEGER NOT NULL CHECK (total_damage_count >= 0),
+                    observed_restored_count INTEGER NOT NULL CHECK (observed_restored_count >= 0),
+                    observed_repairable_count INTEGER NOT NULL CHECK (observed_repairable_count >= 0),
+                    observed_conflict_count INTEGER NOT NULL CHECK (observed_conflict_count >= 0),
+                    selected_count INTEGER NOT NULL CHECK (selected_count >= 0),
+                    restore_original_unit_price_minor INTEGER NOT NULL CHECK (
+                        restore_original_unit_price_minor >= 0
+                    ),
+                    remove_placement_unit_price_minor INTEGER NOT NULL CHECK (
+                        remove_placement_unit_price_minor >= 0
+                    ),
+                    gross_cost_minor INTEGER NOT NULL CHECK (gross_cost_minor >= 0),
+                    payment_ledger_transaction_id TEXT,
+                    status TEXT NOT NULL CHECK (status IN (
+                        'PENDING', 'RUNNING', 'PAUSED', 'COMPLETED', 'CANCELLED', 'FAILED'
+                    )),
+                    next_item_ordinal INTEGER NOT NULL CHECK (next_item_ordinal >= 0),
+                    restored_count INTEGER NOT NULL CHECK (restored_count >= 0),
+                    skipped_conflict_count INTEGER NOT NULL CHECK (skipped_conflict_count >= 0),
+                    failed_count INTEGER NOT NULL CHECK (failed_count >= 0),
+                    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
+                    updated_at_ms INTEGER NOT NULL CHECK (updated_at_ms >= created_at_ms),
+                    completed_at_ms INTEGER,
+                    failure_message TEXT,
+                    CHECK (length(id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    CHECK (initiated_by_player_id IS NULL OR length(initiated_by_player_id) = 36),
+                    CHECK (length(idempotency_key) BETWEEN 1 AND 160),
+                    FOREIGN KEY (season_id, civilization_id)
+                        REFERENCES civilization_accounts(season_id, civilization_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, payment_ledger_transaction_id)
+                        REFERENCES economy_ledger_transactions(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE UNIQUE INDEX protection_repair_jobs_one_open
+                ON protection_repair_jobs(civilization_id)
+                WHERE status IN ('PENDING', 'RUNNING', 'PAUSED')
+                """.trimIndent(),
+                """
+                CREATE TABLE protection_repair_job_items (
+                    repair_job_id TEXT NOT NULL,
+                    site_id TEXT NOT NULL,
+                    ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+                    world_id TEXT NOT NULL,
+                    block_x INTEGER NOT NULL,
+                    block_y INTEGER NOT NULL,
+                    block_z INTEGER NOT NULL,
+                    expected_block_data TEXT NOT NULL,
+                    restore_block_data TEXT NOT NULL,
+                    unit_price_minor INTEGER NOT NULL CHECK (unit_price_minor >= 0),
+                    status TEXT NOT NULL CHECK (status IN (
+                        'PENDING', 'RESTORED', 'SKIPPED_CONFLICT', 'FAILED'
+                    )),
+                    processed_at_ms INTEGER,
+                    failure_message TEXT,
+                    PRIMARY KEY (repair_job_id, ordinal),
+                    UNIQUE (repair_job_id, site_id),
+                    FOREIGN KEY (repair_job_id) REFERENCES protection_repair_jobs(id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (site_id) REFERENCES exposure_damage_sites(id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE TRIGGER protection_repair_jobs_validate_insert
+                BEFORE INSERT ON protection_repair_jobs
+                WHEN NEW.status <> 'PENDING' OR NEW.next_item_ordinal <> 0 OR
+                     NEW.restored_count <> 0 OR NEW.skipped_conflict_count <> 0 OR
+                     NEW.failed_count <> 0 OR NEW.completed_at_ms IS NOT NULL OR
+                     NEW.total_damage_count <> NEW.observed_restored_count +
+                        NEW.observed_repairable_count + NEW.observed_conflict_count OR
+                     NEW.selected_count <= 0 OR
+                     NEW.selected_count > NEW.observed_repairable_count OR
+                     (
+                        NEW.gross_cost_minor = 0 AND
+                        NEW.payment_ledger_transaction_id IS NOT NULL
+                     ) OR (
+                        NEW.gross_cost_minor > 0 AND NOT EXISTS (
+                            SELECT 1
+                            FROM economy_ledger_transactions header
+                            JOIN economy_ledger_postings posting
+                              ON posting.transaction_id = header.id
+                            WHERE header.id = NEW.payment_ledger_transaction_id
+                              AND header.season_id = NEW.season_id
+                              AND header.feature_kind = 'LAND_PROTECTION_REPAIR'
+                              AND header.reference_type = 'LAND_PROTECTION_REPAIR'
+                              AND header.reference_id = NEW.idempotency_key
+                              AND header.posting_count = 1
+                              AND posting.civilization_id = NEW.civilization_id
+                              AND posting.amount_minor = -NEW.gross_cost_minor
+                        )
+                     )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid protection repair job');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER protection_repair_job_items_validate_insert
+                BEFORE INSERT ON protection_repair_job_items
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM protection_repair_jobs job
+                    JOIN exposure_damage_sites site ON site.id = NEW.site_id
+                    WHERE job.id = NEW.repair_job_id
+                      AND job.status = 'PENDING'
+                      AND NEW.ordinal < job.selected_count
+                      AND site.civilization_id = job.civilization_id
+                      AND site.resolved_at_ms IS NULL
+                      AND site.world_id = NEW.world_id
+                      AND site.block_x = NEW.block_x
+                      AND site.block_y = NEW.block_y
+                      AND site.block_z = NEW.block_z
+                      AND site.original_block_data = NEW.restore_block_data
+                      AND NEW.expected_block_data = (
+                          SELECT event.expected_block_data
+                          FROM exposure_damage_events event
+                          WHERE event.site_id = site.id
+                          ORDER BY event.ordinal DESC LIMIT 1
+                      )
+                      AND NEW.unit_price_minor = CASE
+                          WHEN site.original_block_data IN (
+                              'minecraft:air', 'minecraft:cave_air', 'minecraft:void_air'
+                          ) THEN job.remove_placement_unit_price_minor
+                          ELSE job.restore_original_unit_price_minor
+                      END
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid protection repair item');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER protection_repair_jobs_validate_selection
+                BEFORE UPDATE OF status ON protection_repair_jobs
+                WHEN OLD.status IN ('PENDING', 'PAUSED') AND NEW.status = 'RUNNING' AND (
+                    (SELECT COUNT(*) FROM protection_repair_job_items item
+                     WHERE item.repair_job_id = OLD.id) <> OLD.selected_count OR
+                    (SELECT COALESCE(SUM(item.unit_price_minor), 0)
+                     FROM protection_repair_job_items item
+                     WHERE item.repair_job_id = OLD.id) <> OLD.gross_cost_minor
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'protection repair selection is incomplete');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER protection_repair_jobs_validate_update
+                BEFORE UPDATE ON protection_repair_jobs
+                WHEN NEW.id <> OLD.id OR NEW.season_id <> OLD.season_id OR
+                     NEW.civilization_id <> OLD.civilization_id OR
+                     NEW.initiated_by_player_id IS NOT OLD.initiated_by_player_id OR
+                     NEW.idempotency_key <> OLD.idempotency_key OR
+                     NEW.target_completion_basis_points <> OLD.target_completion_basis_points OR
+                     NEW.total_damage_count <> OLD.total_damage_count OR
+                     NEW.observed_restored_count <> OLD.observed_restored_count OR
+                     NEW.observed_repairable_count <> OLD.observed_repairable_count OR
+                     NEW.observed_conflict_count <> OLD.observed_conflict_count OR
+                     NEW.selected_count <> OLD.selected_count OR
+                     NEW.restore_original_unit_price_minor <>
+                        OLD.restore_original_unit_price_minor OR
+                     NEW.remove_placement_unit_price_minor <>
+                        OLD.remove_placement_unit_price_minor OR
+                     NEW.gross_cost_minor <> OLD.gross_cost_minor OR
+                     NEW.payment_ledger_transaction_id IS NOT
+                        OLD.payment_ledger_transaction_id OR
+                     NEW.created_at_ms <> OLD.created_at_ms OR
+                     NEW.updated_at_ms < OLD.updated_at_ms OR
+                     NEW.next_item_ordinal < OLD.next_item_ordinal OR
+                     NEW.restored_count < OLD.restored_count OR
+                     NEW.skipped_conflict_count < OLD.skipped_conflict_count OR
+                     NEW.failed_count < OLD.failed_count OR
+                     NEW.next_item_ordinal > NEW.selected_count OR
+                     NEW.restored_count + NEW.skipped_conflict_count + NEW.failed_count <>
+                        NEW.next_item_ordinal OR
+                     (NEW.status = 'COMPLETED' AND (
+                        NEW.next_item_ordinal <> NEW.selected_count OR
+                        NEW.completed_at_ms IS NULL
+                     )) OR
+                     (NEW.status IN ('PENDING', 'RUNNING', 'PAUSED') AND
+                        NEW.completed_at_ms IS NOT NULL) OR
+                     (NEW.status IN ('CANCELLED', 'FAILED') AND
+                        NEW.completed_at_ms IS NULL) OR
+                     (NEW.failure_message IS NOT NULL AND NEW.status <> 'FAILED') OR
+                     NOT (
+                        (OLD.status = NEW.status AND OLD.status IN (
+                            'PENDING', 'RUNNING', 'PAUSED'
+                        )) OR
+                        (OLD.status = 'PENDING' AND NEW.status IN (
+                            'RUNNING', 'CANCELLED'
+                        )) OR
+                        (OLD.status = 'RUNNING' AND NEW.status IN (
+                            'PAUSED', 'COMPLETED', 'CANCELLED', 'FAILED'
+                        )) OR
+                        (OLD.status = 'PAUSED' AND NEW.status IN (
+                            'RUNNING', 'CANCELLED', 'FAILED'
+                        ))
+                     )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid protection repair transition');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER protection_repair_job_items_validate_update
+                BEFORE UPDATE ON protection_repair_job_items
+                WHEN NEW.repair_job_id <> OLD.repair_job_id OR
+                     NEW.site_id <> OLD.site_id OR NEW.ordinal <> OLD.ordinal OR
+                     NEW.world_id <> OLD.world_id OR NEW.block_x <> OLD.block_x OR
+                     NEW.block_y <> OLD.block_y OR NEW.block_z <> OLD.block_z OR
+                     NEW.expected_block_data <> OLD.expected_block_data OR
+                     NEW.restore_block_data <> OLD.restore_block_data OR
+                     NEW.unit_price_minor <> OLD.unit_price_minor OR
+                     OLD.status <> 'PENDING' OR NEW.status = 'PENDING' OR
+                     NEW.processed_at_ms IS NULL OR NOT EXISTS (
+                        SELECT 1 FROM protection_repair_jobs job
+                        WHERE job.id = OLD.repair_job_id
+                          AND job.status = 'RUNNING'
+                          AND job.next_item_ordinal = OLD.ordinal
+                     )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid protection repair item update');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER protection_repair_jobs_cannot_be_deleted
+                BEFORE DELETE ON protection_repair_jobs
+                BEGIN
+                    SELECT RAISE(ABORT, 'protection repair jobs cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER protection_repair_job_items_cannot_be_deleted
+                BEFORE DELETE ON protection_repair_job_items
+                BEGIN
+                    SELECT RAISE(ABORT, 'protection repair items cannot be deleted');
+                END
+                """.trimIndent(),
+            ),
+        ),
     )
 }

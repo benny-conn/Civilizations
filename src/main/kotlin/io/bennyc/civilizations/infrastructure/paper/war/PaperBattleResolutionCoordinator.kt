@@ -15,6 +15,7 @@ import io.bennyc.civilizations.domain.war.BattleOutcome
 import io.bennyc.civilizations.domain.war.BattleStatus
 import io.bennyc.civilizations.infrastructure.paper.BattleResolutionRules
 import io.bennyc.civilizations.infrastructure.paper.repair.PaperRepairCoordinator
+import io.bennyc.civilizations.infrastructure.paper.protection.PaperLandProtectionCoordinator
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeMutationOutcome
@@ -43,6 +44,7 @@ class PaperBattleResolutionCoordinator(
     private val rules: BattleResolutionRules,
     private val logger: Logger,
     private val repairCoordinator: PaperRepairCoordinator,
+    private val landProtectionCoordinator: PaperLandProtectionCoordinator,
     private val clock: Clock = Clock.systemUTC(),
 ) : AutoCloseable {
     private val queue = LinkedHashMap<BattleId, PendingResolution>()
@@ -747,12 +749,14 @@ class PaperBattleResolutionCoordinator(
     private fun suspendRepairWorldWork() {
         if (repairWorldWorkSuspended) return
         repairCoordinator.suspendForBattleResolution()
+        landProtectionCoordinator.suspendForBattleResolution()
         repairWorldWorkSuspended = true
     }
 
     private fun resumeRepairWorldWork() {
         if (!repairWorldWorkSuspended) return
         repairCoordinator.resumeAfterBattleResolution()
+        landProtectionCoordinator.resumeAfterBattleResolution()
         repairWorldWorkSuspended = false
     }
 
