@@ -2,6 +2,7 @@ package io.bennyc.civilizations.infrastructure.paper
 
 import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.economy.EconomyRules
+import io.bennyc.civilizations.application.economy.BattleCasualtyRules
 import io.bennyc.civilizations.application.economy.RepairEconomyRules
 import io.bennyc.civilizations.application.season.GameplayPhaseRules
 import io.bennyc.civilizations.application.war.WarService
@@ -155,6 +156,22 @@ data class CivilizationsConfiguration(
                         ),
                         ordinaryInitiatorRoles = config.requiredMembershipRoles(
                             "economy.repair.ordinary-initiator-roles",
+                        ),
+                    ),
+                    battleCasualties = BattleCasualtyRules(
+                        attackerDeathCost = config.requiredMoney(
+                            "economy.battle-casualties.attacker-death-cost",
+                            currencyScale,
+                        ),
+                        defenderDeathCost = config.requiredMoney(
+                            "economy.battle-casualties.defender-death-cost",
+                            currencyScale,
+                        ),
+                        requireAttackerCoverage = config.requiredBoolean(
+                            "economy.battle-casualties.require-attacker-coverage",
+                        ),
+                        lockWithdrawalsDuringBattle = config.requiredBoolean(
+                            "economy.battle-casualties.lock-withdrawals-during-battle",
                         ),
                     ),
                 ),

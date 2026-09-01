@@ -4,6 +4,7 @@ import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.civilization.ProvisionCivilization
 import io.bennyc.civilizations.application.claim.ClaimRules
 import io.bennyc.civilizations.application.economy.EconomyRules
+import io.bennyc.civilizations.application.economy.BattleCasualtyRules
 import io.bennyc.civilizations.application.economy.RepairEconomyRules
 import io.bennyc.civilizations.application.claim.PlaceClaim
 import io.bennyc.civilizations.application.damage.PrepareBlockMutation
@@ -68,7 +69,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(9, started.migration.currentVersion)
+            assertEquals(10, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -550,6 +551,12 @@ class CivilizationsRuntimeTest {
                 removePlacementUnitPrice = MoneyAmount(100),
                 victorShareBasisPoints = 2_500,
                 ordinaryInitiatorRoles = setOf(MembershipRole.LEADER),
+            ),
+            battleCasualties = BattleCasualtyRules(
+                attackerDeathCost = MoneyAmount.ZERO,
+                defenderDeathCost = MoneyAmount.ZERO,
+                requireAttackerCoverage = false,
+                lockWithdrawalsDuringBattle = false,
             ),
         ),
         serverThread = directExecutor,

@@ -8,6 +8,12 @@ import io.bennyc.civilizations.application.claim.ClaimService
 import io.bennyc.civilizations.application.claim.PlaceClaim
 import io.bennyc.civilizations.application.damage.DamageReportService
 import io.bennyc.civilizations.application.damage.GenerateDamageReport
+import io.bennyc.civilizations.application.economy.BattleCasualtyRules
+import io.bennyc.civilizations.application.economy.EconomyRules
+import io.bennyc.civilizations.application.economy.EconomyService
+import io.bennyc.civilizations.application.economy.EconomyWithdrawalLockedForBattle
+import io.bennyc.civilizations.application.economy.PreparePlayerEconomyTransfer
+import io.bennyc.civilizations.application.economy.RepairEconomyRules
 import io.bennyc.civilizations.application.season.SeasonService
 import io.bennyc.civilizations.application.support.SequentialIdGenerator
 import io.bennyc.civilizations.application.support.appliedValue
@@ -17,6 +23,10 @@ import io.bennyc.civilizations.application.support.unchangedValue
 import io.bennyc.civilizations.domain.claim.ClaimBounds
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.claim.WorldId
+import io.bennyc.civilizations.domain.civilization.MembershipRole
+import io.bennyc.civilizations.domain.economy.CurrencyScale
+import io.bennyc.civilizations.domain.economy.LedgerTransactionKind
+import io.bennyc.civilizations.domain.economy.MoneyAmount
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.SeasonStatus
@@ -37,6 +47,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class BattleCombatServiceTest {
@@ -177,7 +188,7 @@ class BattleCombatServiceTest {
             assertEquals(BattleOutcome.DEFENDER_VICTORY, closed.outcome)
             assertEquals(fixture.defenderId, closed.winnerCivilizationId)
 
-            val restarted = BattleCombatService(database.repository, fixture.clock)
+            val restarted = BattleCombatService(database.repository, fixture.ids, fixture.clock)
             assertTrue(restarted.recoverExpiredBattles(fixture.seasonId).isEmpty())
             val persisted = database.repository.read { findBattleCombatState(battle.id) }
             assertEquals(BattleOutcome.DEFENDER_VICTORY, persisted?.requestedOutcome)
@@ -217,10 +228,173 @@ class BattleCombatServiceTest {
         }
     }
 
+    @Test
+    fun `battle start requires and durably reserves maximum attacker casualty coverage`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(
+                database,
+                casualtyRules = BattleCasualtyRules(
+                    attackerDeathCost = MoneyAmount(250),
+                    defenderDeathCost = MoneyAmount(100),
+                    requireAttackerCoverage = true,
+                    lockWithdrawalsDuringBattle = true,
+                ),
+                openingBalance = MoneyAmount(200),
+            )
+
+            val rejected = fixture.startBattleResult(setOf(playerId(2), playerId(3))).rejection()
+            assertIs<InsufficientAttackerCasualtyCoverage>(rejected)
+            assertTrue(database.repository.read { listBattlesForSeason(fixture.seasonId).isEmpty() })
+
+            fixture.credit(fixture.attackerId, MoneyAmount(50), "coverage-top-up")
+            val roster = fixture.startBattle(setOf(playerId(2), playerId(3)))
+            val economics = assertNotNull(roster.casualtyEconomics)
+            assertEquals(MoneyAmount(250), economics.attackerReserve)
+            assertEquals(MoneyAmount.ZERO, fixture.balance(fixture.attackerId))
+            assertEquals(
+                LedgerTransactionKind.BATTLE_CASUALTY_RESERVE,
+                fixture.economy!!.listLedger(fixture.attackerId).first().kind,
+            )
+        }
+    }
+
+    @Test
+    fun `casualties charge once without debt and unused attacker coverage releases`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(
+                database,
+                livesPerCombatant = 2,
+                casualtyRules = BattleCasualtyRules(
+                    attackerDeathCost = MoneyAmount(250),
+                    defenderDeathCost = MoneyAmount(100),
+                    requireAttackerCoverage = true,
+                    lockWithdrawalsDuringBattle = true,
+                ),
+                openingBalance = MoneyAmount(500),
+            )
+            val battle = fixture.startBattle(setOf(playerId(2), playerId(3))).battle
+            assertEquals(MoneyAmount.ZERO, fixture.balance(fixture.attackerId))
+
+            val attackerLoss = fixture.loss(1, 2)
+            val first = fixture.combat.recordLifeLosses(
+                RecordBattleLifeLosses(battle.id, listOf(attackerLoss)),
+            ).appliedValue()
+            val casualty = first.casualties.single()
+            assertEquals(MoneyAmount(250), casualty.chargedAmount)
+            assertEquals(MoneyAmount.ZERO, casualty.unpaidAmount)
+            BattleCombatService(database.repository, fixture.ids, fixture.clock).recordLifeLosses(
+                RecordBattleLifeLosses(battle.id, listOf(attackerLoss)),
+            ).unchangedValue()
+            assertEquals(1, database.repository.read { listBattleCasualties(battle.id).size })
+
+            fixture.wars.cancelBattle(battle.id).appliedValue()
+            assertEquals(MoneyAmount(250), fixture.balance(fixture.attackerId))
+            val released = assertNotNull(
+                database.repository.read { findBattleCasualtyEconomics(battle.id) },
+            )
+            assertEquals(MoneyAmount(250), released.releasedAmount)
+            assertEquals(
+                listOf(
+                    LedgerTransactionKind.BATTLE_CASUALTY_RELEASE,
+                    LedgerTransactionKind.BATTLE_CASUALTY_RESERVE,
+                    LedgerTransactionKind.OPENING_BALANCE,
+                ),
+                fixture.economy!!.listLedger(fixture.attackerId).map { it.kind },
+            )
+        }
+    }
+
+    @Test
+    fun `defender casualty stops at zero records unpaid amount and locks withdrawals`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(
+                database,
+                casualtyRules = BattleCasualtyRules(
+                    attackerDeathCost = MoneyAmount.ZERO,
+                    defenderDeathCost = MoneyAmount(100),
+                    requireAttackerCoverage = true,
+                    lockWithdrawalsDuringBattle = true,
+                ),
+                openingBalance = MoneyAmount(50),
+            )
+            val battle = fixture.startBattle(setOf(playerId(2), playerId(3))).battle
+
+            assertIs<EconomyWithdrawalLockedForBattle>(
+                fixture.economy!!.preparePlayerWithdrawal(
+                    PreparePlayerEconomyTransfer(
+                        seasonId = fixture.seasonId,
+                        civilizationId = fixture.defenderId,
+                        playerId = playerId(3),
+                        amount = MoneyAmount(1),
+                        providerName = "TestEconomy",
+                        providerFractionalDigits = 2,
+                        idempotencyKey = "withdraw-during-battle",
+                    ),
+                ).rejection(),
+            )
+
+            val update = fixture.combat.recordLifeLosses(
+                RecordBattleLifeLosses(battle.id, listOf(fixture.loss(1, 3))),
+            ).appliedValue()
+            val casualty = update.casualties.single()
+            assertEquals(MoneyAmount(50), casualty.chargedAmount)
+            assertEquals(MoneyAmount(50), casualty.unpaidAmount)
+            assertEquals(MoneyAmount.ZERO, fixture.balance(fixture.defenderId))
+            assertIs<EconomyWithdrawalLockedForBattle>(
+                fixture.economy.preparePlayerWithdrawal(
+                    PreparePlayerEconomyTransfer(
+                        seasonId = fixture.seasonId,
+                        civilizationId = fixture.defenderId,
+                        playerId = playerId(3),
+                        amount = MoneyAmount(1),
+                        providerName = "TestEconomy",
+                        providerFractionalDigits = 2,
+                        idempotencyKey = "withdraw-while-resolving",
+                    ),
+                ).rejection(),
+            )
+        }
+    }
+
+    @Test
+    fun `coverage and withdrawal lock can be disabled without creating debt`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(
+                database,
+                casualtyRules = BattleCasualtyRules(
+                    attackerDeathCost = MoneyAmount(100),
+                    defenderDeathCost = MoneyAmount(25),
+                    requireAttackerCoverage = false,
+                    lockWithdrawalsDuringBattle = false,
+                ),
+                openingBalance = MoneyAmount(50),
+            )
+            val battle = fixture.startBattle(setOf(playerId(2), playerId(3))).battle
+            val casualty = fixture.combat.recordLifeLosses(
+                RecordBattleLifeLosses(battle.id, listOf(fixture.loss(1, 2))),
+            ).appliedValue().casualties.single()
+            assertEquals(MoneyAmount(50), casualty.chargedAmount)
+            assertEquals(MoneyAmount(50), casualty.unpaidAmount)
+            assertEquals(MoneyAmount.ZERO, fixture.balance(fixture.attackerId))
+
+            DamageReportService(database.repository, fixture.clock).generate(
+                GenerateDamageReport(battle.id, emptyList()),
+            ).appliedValue()
+            fixture.wars.resolve(battle.id, BattleOutcome.DEFENDER_VICTORY).appliedValue()
+            val economics = assertNotNull(
+                database.repository.read { findBattleCasualtyEconomics(battle.id) },
+            )
+            assertEquals(MoneyAmount.ZERO, economics.attackerReserve)
+            assertEquals(MoneyAmount.ZERO, economics.releasedAmount)
+        }
+    }
+
     private fun fixture(
         database: SqliteTestDatabase,
         durationSeconds: Long = 600,
         livesPerCombatant: Int = 1,
+        casualtyRules: BattleCasualtyRules? = null,
+        openingBalance: MoneyAmount = MoneyAmount.ZERO,
     ): Fixture {
         database.migrator.migrate()
         val clock = MutableClock(Instant.parse("2026-08-28T12:00:00Z"))
@@ -263,7 +437,25 @@ class BattleCombatServiceTest {
         ).appliedValue().id
         seasons.transition(season.id, SeasonStatus.PEACE).appliedValue()
         seasons.transition(season.id, SeasonStatus.WAR).appliedValue()
-        val wars = WarService(database.repository, ids, clock)
+        val economy = casualtyRules?.let {
+            EconomyService(
+                database.repository,
+                ids,
+                clock,
+                EconomyRules(
+                    currencyScale = CurrencyScale(0),
+                    openingCivilizationBalance = openingBalance,
+                    repair = RepairEconomyRules(
+                        restoreOriginalUnitPrice = MoneyAmount.ZERO,
+                        removePlacementUnitPrice = MoneyAmount.ZERO,
+                        victorShareBasisPoints = 0,
+                        ordinaryInitiatorRoles = setOf(MembershipRole.LEADER),
+                    ),
+                    battleCasualties = it,
+                ),
+            ).also { service -> service.ensureSeasonAccounts(season.id).appliedValue() }
+        }
+        val wars = WarService(database.repository, ids, clock, casualtyRules)
         val war = wars.declare(
             DeclareWar(
                 season.id,
@@ -276,8 +468,10 @@ class BattleCombatServiceTest {
         return Fixture(
             database = database,
             clock = clock,
+            ids = ids,
             wars = wars,
-            combat = BattleCombatService(database.repository, clock),
+            combat = BattleCombatService(database.repository, ids, clock),
+            economy = economy,
             seasonId = season.id,
             attackerId = attacker.id,
             defenderId = defender.id,
@@ -290,8 +484,10 @@ class BattleCombatServiceTest {
     private data class Fixture(
         val database: SqliteTestDatabase,
         val clock: MutableClock,
+        val ids: SequentialIdGenerator,
         val wars: WarService,
         val combat: BattleCombatService,
+        val economy: EconomyService?,
         val seasonId: SeasonId,
         val attackerId: CivilizationId,
         val defenderId: CivilizationId,
@@ -320,6 +516,29 @@ class BattleCombatServiceTest {
             BattleLifeEventId(UUID(2, event)),
             playerId(player),
         )
+
+        fun balance(civilizationId: CivilizationId): MoneyAmount =
+            checkNotNull(database.repository.read { findCivilizationAccount(civilizationId) }).balance
+
+        fun credit(civilizationId: CivilizationId, amount: MoneyAmount, key: String) {
+            checkNotNull(economy).post(
+                io.bennyc.civilizations.application.economy.LedgerTransactionRequest(
+                    seasonId = seasonId,
+                    idempotencyKey = key,
+                    kind = LedgerTransactionKind.ADMIN_ADJUSTMENT,
+                    postings = listOf(
+                        io.bennyc.civilizations.domain.economy.LedgerPosting(
+                            civilizationId,
+                            amount,
+                        ),
+                    ),
+                    referenceType = "TEST",
+                    referenceId = key,
+                    actorPlayerId = null,
+                    description = "Test credit",
+                ),
+            ).appliedValue()
+        }
     }
 
     private class MutableClock(

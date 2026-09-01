@@ -11,6 +11,7 @@ import io.bennyc.civilizations.application.damage.FinalBlockObservation
 import io.bennyc.civilizations.application.damage.GenerateDamageReport
 import io.bennyc.civilizations.application.damage.PrepareBlockMutation
 import io.bennyc.civilizations.application.economy.EconomyRules
+import io.bennyc.civilizations.application.economy.BattleCasualtyRules
 import io.bennyc.civilizations.application.economy.EconomyService
 import io.bennyc.civilizations.application.economy.InsufficientCivilizationFunds
 import io.bennyc.civilizations.application.economy.RepairEconomyRules
@@ -370,6 +371,12 @@ class RepairJobServiceTest {
                 removePlacementUnitPrice = MoneyAmount(removeUnitPrice),
                 victorShareBasisPoints = victorShareBasisPoints,
                 ordinaryInitiatorRoles = setOf(MembershipRole.LEADER),
+            ),
+            battleCasualties = BattleCasualtyRules(
+                attackerDeathCost = MoneyAmount.ZERO,
+                defenderDeathCost = MoneyAmount.ZERO,
+                requireAttackerCoverage = false,
+                lockWithdrawalsDuringBattle = false,
             ),
         )
         val seasons = SeasonService(database.repository, ids, clock)

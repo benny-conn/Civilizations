@@ -8,10 +8,27 @@ data class EconomyRules(
     val currencyScale: CurrencyScale,
     val openingCivilizationBalance: MoneyAmount,
     val repair: RepairEconomyRules,
+    val battleCasualties: BattleCasualtyRules,
 ) {
     init {
         require(openingCivilizationBalance.minorUnits >= 0) {
             "Opening civilization balance cannot be negative"
+        }
+    }
+}
+
+data class BattleCasualtyRules(
+    val attackerDeathCost: MoneyAmount,
+    val defenderDeathCost: MoneyAmount,
+    val requireAttackerCoverage: Boolean,
+    val lockWithdrawalsDuringBattle: Boolean,
+) {
+    init {
+        require(attackerDeathCost.minorUnits >= 0) {
+            "Attacker death cost cannot be negative"
+        }
+        require(defenderDeathCost.minorUnits >= 0) {
+            "Defender death cost cannot be negative"
         }
     }
 }

@@ -48,6 +48,9 @@ import io.bennyc.civilizations.domain.repair.RepairJobStatus
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleCasualty
+import io.bennyc.civilizations.domain.war.BattleCasualtyEconomics
+import io.bennyc.civilizations.domain.war.BattleCasualtyFunding
 import io.bennyc.civilizations.domain.war.BattleCombatResolutionCause
 import io.bennyc.civilizations.domain.war.BattleCombatRulesSnapshot
 import io.bennyc.civilizations.domain.war.BattleCombatState
@@ -291,6 +294,35 @@ private open class JdbcReadContext(
         sql = "$BATTLE_LIFE_EVENT_SELECT WHERE battle_id = ? ORDER BY recorded_at_ms, id",
         bind = { setString(1, battleId.toString()) },
         map = ResultSet::toBattleLifeEvent,
+    )
+
+    override fun findBattleCasualtyEconomics(
+        battleId: BattleId,
+    ): BattleCasualtyEconomics? = queryOne(
+        sql = "$BATTLE_CASUALTY_ECONOMICS_SELECT WHERE battle_id = ?",
+        bind = { setString(1, battleId.toString()) },
+        map = ResultSet::toBattleCasualtyEconomics,
+    )
+
+    override fun listBattleCasualtyEconomicsForSeason(
+        seasonId: SeasonId,
+    ): List<BattleCasualtyEconomics> = queryMany(
+        sql = "$BATTLE_CASUALTY_ECONOMICS_SELECT WHERE season_id = ? " +
+            "ORDER BY initialized_at_ms, battle_id",
+        bind = { setString(1, seasonId.toString()) },
+        map = ResultSet::toBattleCasualtyEconomics,
+    )
+
+    override fun findBattleCasualty(lifeEventId: BattleLifeEventId): BattleCasualty? = queryOne(
+        sql = "$BATTLE_CASUALTY_SELECT WHERE life_event_id = ?",
+        bind = { setString(1, lifeEventId.toString()) },
+        map = ResultSet::toBattleCasualty,
+    )
+
+    override fun listBattleCasualties(battleId: BattleId): List<BattleCasualty> = queryMany(
+        sql = "$BATTLE_CASUALTY_SELECT WHERE battle_id = ? ORDER BY recorded_at_ms, life_event_id",
+        bind = { setString(1, battleId.toString()) },
+        map = ResultSet::toBattleCasualty,
     )
 
     override fun findBattleSurrender(battleId: BattleId): BattleSurrenderRecord? = queryOne(
@@ -798,6 +830,20 @@ private open class JdbcReadContext(
                    recorded_at_ms
             FROM battle_life_events
         """
+        const val BATTLE_CASUALTY_ECONOMICS_SELECT = """
+            SELECT season_id, battle_id, attacker_death_cost_minor,
+                   defender_death_cost_minor, attacker_coverage_required,
+                   withdrawals_locked, attacker_reserve_minor,
+                   reserve_ledger_transaction_id, initialized_at_ms,
+                   released_amount_minor, release_ledger_transaction_id, released_at_ms
+            FROM battle_casualty_economics
+        """
+        const val BATTLE_CASUALTY_SELECT = """
+            SELECT life_event_id, season_id, battle_id, player_id, civilization_id,
+                   side, nominal_cost_minor, charged_amount_minor, unpaid_amount_minor,
+                   funding, charge_ledger_transaction_id, recorded_at_ms
+            FROM battle_casualties
+        """
         const val BATTLE_SURRENDER_SELECT = """
             SELECT season_id, battle_id, surrendered_civilization_id,
                    surrendered_by_player_id, requested_outcome, surrendered_at_ms
@@ -812,7 +858,9 @@ private open class JdbcReadContext(
             FROM civilization_accounts
         """
         const val LEDGER_TRANSACTION_SELECT = """
-            SELECT id, season_id, idempotency_key, kind, reference_type, reference_id,
+            SELECT id, season_id, idempotency_key,
+                   COALESCE(extended_kind, kind) AS kind,
+                   reference_type, reference_id,
                    actor_player_id, description, currency_scale, created_at_ms
             FROM economy_ledger_transactions
         """
@@ -1231,6 +1279,66 @@ private class JdbcWriteContext(
         }
     }
 
+    override fun insertBattleCasualtyEconomics(economics: BattleCasualtyEconomics) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_casualty_economics(
+                    season_id, battle_id, attacker_death_cost_minor,
+                    defender_death_cost_minor, attacker_coverage_required,
+                    withdrawals_locked, attacker_reserve_minor,
+                    reserve_ledger_transaction_id, initialized_at_ms,
+                    released_amount_minor, release_ledger_transaction_id, released_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            bindBattleCasualtyEconomics(economics)
+        }
+    }
+
+    override fun updateBattleCasualtyEconomics(economics: BattleCasualtyEconomics) {
+        val updated = executeUpdate(
+            sql = """
+                UPDATE battle_casualty_economics
+                SET season_id = ?, battle_id = ?, attacker_death_cost_minor = ?,
+                    defender_death_cost_minor = ?, attacker_coverage_required = ?,
+                    withdrawals_locked = ?, attacker_reserve_minor = ?,
+                    reserve_ledger_transaction_id = ?, initialized_at_ms = ?,
+                    released_amount_minor = ?, release_ledger_transaction_id = ?,
+                    released_at_ms = ?
+                WHERE battle_id = ?
+            """.trimIndent(),
+        ) {
+            bindBattleCasualtyEconomics(economics)
+            setString(13, economics.battleId.toString())
+        }
+        requireUpdated(updated, "Battle casualty economics ${economics.battleId}")
+    }
+
+    override fun insertBattleCasualty(casualty: BattleCasualty) {
+        executeUpdate(
+            sql = """
+                INSERT INTO battle_casualties(
+                    life_event_id, season_id, battle_id, player_id, civilization_id,
+                    side, nominal_cost_minor, charged_amount_minor, unpaid_amount_minor,
+                    funding, charge_ledger_transaction_id, recorded_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+        ) {
+            setString(1, casualty.lifeEventId.toString())
+            setString(2, casualty.seasonId.toString())
+            setString(3, casualty.battleId.toString())
+            setString(4, casualty.playerId.toString())
+            setString(5, casualty.civilizationId.toString())
+            setString(6, casualty.side.name)
+            setLong(7, casualty.nominalCost.minorUnits)
+            setLong(8, casualty.chargedAmount.minorUnits)
+            setLong(9, casualty.unpaidAmount.minorUnits)
+            setString(10, casualty.funding.name)
+            setString(11, casualty.chargeLedgerTransactionId?.toString())
+            setLong(12, casualty.recordedAt.toEpochMilli())
+        }
+    }
+
     override fun insertBattleSurrender(surrender: BattleSurrenderRecord) {
         executeUpdate(
             sql = """
@@ -1281,18 +1389,25 @@ private class JdbcWriteContext(
     }
 
     override fun insertLedgerTransaction(transaction: LedgerTransaction) {
+        val extendedKind = transaction.kind.takeIf { it.isExtendedLedgerKind }
+        val storedKind = if (extendedKind == null) {
+            transaction.kind
+        } else {
+            LedgerTransactionKind.ADMIN_ADJUSTMENT
+        }
         executeUpdate(
             sql = """
                 INSERT INTO economy_ledger_transactions(
                     id, season_id, idempotency_key, kind, reference_type, reference_id,
-                    actor_player_id, description, currency_scale, posting_count, created_at_ms
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    actor_player_id, description, currency_scale, posting_count, created_at_ms,
+                    extended_kind
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
         ) {
             setString(1, transaction.id.toString())
             setString(2, transaction.seasonId.toString())
             setString(3, transaction.idempotencyKey)
-            setString(4, transaction.kind.name)
+            setString(4, storedKind.name)
             setString(5, transaction.referenceType)
             setString(6, transaction.referenceId)
             setString(7, transaction.actorPlayerId?.toString())
@@ -1300,6 +1415,7 @@ private class JdbcWriteContext(
             setInt(9, transaction.currencyScale.decimalPlaces)
             setInt(10, transaction.postings.size)
             setLong(11, transaction.createdAt.toEpochMilli())
+            setString(12, extendedKind?.name)
         }
         transaction.postings.forEach { posting ->
             executeUpdate(
@@ -1481,6 +1597,27 @@ private class JdbcWriteContext(
         setString(index, job.failureMessage)
     }
 
+    private fun PreparedStatement.bindBattleCasualtyEconomics(
+        economics: BattleCasualtyEconomics,
+    ) {
+        setString(1, economics.seasonId.toString())
+        setString(2, economics.battleId.toString())
+        setLong(3, economics.attackerDeathCost.minorUnits)
+        setLong(4, economics.defenderDeathCost.minorUnits)
+        setInt(5, if (economics.attackerCoverageRequired) 1 else 0)
+        setInt(6, if (economics.withdrawalsLocked) 1 else 0)
+        setLong(7, economics.attackerReserve.minorUnits)
+        setString(8, economics.reserveLedgerTransactionId?.toString())
+        setLong(9, economics.initializedAt.toEpochMilli())
+        if (economics.releasedAmount == null) {
+            setNull(10, Types.BIGINT)
+        } else {
+            setLong(10, economics.releasedAmount.minorUnits)
+        }
+        setString(11, economics.releaseLedgerTransactionId?.toString())
+        setInstantOrNull(12, economics.releasedAt)
+    }
+
     private fun PreparedStatement.bindRepairJobItem(item: RepairJobItem) {
         setString(1, item.repairJobId.toString())
         setString(2, item.battleId.toString())
@@ -1589,6 +1726,11 @@ private fun PreparedStatement.setInstantOrNull(index: Int, instant: Instant?) {
         setLong(index, instant.toEpochMilli())
     }
 }
+
+private val LedgerTransactionKind.isExtendedLedgerKind: Boolean
+    get() = this == LedgerTransactionKind.BATTLE_CASUALTY_RESERVE ||
+        this == LedgerTransactionKind.BATTLE_CASUALTY_CHARGE ||
+        this == LedgerTransactionKind.BATTLE_CASUALTY_RELEASE
 
 private fun ResultSet.toSeason(): Season = Season(
     id = SeasonId(uuid("id")),
@@ -1714,6 +1856,43 @@ private fun ResultSet.toBattleLifeEvent(): BattleLifeEvent = BattleLifeEvent(
     playerId = PlayerId(uuid("player_id")),
     livesBefore = getInt("lives_before"),
     livesAfter = getInt("lives_after"),
+    recordedAt = instant("recorded_at_ms"),
+)
+
+private fun ResultSet.toBattleCasualtyEconomics(): BattleCasualtyEconomics =
+    BattleCasualtyEconomics(
+        seasonId = SeasonId(uuid("season_id")),
+        battleId = BattleId(uuid("battle_id")),
+        attackerDeathCost = MoneyAmount(getLong("attacker_death_cost_minor")),
+        defenderDeathCost = MoneyAmount(getLong("defender_death_cost_minor")),
+        attackerCoverageRequired = getInt("attacker_coverage_required") != 0,
+        withdrawalsLocked = getInt("withdrawals_locked") != 0,
+        attackerReserve = MoneyAmount(getLong("attacker_reserve_minor")),
+        reserveLedgerTransactionId = getString("reserve_ledger_transaction_id")?.let {
+            LedgerTransactionId(UUID.fromString(it))
+        },
+        initializedAt = instant("initialized_at_ms"),
+        releasedAmount = nullableLong("released_amount_minor")?.let(::MoneyAmount),
+        releaseLedgerTransactionId = getString("release_ledger_transaction_id")?.let {
+            LedgerTransactionId(UUID.fromString(it))
+        },
+        releasedAt = nullableInstant("released_at_ms"),
+    )
+
+private fun ResultSet.toBattleCasualty(): BattleCasualty = BattleCasualty(
+    lifeEventId = BattleLifeEventId(uuid("life_event_id")),
+    seasonId = SeasonId(uuid("season_id")),
+    battleId = BattleId(uuid("battle_id")),
+    playerId = PlayerId(uuid("player_id")),
+    civilizationId = CivilizationId(uuid("civilization_id")),
+    side = BattleSide.valueOf(getString("side")),
+    nominalCost = MoneyAmount(getLong("nominal_cost_minor")),
+    chargedAmount = MoneyAmount(getLong("charged_amount_minor")),
+    unpaidAmount = MoneyAmount(getLong("unpaid_amount_minor")),
+    funding = BattleCasualtyFunding.valueOf(getString("funding")),
+    chargeLedgerTransactionId = getString("charge_ledger_transaction_id")?.let {
+        LedgerTransactionId(UUID.fromString(it))
+    },
     recordedAt = instant("recorded_at_ms"),
 )
 
@@ -1896,6 +2075,11 @@ private fun ResultSet.instant(column: String): Instant = Instant.ofEpochMilli(ge
 private fun ResultSet.nullableInstant(column: String): Instant? {
     val millis = getLong(column)
     return if (wasNull()) null else Instant.ofEpochMilli(millis)
+}
+
+private fun ResultSet.nullableLong(column: String): Long? {
+    val value = getLong(column)
+    return if (wasNull()) null else value
 }
 
 private fun Connection.rollbackAfter(failure: Throwable) {

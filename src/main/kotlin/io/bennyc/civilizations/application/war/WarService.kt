@@ -3,6 +3,11 @@ package io.bennyc.civilizations.application.war
 import io.bennyc.civilizations.application.ApplicationFailure
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.civilization.CivilizationNotFound
+import io.bennyc.civilizations.application.economy.BattleCasualtyRules
+import io.bennyc.civilizations.application.economy.EconomyAccountNotFound
+import io.bennyc.civilizations.application.economy.EconomyLedger
+import io.bennyc.civilizations.application.economy.EconomyNotInitialized
+import io.bennyc.civilizations.application.economy.LedgerTransactionRequest
 import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
 import io.bennyc.civilizations.application.persistence.CivilizationsWriteContext
@@ -10,12 +15,18 @@ import io.bennyc.civilizations.application.season.SeasonNotFound
 import io.bennyc.civilizations.domain.civilization.Civilization
 import io.bennyc.civilizations.domain.civilization.CivilizationStatus
 import io.bennyc.civilizations.domain.civilization.MembershipRole
+import io.bennyc.civilizations.domain.economy.LedgerPosting
+import io.bennyc.civilizations.domain.economy.LedgerTransaction
+import io.bennyc.civilizations.domain.economy.LedgerTransactionKind
+import io.bennyc.civilizations.domain.economy.MoneyAmount
 import io.bennyc.civilizations.domain.claim.ClaimId
 import io.bennyc.civilizations.domain.identity.CivilizationId
 import io.bennyc.civilizations.domain.identity.PlayerId
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleCasualtyEconomics
+import io.bennyc.civilizations.domain.war.BattleCasualtyFunding
 import io.bennyc.civilizations.domain.war.BattleCombatRulesSnapshot
 import io.bennyc.civilizations.domain.war.BattleCombatState
 import io.bennyc.civilizations.domain.war.BattleCombatant
@@ -35,7 +46,9 @@ class WarService(
     private val repository: CivilizationsRepository,
     private val idGenerator: CivilizationsIdGenerator,
     private val clock: Clock,
+    private val casualtyRules: BattleCasualtyRules? = null,
 ) {
+    private val ledger = EconomyLedger(idGenerator, clock)
     fun declare(request: DeclareWar): ApplicationResult<War> {
         val rules = if (
             request.battleDurationSeconds in 1..MAX_BATTLE_DURATION_SECONDS
@@ -200,6 +213,7 @@ class WarService(
                     participants = listBattleParticipants(existing.id),
                     combatState = findBattleCombatState(existing.id),
                     combatants = listBattleCombatants(existing.id),
+                    casualtyEconomics = findBattleCasualtyEconomics(existing.id),
                 ),
             )
         }
@@ -245,6 +259,48 @@ class WarService(
                 }
             }
             selected
+        }
+
+        val attackerReserve = if (selectedCombatants != null && casualtyRules != null) {
+            if (findSeasonEconomySettings(war.seasonId) == null) {
+                return@transaction ApplicationResult.Rejected(
+                    EconomyNotInitialized(war.seasonId),
+                )
+            }
+            val account = findCivilizationAccount(entrant.civilizationId)
+                ?: return@transaction ApplicationResult.Rejected(
+                    EconomyAccountNotFound(entrant.civilizationId),
+                )
+            val attackerLives = selectedCombatants
+                .filter { it.civilizationId == entrant.civilizationId }
+                .sumOf { combatEnrollment.rules.livesPerCombatant.toLong() }
+            val required = try {
+                if (casualtyRules.requireAttackerCoverage) {
+                    casualtyRules.attackerDeathCost.times(attackerLives)
+                } else {
+                    MoneyAmount.ZERO
+                }
+            } catch (_: ArithmeticException) {
+                return@transaction ApplicationResult.Rejected(
+                    BattleCasualtyCoverageOverflow(entrant.civilizationId),
+                )
+            } catch (_: IllegalArgumentException) {
+                return@transaction ApplicationResult.Rejected(
+                    BattleCasualtyCoverageOverflow(entrant.civilizationId),
+                )
+            }
+            if (account.balance.minorUnits < required.minorUnits) {
+                return@transaction ApplicationResult.Rejected(
+                    InsufficientAttackerCasualtyCoverage(
+                        entrant.civilizationId,
+                        account.balance,
+                        required,
+                    ),
+                )
+            }
+            required
+        } else {
+            null
         }
 
         val now = clock.instant()
@@ -337,8 +393,48 @@ class WarService(
                 ).also(::insertBattleCombatant)
             }
         }
+        val casualtyEconomics = if (attackerReserve == null || casualtyRules == null) {
+            null
+        } else {
+            val reserveLedgerTransactionId = if (attackerReserve == MoneyAmount.ZERO) {
+                null
+            } else {
+                ledger.post(
+                    this,
+                    LedgerTransactionRequest(
+                        seasonId = battle.seasonId,
+                        idempotencyKey = "battle:${battle.id}:casualty-reserve",
+                        kind = LedgerTransactionKind.BATTLE_CASUALTY_RESERVE,
+                        postings = listOf(
+                            LedgerPosting(
+                                battle.attackingCivilizationId,
+                                attackerReserve.negate(),
+                            ),
+                        ),
+                        referenceType = "BATTLE",
+                        referenceId = battle.id.toString(),
+                        actorPlayerId = battle.triggeredByPlayerId,
+                        description = "Attacker casualty coverage for battle ${battle.id}",
+                    ),
+                ).valueOrThrow().id
+            }
+            BattleCasualtyEconomics(
+                seasonId = battle.seasonId,
+                battleId = battle.id,
+                attackerDeathCost = casualtyRules.attackerDeathCost,
+                defenderDeathCost = casualtyRules.defenderDeathCost,
+                attackerCoverageRequired = casualtyRules.requireAttackerCoverage,
+                withdrawalsLocked = casualtyRules.lockWithdrawalsDuringBattle,
+                attackerReserve = attackerReserve,
+                reserveLedgerTransactionId = reserveLedgerTransactionId,
+                initializedAt = now,
+                releasedAmount = null,
+                releaseLedgerTransactionId = null,
+                releasedAt = null,
+            ).also(::insertBattleCasualtyEconomics)
+        }
         ApplicationResult.Applied(
-            BattleRoster(battle, participants, combatState, combatants),
+            BattleRoster(battle, participants, combatState, combatants, casualtyEconomics),
         )
     }
 
@@ -501,6 +597,7 @@ class WarService(
             updatedAt = now,
         )
         updateBattle(closed)
+        releaseAttackerCasualtyReserve(closed)
         ApplicationResult.Applied(closed)
     }
 
@@ -571,6 +668,7 @@ class WarService(
             updatedAt = now,
         )
         updateBattle(cancelled)
+        releaseAttackerCasualtyReserve(cancelled)
         ApplicationResult.Applied(cancelled)
     }
 
@@ -646,6 +744,51 @@ class WarService(
         else -> null
     }
 
+    private fun CivilizationsWriteContext.releaseAttackerCasualtyReserve(battle: Battle) {
+        val economics = findBattleCasualtyEconomics(battle.id) ?: return
+        if (economics.isReleased) return
+        val spent = listBattleCasualties(battle.id)
+            .asSequence()
+            .filter { it.funding == BattleCasualtyFunding.ATTACKER_RESERVE }
+            .fold(MoneyAmount.ZERO) { total, casualty -> total.plus(casualty.chargedAmount) }
+        val releasedAmount = economics.attackerReserve.plus(spent.negate())
+        check(releasedAmount.minorUnits >= 0) {
+            "Battle ${battle.id} spent more than its attacker casualty reserve"
+        }
+        val releaseTransactionId = if (releasedAmount == MoneyAmount.ZERO) {
+            null
+        } else {
+            ledger.post(
+                this,
+                LedgerTransactionRequest(
+                    seasonId = battle.seasonId,
+                    idempotencyKey = "battle:${battle.id}:casualty-reserve-release",
+                    kind = LedgerTransactionKind.BATTLE_CASUALTY_RELEASE,
+                    postings = listOf(
+                        LedgerPosting(battle.attackingCivilizationId, releasedAmount),
+                    ),
+                    referenceType = "BATTLE",
+                    referenceId = battle.id.toString(),
+                    actorPlayerId = null,
+                    description = "Unused attacker casualty coverage for battle ${battle.id}",
+                ),
+            ).valueOrThrow().id
+        }
+        updateBattleCasualtyEconomics(
+            economics.copy(
+                releasedAmount = releasedAmount,
+                releaseLedgerTransactionId = releaseTransactionId,
+                releasedAt = clock.instant(),
+            ),
+        )
+    }
+
+    private fun ApplicationResult<LedgerTransaction>.valueOrThrow(): LedgerTransaction = when (this) {
+        is ApplicationResult.Applied -> value
+        is ApplicationResult.Unchanged -> value
+        is ApplicationResult.Rejected -> error(failure.description)
+    }
+
     private val BattleStatus.isOpen: Boolean
         get() = this == BattleStatus.ACTIVE || this == BattleStatus.RESOLVING
 
@@ -672,6 +815,7 @@ data class BattleRoster(
     val participants: List<BattleParticipant>,
     val combatState: BattleCombatState? = null,
     val combatants: List<BattleCombatant> = emptyList(),
+    val casualtyEconomics: BattleCasualtyEconomics? = null,
 )
 
 data class BattleCombatEnrollment(
@@ -815,6 +959,23 @@ data class BattleCombatantSideEmpty(
 ) : ApplicationFailure {
     override val description: String =
         "Civilization $civilizationId needs at least one eligible online combatant"
+}
+
+data class InsufficientAttackerCasualtyCoverage(
+    val civilizationId: CivilizationId,
+    val available: MoneyAmount,
+    val required: MoneyAmount,
+) : ApplicationFailure {
+    override val description: String =
+        "Civilization $civilizationId needs ${required.minorUnits} for attacker casualty " +
+            "coverage but has ${available.minorUnits}"
+}
+
+data class BattleCasualtyCoverageOverflow(
+    val civilizationId: CivilizationId,
+) : ApplicationFailure {
+    override val description: String =
+        "Attacker casualty coverage for civilization $civilizationId exceeds the supported amount"
 }
 
 data class CivilizationAlreadyInOpenBattle(

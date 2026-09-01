@@ -386,6 +386,15 @@ class EconomyService(
                 EconomyWithdrawalRequiresLeader(request.playerId, request.civilizationId),
             )
         }
+        if (direction == EconomyBridgeDirection.WITHDRAW_TO_PLAYER) {
+            listOpenBattlesForCivilization(request.civilizationId).firstOrNull { battle ->
+                findBattleCasualtyEconomics(battle.id)?.withdrawalsLocked == true
+            }?.let { battle ->
+                return ApplicationResult.Rejected(
+                    EconomyWithdrawalLockedForBattle(request.civilizationId, battle.id),
+                )
+            }
+        }
         findOpenEconomyBridgeTransferForPlayer(request.playerId)?.let { open ->
             return ApplicationResult.Rejected(
                 PlayerHasOpenEconomyBridgeTransfer(request.playerId, open.id),
@@ -614,6 +623,15 @@ data class EconomyWithdrawalRequiresLeader(
 ) : ApplicationFailure {
     override val description: String =
         "Player $playerId must lead civilization $civilizationId to withdraw treasury funds"
+}
+
+data class EconomyWithdrawalLockedForBattle(
+    val civilizationId: CivilizationId,
+    val battleId: io.bennyc.civilizations.domain.war.BattleId,
+) : ApplicationFailure {
+    override val description: String =
+        "Civilization $civilizationId cannot withdraw treasury funds while battle $battleId " +
+            "is active or resolving"
 }
 
 data class PlayerHasOpenEconomyBridgeTransfer(

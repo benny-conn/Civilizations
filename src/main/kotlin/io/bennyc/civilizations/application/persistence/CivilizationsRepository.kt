@@ -30,6 +30,8 @@ import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.war.Battle
 import io.bennyc.civilizations.domain.war.BattleCombatState
 import io.bennyc.civilizations.domain.war.BattleCombatant
+import io.bennyc.civilizations.domain.war.BattleCasualty
+import io.bennyc.civilizations.domain.war.BattleCasualtyEconomics
 import io.bennyc.civilizations.domain.war.BattleId
 import io.bennyc.civilizations.domain.war.BattleLifeEvent
 import io.bennyc.civilizations.domain.war.BattleLifeEventId
@@ -98,6 +100,14 @@ interface CivilizationsReadContext {
     fun findBattleLifeEvent(id: BattleLifeEventId): BattleLifeEvent?
 
     fun listBattleLifeEvents(battleId: BattleId): List<BattleLifeEvent>
+
+    fun findBattleCasualtyEconomics(battleId: BattleId): BattleCasualtyEconomics?
+
+    fun listBattleCasualtyEconomicsForSeason(seasonId: SeasonId): List<BattleCasualtyEconomics>
+
+    fun findBattleCasualty(lifeEventId: BattleLifeEventId): BattleCasualty?
+
+    fun listBattleCasualties(battleId: BattleId): List<BattleCasualty>
 
     fun findBattleSurrender(battleId: BattleId): BattleSurrenderRecord?
 
@@ -219,6 +229,12 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
     fun updateBattleCombatant(combatant: BattleCombatant)
 
     fun insertBattleLifeEvent(event: BattleLifeEvent)
+
+    fun insertBattleCasualtyEconomics(economics: BattleCasualtyEconomics)
+
+    fun updateBattleCasualtyEconomics(economics: BattleCasualtyEconomics)
+
+    fun insertBattleCasualty(casualty: BattleCasualty)
 
     fun insertBattleSurrender(surrender: BattleSurrenderRecord)
 

@@ -1658,5 +1658,301 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        SchemaMigration(
+            version = 10,
+            name = "battle_casualty_economics_and_reserves",
+            statements = listOf(
+                """
+                ALTER TABLE economy_ledger_transactions
+                ADD COLUMN extended_kind TEXT CHECK (
+                    extended_kind IS NULL OR extended_kind IN (
+                        'BATTLE_CASUALTY_RESERVE',
+                        'BATTLE_CASUALTY_CHARGE',
+                        'BATTLE_CASUALTY_RELEASE'
+                    )
+                )
+                """.trimIndent(),
+                """
+                CREATE TABLE battle_casualty_economics (
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT PRIMARY KEY,
+                    attacker_death_cost_minor INTEGER NOT NULL CHECK (
+                        attacker_death_cost_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    defender_death_cost_minor INTEGER NOT NULL CHECK (
+                        defender_death_cost_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    attacker_coverage_required INTEGER NOT NULL CHECK (
+                        attacker_coverage_required IN (0, 1)
+                    ),
+                    withdrawals_locked INTEGER NOT NULL CHECK (withdrawals_locked IN (0, 1)),
+                    attacker_reserve_minor INTEGER NOT NULL CHECK (
+                        attacker_reserve_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    reserve_ledger_transaction_id TEXT,
+                    initialized_at_ms INTEGER NOT NULL CHECK (initialized_at_ms >= 0),
+                    released_amount_minor INTEGER CHECK (
+                        released_amount_minor BETWEEN 0 AND attacker_reserve_minor
+                    ),
+                    release_ledger_transaction_id TEXT,
+                    released_at_ms INTEGER,
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (
+                        (attacker_reserve_minor = 0 AND reserve_ledger_transaction_id IS NULL) OR
+                        (attacker_reserve_minor > 0 AND reserve_ledger_transaction_id IS NOT NULL)
+                    ),
+                    CHECK (
+                        (released_amount_minor IS NULL AND
+                            release_ledger_transaction_id IS NULL AND released_at_ms IS NULL) OR
+                        (released_amount_minor = 0 AND
+                            release_ledger_transaction_id IS NULL AND released_at_ms IS NOT NULL) OR
+                        (released_amount_minor > 0 AND
+                            release_ledger_transaction_id IS NOT NULL AND released_at_ms IS NOT NULL)
+                    ),
+                    CHECK (released_at_ms IS NULL OR released_at_ms >= initialized_at_ms),
+                    FOREIGN KEY (season_id, battle_id)
+                        REFERENCES battles(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, reserve_ledger_transaction_id)
+                        REFERENCES economy_ledger_transactions(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, release_ledger_transaction_id)
+                        REFERENCES economy_ledger_transactions(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX battle_casualty_economics_by_season
+                ON battle_casualty_economics(season_id, initialized_at_ms, battle_id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_casualty_economics_validate_insert
+                BEFORE INSERT ON battle_casualty_economics
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM battles battle
+                    JOIN battle_combat_states combat_state
+                      ON combat_state.battle_id = battle.id
+                    WHERE battle.id = NEW.battle_id
+                      AND battle.season_id = NEW.season_id
+                      AND battle.status = 'ACTIVE'
+                      AND NEW.initialized_at_ms = battle.started_at_ms
+                      AND (
+                          (NEW.attacker_coverage_required = 0 AND
+                              NEW.attacker_reserve_minor = 0) OR
+                          (NEW.attacker_coverage_required = 1 AND
+                              NEW.attacker_reserve_minor = NEW.attacker_death_cost_minor * (
+                                  SELECT COALESCE(SUM(combatant.initial_lives), 0)
+                                  FROM battle_combatants combatant
+                                  WHERE combatant.battle_id = NEW.battle_id
+                                    AND combatant.side = 'ATTACKER'
+                              ))
+                      )
+                      AND (
+                          (NEW.attacker_reserve_minor = 0 AND
+                              NEW.reserve_ledger_transaction_id IS NULL) OR
+                          EXISTS (
+                              SELECT 1
+                              FROM economy_ledger_transactions transaction_header
+                              JOIN economy_ledger_postings posting
+                                ON posting.transaction_id = transaction_header.id
+                               AND posting.civilization_id = battle.attacking_civilization_id
+                              WHERE transaction_header.id = NEW.reserve_ledger_transaction_id
+                                AND transaction_header.season_id = NEW.season_id
+                                AND COALESCE(
+                                    transaction_header.extended_kind,
+                                    transaction_header.kind
+                                ) = 'BATTLE_CASUALTY_RESERVE'
+                                AND transaction_header.reference_type = 'BATTLE'
+                                AND transaction_header.reference_id = NEW.battle_id
+                                AND transaction_header.posting_count = 1
+                                AND posting.amount_minor = -NEW.attacker_reserve_minor
+                          )
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid battle casualty economics snapshot');
+                END
+                """.trimIndent(),
+                """
+                CREATE TABLE battle_casualties (
+                    life_event_id TEXT PRIMARY KEY,
+                    season_id TEXT NOT NULL,
+                    battle_id TEXT NOT NULL,
+                    player_id TEXT NOT NULL,
+                    civilization_id TEXT NOT NULL,
+                    side TEXT NOT NULL CHECK (side IN ('ATTACKER', 'DEFENDER')),
+                    nominal_cost_minor INTEGER NOT NULL CHECK (
+                        nominal_cost_minor BETWEEN 0 AND 9000000000000000
+                    ),
+                    charged_amount_minor INTEGER NOT NULL CHECK (
+                        charged_amount_minor BETWEEN 0 AND nominal_cost_minor
+                    ),
+                    unpaid_amount_minor INTEGER NOT NULL CHECK (
+                        unpaid_amount_minor = nominal_cost_minor - charged_amount_minor
+                    ),
+                    funding TEXT NOT NULL CHECK (funding IN ('ATTACKER_RESERVE', 'TREASURY')),
+                    charge_ledger_transaction_id TEXT,
+                    recorded_at_ms INTEGER NOT NULL CHECK (recorded_at_ms >= 0),
+                    CHECK (length(life_event_id) = 36),
+                    CHECK (length(season_id) = 36),
+                    CHECK (length(battle_id) = 36),
+                    CHECK (length(player_id) = 36),
+                    CHECK (length(civilization_id) = 36),
+                    CHECK (
+                        (funding = 'ATTACKER_RESERVE' AND side = 'ATTACKER' AND
+                            charged_amount_minor = nominal_cost_minor AND
+                            unpaid_amount_minor = 0 AND
+                            charge_ledger_transaction_id IS NULL) OR
+                        (funding = 'TREASURY' AND (
+                            (charged_amount_minor = 0 AND
+                                charge_ledger_transaction_id IS NULL) OR
+                            (charged_amount_minor > 0 AND
+                                charge_ledger_transaction_id IS NOT NULL)
+                        ))
+                    ),
+                    FOREIGN KEY (life_event_id) REFERENCES battle_life_events(id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (battle_id, player_id)
+                        REFERENCES battle_combatants(battle_id, player_id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (season_id, charge_ledger_transaction_id)
+                        REFERENCES economy_ledger_transactions(season_id, id)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+                """
+                CREATE INDEX battle_casualties_by_battle
+                ON battle_casualties(battle_id, recorded_at_ms, life_event_id)
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_casualties_validate_insert
+                BEFORE INSERT ON battle_casualties
+                WHEN NOT EXISTS (
+                    SELECT 1
+                    FROM battle_life_events life_event
+                    JOIN battle_combatants combatant
+                      ON combatant.battle_id = life_event.battle_id
+                     AND combatant.player_id = life_event.player_id
+                    JOIN battle_casualty_economics economics
+                      ON economics.battle_id = life_event.battle_id
+                    WHERE life_event.id = NEW.life_event_id
+                      AND life_event.season_id = NEW.season_id
+                      AND life_event.battle_id = NEW.battle_id
+                      AND life_event.player_id = NEW.player_id
+                      AND life_event.recorded_at_ms = NEW.recorded_at_ms
+                      AND combatant.civilization_id = NEW.civilization_id
+                      AND combatant.side = NEW.side
+                      AND NEW.nominal_cost_minor = CASE NEW.side
+                          WHEN 'ATTACKER' THEN economics.attacker_death_cost_minor
+                          ELSE economics.defender_death_cost_minor
+                      END
+                      AND (
+                          (NEW.funding = 'ATTACKER_RESERVE' AND
+                              economics.attacker_coverage_required = 1) OR
+                          (NEW.funding = 'TREASURY' AND (
+                              NEW.side = 'DEFENDER' OR
+                              economics.attacker_coverage_required = 0
+                          ))
+                      )
+                      AND (
+                          NEW.charge_ledger_transaction_id IS NULL OR EXISTS (
+                              SELECT 1
+                              FROM economy_ledger_transactions transaction_header
+                              JOIN economy_ledger_postings posting
+                                ON posting.transaction_id = transaction_header.id
+                               AND posting.civilization_id = NEW.civilization_id
+                              WHERE transaction_header.id = NEW.charge_ledger_transaction_id
+                                AND transaction_header.season_id = NEW.season_id
+                                AND COALESCE(
+                                    transaction_header.extended_kind,
+                                    transaction_header.kind
+                                ) = 'BATTLE_CASUALTY_CHARGE'
+                                AND transaction_header.reference_type = 'BATTLE_LIFE_EVENT'
+                                AND transaction_header.reference_id = NEW.life_event_id
+                                AND transaction_header.posting_count = 1
+                                AND posting.amount_minor = -NEW.charged_amount_minor
+                          )
+                      )
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid battle casualty record');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_casualties_are_immutable
+                BEFORE UPDATE ON battle_casualties
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle casualties are immutable');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_casualties_cannot_be_deleted
+                BEFORE DELETE ON battle_casualties
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle casualties cannot be deleted');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_casualty_economics_validate_update
+                BEFORE UPDATE ON battle_casualty_economics
+                WHEN NEW.season_id <> OLD.season_id OR
+                     NEW.battle_id <> OLD.battle_id OR
+                     NEW.attacker_death_cost_minor <> OLD.attacker_death_cost_minor OR
+                     NEW.defender_death_cost_minor <> OLD.defender_death_cost_minor OR
+                     NEW.attacker_coverage_required <> OLD.attacker_coverage_required OR
+                     NEW.withdrawals_locked <> OLD.withdrawals_locked OR
+                     NEW.attacker_reserve_minor <> OLD.attacker_reserve_minor OR
+                     NEW.reserve_ledger_transaction_id IS NOT OLD.reserve_ledger_transaction_id OR
+                     NEW.initialized_at_ms <> OLD.initialized_at_ms OR
+                     OLD.released_at_ms IS NOT NULL OR
+                     NEW.released_at_ms IS NULL OR
+                     NEW.released_amount_minor <> OLD.attacker_reserve_minor - COALESCE((
+                         SELECT SUM(casualty.charged_amount_minor)
+                         FROM battle_casualties casualty
+                         WHERE casualty.battle_id = OLD.battle_id
+                           AND casualty.funding = 'ATTACKER_RESERVE'
+                     ), 0) OR
+                     NOT EXISTS (
+                         SELECT 1 FROM battles battle
+                         WHERE battle.id = OLD.battle_id
+                           AND battle.status IN ('CLOSED', 'CANCELLED')
+                     ) OR
+                     NOT (
+                         (NEW.released_amount_minor = 0 AND
+                             NEW.release_ledger_transaction_id IS NULL) OR
+                         EXISTS (
+                             SELECT 1
+                             FROM economy_ledger_transactions transaction_header
+                             JOIN economy_ledger_postings posting
+                               ON posting.transaction_id = transaction_header.id
+                             JOIN battles battle ON battle.id = OLD.battle_id
+                             WHERE transaction_header.id = NEW.release_ledger_transaction_id
+                               AND transaction_header.season_id = NEW.season_id
+                               AND COALESCE(
+                                   transaction_header.extended_kind,
+                                   transaction_header.kind
+                               ) = 'BATTLE_CASUALTY_RELEASE'
+                               AND transaction_header.reference_type = 'BATTLE'
+                               AND transaction_header.reference_id = NEW.battle_id
+                               AND transaction_header.posting_count = 1
+                               AND posting.civilization_id = battle.attacking_civilization_id
+                               AND posting.amount_minor = NEW.released_amount_minor
+                         )
+                     )
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid battle casualty reserve release');
+                END
+                """.trimIndent(),
+                """
+                CREATE TRIGGER battle_casualty_economics_cannot_be_deleted
+                BEFORE DELETE ON battle_casualty_economics
+                BEGIN
+                    SELECT RAISE(ABORT, 'battle casualty economics cannot be deleted');
+                END
+                """.trimIndent(),
+            ),
+        ),
     )
 }

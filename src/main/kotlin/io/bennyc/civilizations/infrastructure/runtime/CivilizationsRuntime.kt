@@ -41,6 +41,8 @@ import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.season.Season
 import io.bennyc.civilizations.domain.season.SeasonStatus
 import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleCasualty
+import io.bennyc.civilizations.domain.war.BattleCasualtyEconomics
 import io.bennyc.civilizations.domain.war.BattleCombatState
 import io.bennyc.civilizations.domain.war.BattleCombatant
 import io.bennyc.civilizations.domain.war.BattleId
@@ -88,8 +90,8 @@ class CivilizationsRuntime private constructor(
         seasons = SeasonService(repository, idGenerator, clock),
         civilizations = CivilizationService(repository, idGenerator, clock, phaseRules),
         claims = ClaimService(repository, idGenerator, claimRules, phaseRules),
-        wars = WarService(repository, idGenerator, clock),
-        combat = BattleCombatService(repository, clock),
+        wars = WarService(repository, idGenerator, clock, economyRules.battleCasualties),
+        combat = BattleCombatService(repository, idGenerator, clock),
         damageJournal = DamageJournalService(repository, idGenerator, clock),
         damageReports = DamageReportService(repository, clock),
         economy = EconomyService(repository, idGenerator, clock, economyRules),
@@ -338,6 +340,11 @@ class CivilizationsRuntime private constructor(
                 battleCombatants = battles.associate { battle ->
                     battle.id to listBattleCombatants(battle.id)
                 },
+                battleCasualtyEconomics = listBattleCasualtyEconomicsForSeason(activeSeasonId)
+                    .associateBy(BattleCasualtyEconomics::battleId),
+                battleCasualties = battles.associate { battle ->
+                    battle.id to listBattleCasualties(battle.id)
+                },
                 battleSurrenders = listBattleSurrendersForSeason(activeSeasonId)
                     .associateBy(BattleSurrenderRecord::battleId),
                 economySettings = findSeasonEconomySettings(activeSeasonId)
@@ -374,6 +381,8 @@ class CivilizationsRuntime private constructor(
                         battleParticipants = loaded.battleParticipants,
                         battleCombatStates = loaded.battleCombatStates,
                         battleCombatants = loaded.battleCombatants,
+                        battleCasualtyEconomics = loaded.battleCasualtyEconomics,
+                        battleCasualties = loaded.battleCasualties,
                         battleSurrenders = loaded.battleSurrenders,
                         economySettings = loaded.economySettings,
                         civilizationAccounts = loaded.civilizationAccounts,
@@ -513,6 +522,8 @@ class CivilizationsRuntime private constructor(
             }
             val combatState = loaded.battleCombatStates[battle.id]
             val combatants = loaded.battleCombatants[battle.id].orEmpty()
+            val casualtyEconomics = loaded.battleCasualtyEconomics[battle.id]
+            val casualties = loaded.battleCasualties[battle.id].orEmpty()
             if (combatState == null) {
                 if (combatants.isNotEmpty()) {
                     throw RuntimeIntegrityException(
@@ -567,6 +578,38 @@ class CivilizationsRuntime private constructor(
                         "Battle ${battle.id} has a combat outcome while ${battle.status}",
                     )
                 }
+            }
+            if (casualtyEconomics != null) {
+                if (casualtyEconomics.seasonId != battle.seasonId || combatState == null) {
+                    throw RuntimeIntegrityException(
+                        "Battle ${battle.id} has casualty economics without matching combat state",
+                    )
+                }
+                if (battle.status == BattleStatus.CLOSED || battle.status == BattleStatus.CANCELLED) {
+                    if (!casualtyEconomics.isReleased) {
+                        throw RuntimeIntegrityException(
+                            "Terminal battle ${battle.id} has unreleased casualty coverage",
+                        )
+                    }
+                } else if (casualtyEconomics.isReleased) {
+                    throw RuntimeIntegrityException(
+                        "Open battle ${battle.id} has already released casualty coverage",
+                    )
+                }
+                val eventsById = loaded.battleCasualties[battle.id].orEmpty()
+                    .associateBy(BattleCasualty::lifeEventId)
+                if (eventsById.size != casualties.size || casualties.any {
+                        it.battleId != battle.id || it.seasonId != battle.seasonId
+                    }
+                ) {
+                    throw RuntimeIntegrityException(
+                        "Battle ${battle.id} has inconsistent casualty records",
+                    )
+                }
+            } else if (casualties.isNotEmpty()) {
+                throw RuntimeIntegrityException(
+                    "Battle ${battle.id} has casualties without an economics snapshot",
+                )
             }
             if (battle.status == BattleStatus.ACTIVE ||
                 battle.status == BattleStatus.RESOLVING
@@ -781,6 +824,8 @@ data class ActiveSeasonRuntimeState(
     val battleParticipants: Map<BattleId, List<BattleParticipant>>,
     val battleCombatStates: Map<BattleId, BattleCombatState>,
     val battleCombatants: Map<BattleId, List<BattleCombatant>>,
+    val battleCasualtyEconomics: Map<BattleId, BattleCasualtyEconomics>,
+    val battleCasualties: Map<BattleId, List<BattleCasualty>>,
     val battleSurrenders: Map<BattleId, BattleSurrenderRecord>,
     val economySettings: SeasonEconomySettings,
     val civilizationAccounts: Map<CivilizationId, CivilizationAccount>,
@@ -1094,6 +1139,8 @@ private sealed interface LoadedActiveSeason {
         val battleParticipants: Map<BattleId, List<BattleParticipant>>,
         val battleCombatStates: Map<BattleId, BattleCombatState>,
         val battleCombatants: Map<BattleId, List<BattleCombatant>>,
+        val battleCasualtyEconomics: Map<BattleId, BattleCasualtyEconomics>,
+        val battleCasualties: Map<BattleId, List<BattleCasualty>>,
         val battleSurrenders: Map<BattleId, BattleSurrenderRecord>,
         val economySettings: SeasonEconomySettings,
         val civilizationAccounts: Map<CivilizationId, CivilizationAccount>,

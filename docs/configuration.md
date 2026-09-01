@@ -28,6 +28,10 @@ currently no `/reload` integration or partial live-reload behavior.
 | `economy.repair.remove-placement-unit-price` | `1.00` | Non-negative price for each selected `REMOVE_PLACED_BLOCK` repair unit. |
 | `economy.repair.victor-share-percent` | `25.00` | Percentage from `0` through `100`, with at most two decimal places, of an ordinary repair payment assigned to the battle victor. |
 | `economy.repair.ordinary-initiator-roles` | `[LEADER]` | Non-empty civilization roles allowed to initiate an ordinary paid repair. |
+| `economy.battle-casualties.attacker-death-cost` | `2500.00` | Non-negative treasury cost of one attacker life loss, snapshotted into a new battle. |
+| `economy.battle-casualties.defender-death-cost` | `1000.00` | Non-negative treasury cost of one defender life loss, snapshotted into a new battle. |
+| `economy.battle-casualties.require-attacker-coverage` | `true` | Whether battle activation must pre-fund every possible attacker life loss. The reserve is unavailable for other spending until the battle ends. |
+| `economy.battle-casualties.lock-withdrawals-during-battle` | `true` | Whether both battle parties are barred from starting player-wallet withdrawals while the battle is `ACTIVE` or `RESOLVING`. |
 | `repair.runner.blocks-per-tick` | `20` | Global maximum authoritative repair mutations in one server tick, from `1` through `1000`. At the normal 20 ticks/second, the default ceiling is 400 blocks/second; storage and chunk transitions can make actual throughput lower. |
 | `repair.assessment.blocks-per-tick` | `200` | Global maximum live block observations in one server tick while calculating status or a fresh quote, from `1` through `4000`. |
 
@@ -69,6 +73,21 @@ There is no `admin-waives-cost` setting. The privileged admin repair command nam
 the target civilization and executes the same repair operation with an audited
 admin-sponsored funding context. It charges no civilization account and therefore pays
 no victor share.
+
+Every new combat-enabled battle also snapshots its attacker/defender death prices,
+coverage requirement, and withdrawal-lock policy. With the default coverage rule, battle
+activation atomically debits the attacking treasury for its maximum possible casualty
+liability: attacker price multiplied by the sum of enrolled attacker lives. If that money
+is unavailable, the battle does not start. Each attacker death consumes part of the
+already-funded reserve; when the battle closes or is cancelled, only the unused portion
+returns to the attacker. That release is not a refund of a charged death.
+
+Defender deaths, and attacker deaths when coverage is disabled, charge the treasury at the
+time of the durable life loss. The charge takes at most the current balance, stops at zero,
+and records any uncollectible remainder for history without creating debt. Casualty money
+is a pure currency sink: it is not paid to the opponent and is independent of repair
+pricing and the repair victor share. Deposits remain allowed during battle, while new
+withdrawals are locked for both parties by default through `ACTIVE` and `RESOLVING`.
 
 The two Paper repair budgets control pace rather than durable meaning, so they are not
 snapshotted into jobs. The runner processes one job and holds at most one plugin chunk

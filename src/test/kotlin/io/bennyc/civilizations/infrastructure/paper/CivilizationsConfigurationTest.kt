@@ -45,6 +45,16 @@ class CivilizationsConfigurationTest {
             assertEquals(MoneyAmount.ZERO, loaded.economyRules.openingCivilizationBalance)
             assertEquals(MoneyAmount(100), loaded.economyRules.repair.restoreOriginalUnitPrice)
             assertEquals(2_500, loaded.economyRules.repair.victorShareBasisPoints)
+            assertEquals(
+                MoneyAmount(250_000),
+                loaded.economyRules.battleCasualties.attackerDeathCost,
+            )
+            assertEquals(
+                MoneyAmount(100_000),
+                loaded.economyRules.battleCasualties.defenderDeathCost,
+            )
+            assertEquals(true, loaded.economyRules.battleCasualties.requireAttackerCoverage)
+            assertEquals(true, loaded.economyRules.battleCasualties.lockWithdrawalsDuringBattle)
             assertEquals(20, loaded.repairRunnerRules.blocksPerTick)
             assertEquals(200, loaded.repairRunnerRules.assessmentBlocksPerTick)
         } finally {
@@ -172,6 +182,19 @@ class CivilizationsConfigurationTest {
             )
         }
         assertContains(amountFailure.message.orEmpty(), "economy.opening-civilization-balance")
+
+        val casualtyFailure = assertFailsWith<IllegalArgumentException> {
+            load(
+                validYaml.replace(
+                    "attacker-death-cost: \"2500.00\"",
+                    "attacker-death-cost: \"-1.00\"",
+                ),
+            )
+        }
+        assertContains(
+            casualtyFailure.message.orEmpty(),
+            "economy.battle-casualties.attacker-death-cost",
+        )
     }
 
     @Test
@@ -242,6 +265,11 @@ class CivilizationsConfigurationTest {
                 remove-placement-unit-price: "1.00"
                 victor-share-percent: "25.00"
                 ordinary-initiator-roles: [LEADER]
+              battle-casualties:
+                attacker-death-cost: "2500.00"
+                defender-death-cost: "1000.00"
+                require-attacker-coverage: true
+                lock-withdrawals-during-battle: true
             repair:
               runner:
                 blocks-per-tick: 20

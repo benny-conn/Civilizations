@@ -10,7 +10,7 @@ features as passes. On the current build, civilization setup, claims, protection
 declaration, hostile-entry battle activation, simple battle block mutation, persistence,
 durable online combatant/life state, defender-at-timeout resolution, bounded report
 sealing, targeted participant PVP, Paper death/respawn integration, BattleLock stand-in
-translation, treasuries, and paid repair are live. Delayed respawn and teammate-locked
+translation, treasuries, no-debt casualty charges, and paid repair are live. Delayed respawn and teammate-locked
 viewing are deliberately deferred rather than treated as current behavior.
 
 ## Test record
@@ -59,6 +59,11 @@ actual behavior, relevant ID, and the matching section of `server/logs/latest.lo
    the season, set `gameplay.war.battle-duration-seconds` to a small value such as `300`,
    and restart. Configuration is loaded only at startup. Do not use `/reload`.
 
+   The shipped casualty defaults charge attackers `2500.00` and defenders `1000.00` per
+   life. Attacker coverage is required and withdrawals lock during active/resolving
+   battles. Keep those defaults for this path unless the test record explicitly notes an
+   override.
+
 6. For the combat-logging checkpoint, install reviewed
    [BattleLock 1.8](https://hangar.papermc.io/Jelly-Pudding/BattleLock/versions/1.8) in
    `server/plugins` and restart. The expected JAR SHA-256 is
@@ -77,14 +82,14 @@ Run these commands from the console, substituting the saved UUIDs:
 /civadmin civilization provision Aurelia <A_LEADER_UUID> [<A_MEMBER_UUID>]
 /civadmin civilization provision Borealis <B_LEADER_UUID> [<B_MEMBER_UUID>]
 /civadmin civilization list
-/civadmin economy adjust Aurelia 1000.00 manual playtest funds
-/civadmin economy adjust Borealis 1000.00 manual playtest funds
+/civadmin economy adjust Aurelia 10000.00 manual playtest funds
+/civadmin economy adjust Borealis 10000.00 manual playtest funds
 /civadmin economy balances
 ```
 
 The square brackets mean the second player is optional; do not type the brackets. Pass
 when both civilizations are active, have the intended leaders/members, and each treasury
-shows exactly `1000.00`. Repeat one `provision` command and confirm it is idempotent rather
+shows exactly `10000.00`. Repeat one `provision` command and confirm it is idempotent rather
 than creating a duplicate civilization or membership.
 
 Player checks:
@@ -185,6 +190,20 @@ Record and inspect the battle:
 The inspection should show the full participant count, smaller/equal combatant count,
 living count, snapshotted lives, and no combat resolution yet.
 
+Immediately after activation, run:
+
+```text
+/civadmin economy balances
+/civadmin economy ledger Aurelia 10
+```
+
+Pass when Aurelia has one `BATTLE_CASUALTY_RESERVE` debit equal to attacker price times
+the total enrolled attacker lives. No defender reserve is taken. If Aurelia lacks that
+full amount before entry, activation must fail without creating a battle. As each party's
+leader, try `/civ withdraw 1.00`; both attempts must be rejected while the battle is
+`ACTIVE` and later while it is `RESOLVING`. `/civ deposit 1.00` remains allowed when Vault
+and a player-economy provider are installed.
+
 While the battle is active, verify:
 
 1. A snapshotted Aurelia participant can break and place simple, independent blocks in
@@ -206,13 +225,18 @@ While the battle is active, verify:
 9. With four players, kill one combatant while their teammate remains alive. The death
    should consume exactly one life. At the default one-life setting, the eliminated player
    should respawn through normal Minecraft behavior, receive a clear message, and be unable
-   to PVP or break/place in either side's battle land. They remain free to play elsewhere.
+   to PVP or break/place in either side's battle land. The message should also report the
+   civilization casualty charge. They remain free to play elsewhere.
 10. Repeating or retrying the same authoritative death consequence must not consume another
     life. `/civadmin battle inspect <BATTLE_ID>` should show the expected living count.
 11. Disconnecting a combatant does not change the living count by itself. If testing
     BattleLock, use [combat-logging.md](combat-logging.md): an opposing living combatant may
     damage its recognized stand-in in battle land, while a teammate or non-combatant may
     not. Killing the stand-in consumes exactly one life for its stored player UUID.
+12. Re-run `/civadmin economy balances`, both party ledgers, and battle inspection. Each
+    durable life loss must have one casualty. Defender charges debit only available funds;
+    if a test defender is first adjusted down below `1000.00`, the charge stops at zero and
+    inspection reports the uncollected remainder without a negative balance or debt.
 
 Optional four-player roster check: after the battle starts, move a non-leader member to
 the opposing civilization with `/civadmin civilization move-member <PLAYER_UUID> <civ>`.
@@ -240,6 +264,11 @@ Use one of these paths:
 After surrender or force-resolution, verify that battle block mutation stops immediately.
 Pass when `/civadmin battle inspect <BATTLE_ID>` eventually reports `CLOSED` with the
 requested outcome and repair status becomes available.
+
+At terminal closure or cancellation, inspect Aurelia's ledger again. It should contain one
+`BATTLE_CASUALTY_RELEASE` credit for only the unused attacker reserve. Money allocated to
+actual attacker deaths must remain removed from circulation; it is not paid to Borealis and
+is not included in repair pricing or victor proceeds.
 
 For the restart checkpoint, create enough damage that observation cannot finish instantly,
 then stop Paper while the battle is `RESOLVING`. After restart, a surrendered battle should

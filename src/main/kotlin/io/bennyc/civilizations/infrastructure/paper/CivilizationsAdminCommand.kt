@@ -931,6 +931,10 @@ class CivilizationsAdminCommand(
         val combatState = active.battleCombatStates[battle.id]
         val combatants = active.battleCombatants[battle.id].orEmpty()
         val aliveCombatants = combatants.count { !it.isEliminated }
+        val casualtyEconomics = active.battleCasualtyEconomics[battle.id]
+        val casualties = active.battleCasualties[battle.id].orEmpty()
+        val casualtyCharged = casualties.sumOf { it.chargedAmount.minorUnits }
+        val casualtyUnpaid = casualties.sumOf { it.unpaidAmount.minorUnits }
         val surrender = active.battleSurrenders[battle.id]
         info(
             sender,
@@ -941,6 +945,13 @@ class CivilizationsAdminCommand(
                 "alive=$aliveCombatants; lives=${combatState?.rules?.livesPerCombatant}; " +
                 "combatResolution=${combatState?.resolutionCause}; " +
                 "combatOutcome=${combatState?.requestedOutcome}; startedAt=${battle.startedAt}; " +
+                "casualties=${casualties.size}; casualtyChargedMinor=$casualtyCharged; " +
+                "casualtyUnpaidMinor=$casualtyUnpaid; " +
+                "attackerDeathCostMinor=${casualtyEconomics?.attackerDeathCost?.minorUnits}; " +
+                "defenderDeathCostMinor=${casualtyEconomics?.defenderDeathCost?.minorUnits}; " +
+                "attackerReserveMinor=${casualtyEconomics?.attackerReserve?.minorUnits}; " +
+                "reserveReleasedMinor=${casualtyEconomics?.releasedAmount?.minorUnits}; " +
+                "withdrawalsLocked=${casualtyEconomics?.withdrawalsLocked}; " +
                 "endsAt=${battle.endsAt}; resolvingAt=${battle.resolvingAt}; " +
                 "endedAt=${battle.endedAt}; outcome=${battle.outcome}; " +
                 if (surrender == null) {

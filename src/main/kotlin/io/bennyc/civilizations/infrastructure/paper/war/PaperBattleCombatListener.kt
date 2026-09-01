@@ -189,14 +189,36 @@ class PaperBattleCombatListener(
     }
 
     private fun publishNotices(update: BattleCombatUpdate) {
+        val active = (runtime.state as? CivilizationsRuntimeState.Ready)?.activeSeason
         for (event in update.lifeEvents) {
             val combatant = update.combatants.single { it.playerId == event.playerId }
+            val casualty = update.casualties.singleOrNull { it.lifeEventId == event.id }
+            val economicNotice = if (casualty == null || active == null) {
+                ""
+            } else {
+                val scale = active.economySettings.currencyScale
+                buildString {
+                    append(" Your civilization casualty cost was ")
+                    append(scale.format(casualty.nominalCost))
+                    append(';')
+                    if (casualty.unpaidAmount.minorUnits == 0L) {
+                        append(" fully charged.")
+                    } else {
+                        append(' ')
+                        append(scale.format(casualty.chargedAmount))
+                        append(" was charged and ")
+                        append(scale.format(casualty.unpaidAmount))
+                        append(" was uncollectible; no debt was created.")
+                    }
+                }
+            }
             val notice = if (combatant.isEliminated) {
-                BattleRespawnNotice.Eliminated(update.battle.id.toString())
+                BattleRespawnNotice.Eliminated(update.battle.id.toString(), economicNotice)
             } else {
                 BattleRespawnNotice.LivesRemaining(
                     update.battle.id.toString(),
                     combatant.livesRemaining,
+                    economicNotice,
                 )
             }
             val player = server.getPlayer(event.playerId.value)
@@ -212,10 +234,11 @@ class PaperBattleCombatListener(
         val message = when (notice) {
             is BattleRespawnNotice.Eliminated ->
                 "You have been eliminated from battle ${notice.battleId}. " +
-                    "You can no longer fight or damage either side's battle land."
+                    "You can no longer fight or damage either side's battle land." +
+                    notice.economicNotice
             is BattleRespawnNotice.LivesRemaining ->
                 "You lost a battle life in ${notice.battleId}; " +
-                    "${notice.remaining} remaining."
+                    "${notice.remaining} remaining." + notice.economicNotice
         }
         player.sendMessage(Component.text(message, NamedTextColor.RED))
     }
@@ -230,11 +253,16 @@ class PaperBattleCombatListener(
 
 private sealed interface BattleRespawnNotice {
     val battleId: String
+    val economicNotice: String
 
-    data class Eliminated(override val battleId: String) : BattleRespawnNotice
+    data class Eliminated(
+        override val battleId: String,
+        override val economicNotice: String,
+    ) : BattleRespawnNotice
 
     data class LivesRemaining(
         override val battleId: String,
         val remaining: Int,
+        override val economicNotice: String,
     ) : BattleRespawnNotice
 }

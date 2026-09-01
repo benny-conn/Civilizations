@@ -319,6 +319,12 @@ class EconomyServiceTest {
                         victorShareBasisPoints = 2_500,
                         ordinaryInitiatorRoles = setOf(MembershipRole.LEADER),
                     ),
+                    battleCasualties = BattleCasualtyRules(
+                        attackerDeathCost = MoneyAmount.ZERO,
+                        defenderDeathCost = MoneyAmount.ZERO,
+                        requireAttackerCoverage = false,
+                        lockWithdrawalsDuringBattle = false,
+                    ),
                 ),
             ),
             seasonId = season.id,

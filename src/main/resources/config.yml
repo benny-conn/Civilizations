@@ -46,6 +46,14 @@ economy:
     victor-share-percent: "25.00"
     ordinary-initiator-roles:
       - LEADER
+  battle-casualties:
+    # Snapshotted for each new battle. Attacker coverage pre-funds the maximum
+    # possible attacker life losses; unused coverage returns when the battle closes.
+    attacker-death-cost: "2500.00"
+    defender-death-cost: "1000.00"
+    require-attacker-coverage: true
+    # Applies to both battle parties through ACTIVE and RESOLVING.
+    lock-withdrawals-during-battle: true
 repair:
   # Paper world work is bounded globally. Changes require a server restart.
   runner:

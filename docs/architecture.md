@@ -67,6 +67,18 @@ values are lifecycle policy rather than live plugin-integration settings: an ext
 combat logger may produce a real death consequence, but disconnect alone never rewrites
 Civilizations state.
 
+Season One casualty economics are likewise snapshotted per battle. The default attacker
+and defender death costs are `2500.00` and `1000.00`. Battle activation pre-funds the
+maximum attacker liability from the SQL treasury by default, making that reserve
+unavailable to withdrawals or unrelated spending; insufficient coverage rejects the
+activation atomically. Immutable casualty rows share the stable life-event identity.
+Covered attacker deaths allocate the pre-funded reserve, while defender deaths (and
+attacker deaths when coverage is disabled) debit only the balance currently available.
+Any shortfall is recorded but never becomes debt. Casualty money is a sink, never opponent
+proceeds, and unused attacker coverage is released only after terminal battle state.
+Both parties' player-wallet withdrawals are locked by the snapshotted policy while the
+battle is `ACTIVE` or `RESOLVING`; deposits remain available.
+
 Civilizations owns civilization money as exact fixed-point SQL balances. Schema migration
 7 creates one account per civilization, immutable ledger transaction headers and postings,
 and balance-application triggers inside the same database transaction. Caller-supplied
@@ -130,7 +142,7 @@ The persistence boundary lives under `application.persistence`; JDBC is an imple
 
 - `CivilizationsRepository` exposes scoped read contexts and atomic write transactions. Application code does not receive JDBC connections or SQL types.
 - Schema changes are ordered, named, and recorded in `schema_migrations`. Startup refuses unknown or renamed migrations instead of guessing.
-- The schema models seasons, civilizations, memberships, claims, wars, timed battles, battle-participant snapshots, battle combat rules/combatants/life events, immutable block-change journal rows, and sealed per-battle damage reports as separate relational records.
+- The schema models seasons, civilizations, memberships, claims, wars, timed battles, battle-participant snapshots, battle combat rules/combatants/life events, casualty rules/reserves/immutable charges, immutable block-change journal rows, and sealed per-battle damage reports as separate relational records.
 - Civilization display names are normalized before storage and unique within a season.
 - Composite foreign keys prevent a membership or claim from referencing a civilization in a different season.
 - The membership primary key permits one civilization per player per season while retaining membership history across seasons.
@@ -185,7 +197,8 @@ force-resolution is an explicit audited recovery operation, not an ordinary vict
 
 ## Battle combat state
 
-Schema migration 9 separates political participation history from gameplay combat state.
+Schema migration 9 separates political participation history from gameplay combat state,
+and migration 10 adds the casualty rules/reserve snapshot and immutable casualty records.
 `battle_participants` remains the full immutable roster. `battle_combat_states` stores the
 effective lives, timeout outcome, disconnect policy, and any ordinary resolution request;
 `battle_combatants` stores the selected participant side and remaining lives; and immutable
@@ -308,7 +321,7 @@ because their atomic ledger transaction changes a treasury balance.
 `CivilizationsRuntime` is the owner of runtime state and structured background work.
 
 - Startup migrations and reads run on the storage executor. The plugin remains in a visible `Starting` state until a `Ready` snapshot is published on the server thread.
-- Runtime snapshots contain the active season, civilizations, memberships, wars, battles, participant/combatant snapshots, a read-only-by-convention claim index, derived living-combatant eligibility, and a protection policy built over those values. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
+- Runtime snapshots contain the active season, civilizations, memberships, wars, battles, participant/combatant/casualty snapshots, treasury balances, a read-only-by-convention claim index, derived living-combatant eligibility, and a protection policy built over those values. Each publication replaces the entire snapshot; it never mutates an index while event code may be reading it.
 - Startup verifies that an active season is not archived, every active civilization has exactly one leader, every claim has an active owner, no persisted claims overlap, open wars reference active parties, and open battles/participants match their war and trigger claim. Invalid durable state fails closed with actionable IDs instead of partially enabling gameplay.
 - Mutations submitted before readiness are rejected. Infrastructure failures move the runtime to `Failed` and disable the plugin rather than falling back to another store.
 - Shutdown stops new work and gives the storage executor a bounded drain period. Civilizations no longer cancels scheduler tasks owned by other plugins.

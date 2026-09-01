@@ -4,7 +4,7 @@ Civilizations is an in-progress Paper plugin for civilization, territory, econom
 
 The architecture rework is complete. See [TODO.md](TODO.md) for the prioritized product roadmap, [docs/architecture.md](docs/architecture.md) for the stable dependency and persistence boundaries, and [docs/worktree-roadmap.md](docs/worktree-roadmap.md) for the dependency-aware multi-worktree queue for net-new MVP work.
 
-The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, snapshotted combatants and lives, a first-write-wins battle damage journal, bounded live-world resolution into immutable damage reports, exact civilization treasury accounts backed by an immutable idempotent ledger, and persisted resumable repair plans with atomic payments.
+The live core includes pure claim geometry and indexing, versioned relational persistence, durable season selection/phases, preselected landless civilization rosters, leadership, validated claim placement, centralized land protection, player war declaration and surrender commands, hostile-claim-entry battle activation, a durable war/timed-battle lifecycle, snapshotted combatants and lives, idempotent no-debt casualty economics, a first-write-wins battle damage journal, bounded live-world resolution into immutable damage reports, exact civilization treasury accounts backed by an immutable idempotent ledger, and persisted resumable repair plans with atomic payments.
 
 The incomplete pre-rework commands, mutable model graph, menus, scheduled tasks, adapters, and JSON-blob datastores have been deleted. Paper listeners protect claims through the application policy. During an active battle in the global `WAR` phase, snapshotted participants may break or place simple single blocks in either side's claimed land. The listener cancels the original event, commits its first-write-wins journal record off-thread, then revalidates and applies the mutation on the server thread. Block entities, multi-place operations, entities, explosions, and unsafe cascading blocks remain protected.
 Living opposing combatants may also PVP in either side's claimed land; teammates,
@@ -95,6 +95,13 @@ latest job, then offers absolute 25/50/75/100% targets. Spending requires a sepa
 quote confirmation and a final current-world recheck; the menu owns no economic policy.
 The confirmed start may charge a lower refreshed price, but a higher price is rejected for
 another confirmation rather than silently exceeding the amount the player approved.
+
+A5 adds schema 10 casualty economics. New battles snapshot configurable attacker and
+defender death prices. Attackers pre-fund their maximum life-loss exposure by default,
+both parties' withdrawals lock through active/resolving combat, and each stable life event
+produces at most one immutable casualty record. Direct charges stop at zero and record the
+unpaid remainder without debt; casualty money is a sink separate from repair pricing and
+victor proceeds. Only unused attacker coverage returns at terminal battle state.
 
 ## Administration
 

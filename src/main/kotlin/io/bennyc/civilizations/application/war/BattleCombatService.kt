@@ -2,11 +2,21 @@ package io.bennyc.civilizations.application.war
 
 import io.bennyc.civilizations.application.ApplicationFailure
 import io.bennyc.civilizations.application.ApplicationResult
+import io.bennyc.civilizations.application.economy.EconomyLedger
+import io.bennyc.civilizations.application.economy.LedgerTransactionRequest
+import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
 import io.bennyc.civilizations.application.persistence.CivilizationsRepository
 import io.bennyc.civilizations.application.persistence.CivilizationsWriteContext
 import io.bennyc.civilizations.domain.identity.PlayerId
+import io.bennyc.civilizations.domain.economy.LedgerPosting
+import io.bennyc.civilizations.domain.economy.LedgerTransaction
+import io.bennyc.civilizations.domain.economy.LedgerTransactionKind
+import io.bennyc.civilizations.domain.economy.MoneyAmount
 import io.bennyc.civilizations.domain.identity.SeasonId
 import io.bennyc.civilizations.domain.war.Battle
+import io.bennyc.civilizations.domain.war.BattleCasualty
+import io.bennyc.civilizations.domain.war.BattleCasualtyEconomics
+import io.bennyc.civilizations.domain.war.BattleCasualtyFunding
 import io.bennyc.civilizations.domain.war.BattleCombatResolutionCause
 import io.bennyc.civilizations.domain.war.BattleCombatState
 import io.bennyc.civilizations.domain.war.BattleCombatant
@@ -21,8 +31,10 @@ import java.time.Clock
 /** Durable, framework-neutral ordinary battle outcome state. */
 class BattleCombatService(
     private val repository: CivilizationsRepository,
+    idGenerator: CivilizationsIdGenerator,
     private val clock: Clock,
 ) {
+    private val ledger = EconomyLedger(idGenerator, clock)
     /**
      * Consumes one life from every distinct combatant in the batch. Batching makes a
      * same-tick cross-kill deterministic: if both sides lose their final combatant in
@@ -69,7 +81,9 @@ class BattleCombatService(
         val combatantsByPlayer = listBattleCombatants(battle.id)
             .associateBy(BattleCombatant::playerId)
             .toMutableMap()
+        val casualtyEconomics = findBattleCasualtyEconomics(battle.id)
         val insertedEvents = mutableListOf<BattleLifeEvent>()
+        val insertedCasualties = mutableListOf<BattleCasualty>()
         for (loss in request.losses) {
             if (existingEvents.getValue(loss) != null) continue
             val current = combatantsByPlayer[loss.playerId]
@@ -96,6 +110,9 @@ class BattleCombatService(
                 recordedAt = now,
             )
             insertBattleLifeEvent(event)
+            casualtyEconomics?.let { economics ->
+                insertedCasualties += recordCasualty(economics, current, event)
+            }
             combatantsByPlayer[loss.playerId] = updated
             insertedEvents += event
         }
@@ -124,6 +141,7 @@ class BattleCombatService(
                 state = updatedState,
                 combatants = combatantsByPlayer.values.sortedWith(COMBATANT_ORDER),
                 lifeEvents = insertedEvents,
+                casualties = insertedCasualties,
             ),
         )
     }
@@ -197,7 +215,79 @@ class BattleCombatService(
             ?: throw IllegalStateException("Battle ${battle.id} life event has no combat state"),
         combatants = listBattleCombatants(battle.id),
         lifeEvents = events,
+        casualties = events.mapNotNull { findBattleCasualty(it.id) },
     )
+
+    private fun CivilizationsWriteContext.recordCasualty(
+        economics: BattleCasualtyEconomics,
+        combatant: BattleCombatant,
+        event: BattleLifeEvent,
+    ): BattleCasualty {
+        val nominalCost = when (combatant.side) {
+            BattleSide.ATTACKER -> economics.attackerDeathCost
+            BattleSide.DEFENDER -> economics.defenderDeathCost
+        }
+        val fundedByReserve = combatant.side == BattleSide.ATTACKER &&
+            economics.attackerCoverageRequired
+        val chargedAmount: MoneyAmount
+        val unpaidAmount: MoneyAmount
+        val ledgerTransaction = if (fundedByReserve) {
+            chargedAmount = nominalCost
+            unpaidAmount = MoneyAmount.ZERO
+            null
+        } else {
+            val account = checkNotNull(findCivilizationAccount(combatant.civilizationId)) {
+                "Battle ${event.battleId} casualty civilization has no treasury account"
+            }
+            chargedAmount = MoneyAmount(
+                minOf(account.balance.minorUnits, nominalCost.minorUnits),
+            )
+            unpaidAmount = nominalCost.plus(chargedAmount.negate())
+            if (chargedAmount == MoneyAmount.ZERO) {
+                null
+            } else {
+                ledger.post(
+                    this,
+                    LedgerTransactionRequest(
+                        seasonId = event.seasonId,
+                        idempotencyKey = "battle-life:${event.id}:casualty-charge",
+                        kind = LedgerTransactionKind.BATTLE_CASUALTY_CHARGE,
+                        postings = listOf(
+                            LedgerPosting(combatant.civilizationId, chargedAmount.negate()),
+                        ),
+                        referenceType = "BATTLE_LIFE_EVENT",
+                        referenceId = event.id.toString(),
+                        actorPlayerId = event.playerId,
+                        description = "Battle casualty charge for life event ${event.id}",
+                    ),
+                ).valueOrThrow()
+            }
+        }
+        return BattleCasualty(
+            lifeEventId = event.id,
+            seasonId = event.seasonId,
+            battleId = event.battleId,
+            playerId = event.playerId,
+            civilizationId = combatant.civilizationId,
+            side = combatant.side,
+            nominalCost = nominalCost,
+            chargedAmount = chargedAmount,
+            unpaidAmount = unpaidAmount,
+            funding = if (fundedByReserve) {
+                BattleCasualtyFunding.ATTACKER_RESERVE
+            } else {
+                BattleCasualtyFunding.TREASURY
+            },
+            chargeLedgerTransactionId = ledgerTransaction?.id,
+            recordedAt = event.recordedAt,
+        ).also(::insertBattleCasualty)
+    }
+
+    private fun ApplicationResult<LedgerTransaction>.valueOrThrow(): LedgerTransaction = when (this) {
+        is ApplicationResult.Applied -> value
+        is ApplicationResult.Unchanged -> value
+        is ApplicationResult.Rejected -> error(failure.description)
+    }
 
     private fun outcomeAfterLosses(combatants: Collection<BattleCombatant>): BattleOutcome? {
         val attackersAlive = combatants.any {
@@ -248,6 +338,7 @@ data class BattleCombatUpdate(
     val state: BattleCombatState,
     val combatants: List<BattleCombatant>,
     val lifeEvents: List<BattleLifeEvent>,
+    val casualties: List<BattleCasualty> = emptyList(),
 )
 
 data class BattleTimeoutResolution(
