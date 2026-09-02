@@ -115,64 +115,19 @@ not a hidden scheduler side effect.
 
 ## Prisoners of war
 
-Decision status: **provisional concept retained for future design, not an approved rules
-contract.** The downed/rescue/capture direction is promising. Escape, transport, ransom,
-exchange, pursuit, inventory, and duration mechanics still require a dedicated design
-pass and playtest before implementation.
+Decision status: **unresolved. No POW mechanics are approved for implementation.** The
+server may eventually use prisoners of war to create negotiation, rescue, exchange,
+escape, ransom, and political drama, but it must not become a disguised temporary ban or
+grant unilateral civil-jail authority.
 
-Ordinary civilization leaders do not receive unilateral civil-jail authority. Prisoners
-of war are a separate, explicit conflict context available only to eligible combatants in
-an active war or battle.
+The current game remains unchanged: final-life combatants are eliminated, respawn
+normally, and enter no custody state. A dedicated design pass and staging playtest must
+settle capture, consent, death/lives interaction, transport, inventory, duration, logout,
+escape, pursuit, exchange, ransom, war closure, and recovery before a POW branch begins.
 
-The preferred capture loop is a later extension of final-life combat:
-
-1. A combatant who would lose their final life may enter a short, durable `DOWNED` window.
-2. Allies can rescue them; an opponent must remain exposed and complete a visible capture
-   interaction to take custody. If neither happens, ordinary elimination/respawn wins.
-3. A captured player enters a durable custody record tied to captor, war, battle, terms,
-   start, maximum duration, and release state. Capture does not silently alter citizenship
-   or claim ownership.
-4. Custody may end through rescue, escape, exchange, ransom accepted by the prisoner's
-   government, parole, war closure, timeout, or audited admin release.
-
-Custody must create gameplay for the prisoner rather than a disguised temporary ban:
-
-- sentences have a short online-time target and a hard wall-clock maximum;
-- chat and proximity voice remain available for negotiation and intrigue;
-- physical camps may contain work, trade, contraband, or designed escape opportunities;
-- holding prisoners should cost the captor upkeep or attention rather than generating
-  passive profit;
-- prisoners keep a meaningful escape or parole path; and
-- logout cannot erase custody, but also cannot extend it indefinitely.
-
-An escape should be physical. Reaching an escape condition changes custody to `ESCAPED`
-instead of teleporting the player home. A later bounded `CUSTODY_ESCAPE` conflict context
-may let eligible guards pursue or recapture the escaped player without enabling general
-PVP. Invisible permanent confinement, unrestricted guard damage, inventory confiscation,
-and automatic tax-debtor imprisonment are out of scope.
-
-Still-open POW decisions include whether final-life capture is mandatory or opt-in, the
-rescue/capture channel duration, transport versus relocation to a camp, custody caps,
-ransom approval rules, inventory treatment, and the exact escape/pursuit boundary.
-
-Two physical mechanics are worth preserving for that later design pass:
-
-- **Escape:** a registered camp should not be an invisible permanent barrier. Prisoners
-  may obtain contraband, tools, information, or help from visitors; discover or create a
-  bounded escape route; and physically reach an escape boundary. Success changes custody
-  to `ESCAPED`, grants a short configurable head start, and begins a narrow guard-pursuit
-  window. Reaching a defined safe condition or surviving the pursuit closes custody. A
-  recapture never resets the hard wall-clock release limit.
-- **In-person exchange:** governments may create a durable exchange proposal naming the
-  prisoners, representatives, neutral location, and time window. Both sides physically
-  escort their prisoners to the site. Once every required participant is present, the
-  authorized representatives confirm and the repository releases all listed prisoners
-  atomically. This prevents one side from accepting its citizen and then refusing to
-  release the other. Whether the meeting has a ceasefire, can be ambushed, or can include
-  escrowed ransom remains explicitly undecided.
-
-These ideas are recorded so they are not lost; they are examples, not settled acceptance
-criteria.
+Ideas such as a downed/rescue/capture window, physical camp escape, and atomic in-person
+exchange are preserved only in [pow-design-notes.md](pow-design-notes.md). That file is an
+exploration notebook, not an implementation contract.
 
 ## Regional scarcity and strategic infrastructure
 
@@ -263,7 +218,8 @@ Civilizations.
 4. Fixed citizen dues and public treasury visibility.
 5. Bounded public purchase orders and player/civilization escrow contracts.
 6. A small regional-resource prototype plus the real-season world design.
-7. Final-life downed/rescue/capture and bounded POW custody.
+7. A dedicated POW rules/design pass; no custody implementation until those rules are
+   separately approved.
 
 The first mechanics playtest does not require all of these systems. The actual first
 season world should not launch until its travel, money faucet, government, and initial

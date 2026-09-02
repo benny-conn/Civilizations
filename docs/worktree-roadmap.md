@@ -75,7 +75,9 @@ after playtesting; unrestricted spectator free-camera remains disallowed.
 The working product direction for the next political/economic arc is documented in
 [server-design.md](server-design.md). Its intended order is civilization roles, durable
 binding votes and non-binding polls, government types, citizen dues, bounded public
-purchase orders and private contracts, a regional-resource prototype, and finally a
-distinct downed/capture/POW-custody context. These are not permission-listener shortcuts:
-each durable fact requires its own application service and must enter the serialized
-schema/repository and Paper-integration lanes in dependency order.
+purchase orders and private contracts, and a regional-resource prototype. POW mechanics
+remain an unresolved design exercise documented separately in
+[pow-design-notes.md](pow-design-notes.md); no capture/custody implementation should enter
+a lane until its rules are separately approved. These features are not permission-listener
+shortcuts: each approved durable fact requires its own application service and must enter
+the serialized schema/repository and Paper-integration lanes in dependency order.
