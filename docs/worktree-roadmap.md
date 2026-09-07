@@ -68,6 +68,8 @@ No product decision currently blocks the completed E1 slice. Civilization-scoped
 
 ## Later parallel tracks
 
+- [ ] **Deferred — native proximity text chat (2026-09-07).** Implement in Civilizations later: configurable same-world distance filtering with no ordinary-player global fallback, respecting Staff++ mutes and Paper chat cancellation. Keep asynchronous chat handling off live Bukkit world/player state. Not a prerequisite for the test server or the WorldPainter/scarcity compatibility sample; radius and staff exceptions remain design choices.
+
 [Scarcity and season-world planning](scarcity-world-plan.md) contains a proposed S0–S6
 sequence, starting with an isolated generation and entity-lifecycle compatibility spike.
 It is a researched proposal, not a new active merge queue or a change to product priority.
