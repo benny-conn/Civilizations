@@ -211,7 +211,9 @@ backup/recovery proposal below is not a requirement to back up this current test
 - Final verification: `./gradlew clean build` passed (182 tests, zero failures); probe
   compiled with Java 25. Fixture stopped. No production changes or migrations. Detailed
   [report](animal-mechanics-spike.md) and checked-in observation excerpts preserve pickup
-  evidence. S3 is now the next item; integration pending below.
+  evidence. S3 is now the next item. Delivery complete: `2e107bd` on
+  `benny/animal-mechanics-spike`, rebased onto current main, fast-forward merged and pushed
+  to `origin/main`. Desktop server and its untracked root symlink were preserved.
 
 ### Next agent's coding starting point
 
