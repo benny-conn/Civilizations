@@ -28,6 +28,7 @@ class CivilizationsPlugin : JavaPlugin() {
     private lateinit var battleResolutionCoordinator: PaperBattleResolutionCoordinator
     private lateinit var repairCoordinator: PaperRepairCoordinator
     private lateinit var landProtectionCoordinator: PaperLandProtectionCoordinator
+    private lateinit var portalListener: io.bennyc.civilizations.infrastructure.paper.scarcity.PaperPortalListener
     private lateinit var repairMenu: PaperRepairMenu
 
     override fun onEnable() {
@@ -113,6 +114,10 @@ class CivilizationsPlugin : JavaPlugin() {
                 (runtime.state as? CivilizationsRuntimeState.Ready)?.canePolicy
             }, this,
         )
+        portalListener = io.bennyc.civilizations.infrastructure.paper.scarcity.PaperPortalListener(this, { runtime.state })
+        server.pluginManager.registerEvents(portalListener, this)
+        registerCommand("civportal", "Set up fixed Nether portal pairs", emptyList(),
+            io.bennyc.civilizations.infrastructure.paper.scarcity.CivilizationsPortalCommand(runtime, dataFolder.toPath().resolve("portals")))
         registerCommand("civworld", "Register and inspect scarcity world manifests", emptyList(),
             io.bennyc.civilizations.infrastructure.paper.scarcity.CivilizationsWorldCommand(runtime, dataFolder.toPath().resolve("manifests")))
         registerCommand(
@@ -187,6 +192,7 @@ class CivilizationsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::portalListener.isInitialized) portalListener.close()
         if (::repairMenu.isInitialized) {
             repairMenu.close()
         }

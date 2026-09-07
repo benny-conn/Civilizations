@@ -69,7 +69,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(13, started.migration.currentVersion)
+            assertEquals(14, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -557,9 +557,16 @@ class CivilizationsRuntimeTest {
             runtime.submitAwait { caneActivation.enable(season.id, 3, "console", "recovery test",
                 listOf(io.bennyc.civilizations.application.scarcity.LoadedResourceWorld(manifest.worldId, manifest.worldUuid, -64, 320)))
             }.awaitCompleted().appliedValue()
+            val portalA = io.bennyc.civilizations.application.scarcity.PortalSite(manifest.worldId, manifest.worldUuid,
+                io.bennyc.civilizations.application.scarcity.ResourceBounds(0,64,0,1,66,0))
+            val portalB = io.bennyc.civilizations.application.scarcity.PortalSite(WorldId("minecraft:the_nether"), java.util.UUID(0, 789),
+                io.bennyc.civilizations.application.scarcity.ResourceBounds(0,64,0,1,66,0))
+            val pair = io.bennyc.civilizations.application.scarcity.PortalPair("crossing", portalA, portalB)
+            runtime.submitAwait { portals.install(season.id, listOf(pair), "b".repeat(64), "console") }.awaitCompleted().appliedValue()
             runtime.close()
             val restarted = database.runtime()
             val recovered = restarted.startAwait().state
+            assertEquals(listOf(pair), recovered.portals?.pairs)
             check(recovered)
             assertEquals(3, recovered.caneActivation?.maxHeight)
             assertTrue(recovered.canePolicy.permits(manifest.worldId, manifest.worldUuid, 0, 0, 0, 2))

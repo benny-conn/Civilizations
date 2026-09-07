@@ -1,5 +1,7 @@
 package io.bennyc.civilizations.infrastructure.runtime
 
+import io.bennyc.civilizations.application.scarcity.PortalNetwork
+import io.bennyc.civilizations.application.scarcity.PortalNetworkService
 import io.bennyc.civilizations.application.scarcity.CaneActivation
 import io.bennyc.civilizations.application.scarcity.CaneActivationService
 import io.bennyc.civilizations.application.scarcity.CaneGrowthPolicy
@@ -107,6 +109,7 @@ class CivilizationsRuntime private constructor(
         seasons = SeasonService(repository, idGenerator, clock),
         worldManifests = WorldManifestService(repository, clock),
         caneActivation = CaneActivationService(repository, clock),
+        portals = PortalNetworkService(repository, clock),
         civilizations = CivilizationService(repository, idGenerator, clock, phaseRules),
         claims = ClaimService(repository, idGenerator, claimRules, phaseRules, clock),
         wars = WarService(repository, idGenerator, clock, economyRules.battleCasualties),
@@ -405,6 +408,7 @@ class CivilizationsRuntime private constructor(
     private fun loadReadyState(): CivilizationsRuntimeState.Ready {
         val worldManifests = java.util.List.copyOf(repository.read { listWorldManifests() })
         val caneActivation = repository.read { findCaneActivation() }
+        val portals = repository.read { findPortalNetwork() }
         repository.read { findActiveSeasonId() }?.let { activeSeasonId ->
             mutationScope.combat.recoverExpiredBattles(activeSeasonId)
             when (val economy = mutationScope.economy.ensureSeasonAccounts(activeSeasonId)) {
@@ -470,7 +474,7 @@ class CivilizationsRuntime private constructor(
         }
 
         return when (loaded) {
-            LoadedActiveSeason.None -> CivilizationsRuntimeState.Ready(activeSeason = null, worldManifests = worldManifests, caneActivation = caneActivation)
+            LoadedActiveSeason.None -> CivilizationsRuntimeState.Ready(activeSeason = null, worldManifests = worldManifests, caneActivation = caneActivation, portals = portals)
             is LoadedActiveSeason.Present -> {
                 validate(loaded)
                 val index = ClaimSpatialIndex(loaded.season.id, loaded.claims)
@@ -485,6 +489,7 @@ class CivilizationsRuntime private constructor(
                 CivilizationsRuntimeState.Ready(
                     worldManifests = worldManifests,
                     caneActivation = caneActivation,
+                    portals = portals,
                     activeSeason = ActiveSeasonRuntimeState(
                         season = loaded.season,
                         civilizations = loaded.civilizations,
@@ -945,6 +950,7 @@ class RuntimeMutationScope internal constructor(
     val seasons: SeasonService,
     val worldManifests: WorldManifestService,
     val caneActivation: CaneActivationService,
+    val portals: PortalNetworkService,
     val civilizations: CivilizationService,
     val claims: ClaimService,
     val wars: WarService,
@@ -996,6 +1002,7 @@ sealed interface CivilizationsRuntimeState {
         val worldManifests: List<RegisteredWorldManifest> = emptyList(),
         val resourceZoneIndex: ResourceZoneIndex = ResourceZoneIndex(worldManifests),
         val caneActivation: CaneActivation? = null,
+        val portals: PortalNetwork? = null,
         val canePolicy: CaneGrowthPolicy = CaneGrowthPolicy(caneActivation, resourceZoneIndex),
     ) : CivilizationsRuntimeState
 

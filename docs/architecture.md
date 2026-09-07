@@ -423,3 +423,22 @@ listener cancels unauthorized creation using bounded loaded-chunk reads, never S
 never grants a claim permission or rewrites a block. Existing harvest, piston destruction,
 and transportation remain ordinary gameplay. See [cane-policy.md](cane-policy.md) for
 exact scope, authoring controls, failure behavior and verified routes.
+
+## Fixed portal pairs (S2b)
+
+Schema 14 stores a single fixed `PortalNetwork` with season, paired world key/UUID and
+portal-interior bounds, source hash and importing actor/time. Setup requires active SETUP
+and rejects worlds conflicting with existing season/world registrations. Portal worlds
+need not contain resource zones. The Paper setup boundary validates loaded Normal/Nether
+identities, complete lit frames, build/border bounds and clear landing spaces. The network
+is opt-in and independent of active-season selection after installation.
+
+Runtime snapshots carry the recovered immutable network. Native Nether creation accepts
+only the complete registered rectangle; native Nether search/creation during travel is
+cancelled. Bounded pending crossings load existing destination chunks asynchronously,
+retain shared plugin tickets, revalidate the entity and both sites on the server thread,
+then invoke the ordinary cancellable teleport API. Tickets acquired by this listener are
+released on completion/shutdown; pre-existing tickets are preserved. No event path reads
+SQL or generates a destination. End portals are unchanged. Physical repair/re-lighting
+and exit clearing provide recovery without automatic rebuilding or revision machinery.
+See [portal-sites.md](portal-sites.md) for exact geometry, landing and integration scope.

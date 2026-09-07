@@ -2,7 +2,7 @@
 
 Research date: 2026-09-07. Baseline: `9a43165`, Paper 26.2 build 121.
 
-Status: **prototype authored; S1 registration and opt-in S2a cane policy implemented and verified**.
+Status: **prototype authored; S1 registration, S2a cane and S2b portal policies implemented**.
 This develops [server-design.md](server-design.md#regional-scarcity-and-strategic-infrastructure)
 and the [scarcity backlog](../TODO.md#scarcity-and-specialization). Gameplay numbers below
 remain proposals. See the dated handoff below for actual progress and user decisions.
@@ -22,7 +22,8 @@ artifacts and next work; do not wait until the entire slice is finished.
 | 2,048-square authored prototype | Export complete; user accepted overview | All 16,384 chunks verified offline; three settlement spawn columns have solid grass and two air blocks. User explicitly declined a further playtest. Not imported or verified on Paper; acceptance of appearance is not runtime verification. |
 | S1 world manifest / resource zones | Complete (registration scope) | Schema 12, validated immutable YAML imports, memory index and admin inspection; 165 tests and isolated Paper import/restart passed. Enforcement/activation intentionally absent. |
 | S2a sugar-cane policy | Complete; Desktop not activated | Schema 13 explicit activation, frozen geography and bounded creation checks. 173 tests and Paper growth/harvest/restart passed. |
-| S2b / S3–S6 | Not started | No portal enforcement, registered herds, finite deposits, supply audit or season release. |
+| S2b fixed Nether pairs | Complete; Desktop not activated | Schema 14, simple YAML setup, exact pairing, safe exits and relighting; 182 tests, real bidirectional entity travel, denials and unloaded-destination/restart recovery passed. |
+| S3–S6 | Not started | No registered herds, finite deposits, supply audit or season release. |
 | Proximity text chat | Explicitly deferred | Recorded in worktree roadmap; ordinary text chat retains existing behavior. |
 
 ### S1 implementation progress
@@ -102,6 +103,50 @@ artifacts and next work; do not wait until the entire slice is finished.
   `origin/main` (already current), fast-forwarded into main and pushed. No S2a code work
   remains; this final handoff entry records the integration.
 
+### S2b implementation progress
+
+- User decision: rectangular zones are sufficient now; irregular shapes may come later.
+  Do not add draft editing, revisions or visual boundary previews. Keep operator setup simple.
+- Started `benny/scarcity-portals` from main `f8897aa`. Scope: fixed bidirectional Nether
+  pairs, YAML setup, opt-in enforcement, exact frames, safe exits, player/entity routing,
+  relighting existing sites, and restart checks. No tolls, ownership restrictions or editor.
+  Desktop server remains stopped; integration uses an isolated fixture.
+- Model/storage step implemented: bounded 1–16 fixed pairs, exact vertical portal geometry,
+  world key/UUID binding, source hash, migration 14 and runtime recovery. Parser and commands
+  added; enable validates lit frames/clear exits and active SETUP. Checks pending.
+- Routing step implemented: cancel vanilla Nether search, load only existing destination
+  chunks asynchronously, retain bounded shared tickets, recheck both sites and entity, then
+  teleport through normal plugin-cancellable APIs. Vanilla End travel is unchanged. Relight
+  only the complete registered rectangle. No zone editor/revision/preview features added.
+- First full clean build passed 177 tests: geometry, identity, strict YAML, SQL migration
+  13→14 and preservation, idempotency, phase gates and runtime restart recovery. Real Paper
+  fixture prepared on loopback 25578; live creation/entity travel tests are next.
+- Player adapter checks added: fixed landing, snapshot refresh during load, movement away,
+  missing chunks, preserving pre-existing plugin tickets, End travel and shutdown. Full
+  clean build now passes 181 tests.
+- Paper creation/forward-travel step passed: real FIRE creation permits the exact two
+  registered rectangles and cancels an unregistered one; a cow entering the native portal
+  reaches the configured Nether landing (33.5,64,2.5), not vanilla's scaled/search result.
+  Reverse travel returned to (1.5,64,2.5); obstructed target and an existing unregistered
+  portal left the cow safely at its source. The SQL integrity/foreign-key checks passed.
+- Portal setup/recovery documentation added in `docs/portal-sites.md`. First Paper evidence
+  saved at `server/verification/portal-first-checks.log`; source YAML removed from its import
+  folder before restart to verify SQL recovery.
+- Final verification passed: 182 tests in `./gradlew clean build`, including rejection of
+  portal worlds conflicting with an existing season binding. The final JAR recovered the
+  network with its original audit record without the authoring YAML. Explicitly unloaded
+  destination chunks were loaded for a crossing without generation; after the entity itself
+  unloaded, reloading destination entities recovered the same cow UUID at (33.5,64,2.5).
+  The fixture first needed to remove both force-load tickets before unloading; its initial
+  loaded-entity lookup also needed to distinguish unload from death. No production changes
+  were needed for those fixture corrections.
+- Final SQL integrity/foreign-key checks passed, with one network and two sites. Evidence:
+  `civilizations-s2b/server/verification/portal-restart-existing-chunks.log` (no ERROR),
+  `portal-first-checks.log`, and `probe-src/PortalProbe.java`. The ignored probe is never
+  shipped in the plugin. Player routing is adapter-tested; no client playtest claimed.
+- Isolated server stopped; Desktop server/JAR/maps unchanged. No draft, revision or preview
+  features added. Remaining delivery step: commit, rebase, merge and push.
+
 ### Local artifacts and running environment
 
 These are local desktop artifacts, not committed to Git. A different machine needs the
@@ -150,18 +195,18 @@ backup/recovery proposal below is not a requirement to back up this current test
 
 ### Next agent's coding starting point
 
-S1 registration and S2a cane policy are complete; read [the manifest contract](world-manifests.md)
-and [cane activation contract](cane-policy.md). The next bounded feature is **S2b registered
-portal sites**: define immutable site pairs, complete portal geometry, same-season world
-identity and target validation, creation/travel restrictions (including already-existing
-portals and entities), denial diagnostics and audited recovery. Do not infer portal sites
-from cane zones; the manifest has no paired-site model yet. Define how ordinary/admin travel
-interacts with the policy before enabling it, and test actual Paper event ordering.
+S1 registration, S2a cane and S2b fixed portal pairs are implemented. Read the
+[manifest contract](world-manifests.md), [cane contract](cane-policy.md), and
+[portal setup](portal-sites.md). The next step is the unfinished **S0 managed-animal
+mechanics experiment**, which is required before S3: verify actual Paper birth/death event
+ordering, cancellation effects on parents/food/XP/drops, unload/reload identity, and
+restart/crash windows. Use an isolated fixture and record observed behavior before
+implementing persistent managed herds. A missing entity in an unloaded chunk is not proof
+of death. No population registry, finite-deposit enforcement or full supply audit exists.
 
-Animal lifecycle work remains blocked on the unfinished S0 birth/death/crash experiment.
-No managed herds, finite deposits or full supply audit have been implemented. Cane
-activation is an explicit server-wide experiment, defaults OFF, and has only been enabled
-in the isolated S2a fixture. Do not silently activate it on the Desktop server.
+User preference: rectangular geometry is enough; irregular zones may come later. Do not
+add draft editing, revisions or visible boundary previews. Keep configuration/setup direct.
+Cane and portal enforcement were enabled only in their isolated fixtures, not on Desktop.
 
 The accepted 2048 export remains offline and unregistered. Before a later integrated test,
 load it, obtain its actual UUID, choose exact 3D boxes from the proposed JSON, and register
@@ -390,7 +435,7 @@ existing government/economy product sequence.
 | --- | --- | --- |
 | S0 — compatibility and mechanics spike | Operations; no production policy. Test WorldPainter export and the managed birth/death event sequence on a separate 26.2 fixture. | Small world survives restart; documented event ordering, cancellation side effects and crash windows; go/no-go for chosen tools. |
 | S1 — world manifest and zones | Complete as registration only; foundational work separated from the unfinished animal spike. Application values, SQL import, spatial index and admin validation/status. Activation deferred until enforceable release policy exists. | Invalid/overlapping zones and mismatched worlds reject; snapshot recovery, randomized geometry tests, Paper import/restart pass. |
-| S2 — crop and portal enforcement | S2a cane complete with schema 13; S2b portal pairs pending in serialized durable/Paper lanes. | Cane growth/harvest/restart verified; paired travel, existing portals and entity travel still require implementation and tests. |
+| S2 — crop and portal enforcement | S2a cane (schema 13) and S2b fixed pairs (schema 14) implemented. | Cane growth/harvest and fixed two-way entity travel, unregistered/blocked cases and runtime recovery tested. Player portal routing is adapter-tested; no client playtest claimed. |
 | S3 — managed cattle lifecycle | Durable lane then Paper lane, after S0/S1. Seeding, birth reservations, maturity, deaths, reconciliation and staff diagnostics. | Duplicate events and crashes at each boundary cannot create a second authorized animal; unload is never mistaken for death; ambiguity is visible and contained. |
 | S4 — extraction and repair boundary | Serialized durable/Paper changes as necessary, after S1. Ore preparation, loot/trade decisions, resource exclusions and diagnostics. | No unauthorized new supply in the release audit; adversarial harvest → battle/exposure repair → harvest fails to multiply selected resources. |
 | S5 — integrated resource playtest | After S2–S4. 2,048-square map, three civilizations, three resource types and registered portals. | At least two meaningful resource exchanges, successful herd relocation and reproduction, visible depletion, and no permanent basic-food lockout. |

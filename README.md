@@ -150,6 +150,9 @@ resource-zone registration (schema 12). Enforcement defaults OFF. S2a adds expli
 policy; see [cane rules and activation](docs/cane-policy.md). See the
 [manifest format and operator workflow](docs/world-manifests.md).
 
+S2b adds `/civportal validate|enable <file.yml>` and `/civportal check` for fixed two-way
+Nether crossings (schema 14). Restrictions default OFF; see [portal setup](docs/portal-sites.md).
+
 ## Local test server
 
 The repository includes a reproducible development server workflow. Server binaries, worlds, logs, plugin data, and configuration live in the ignored `server/` directory at the repository root.

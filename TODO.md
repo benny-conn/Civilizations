@@ -279,7 +279,7 @@ remain unimplemented; proposed balancing values are not approved defaults.
 - [ ] **[P2][L] Add anti-bypass rules for eggs, spawn eggs, breeding, curing, transformations, wandering traders, alternate dimensions, loot tables, generated structures, and later-generated chunks only as each scarce resource requires.**
 - [ ] **[P2][M] Add admin seeding/rebalancing tools and telemetry.** Scarcity must create interdependence rather than unknowable grind.
 - [ ] **[P2][L] Author a finite asymmetric season world.** Use WorldPainter, a versioned world-generation data pack, or a configurable generator for initial geography, but keep durable resource-zone identities and live enforcement in purpose-built policy that understands Civilizations.
-- [ ] **[P2][M] Add registered Nether portal sites and deny ordinary portal creation elsewhere.** Define several sites, stable linking, admin recovery, and whether controllers may close access, charge tolls, or must preserve a right of passage.
+- [x] **S2b: fixed registered Nether portal pairs.** Explicit YAML setup, native creation/travel restrictions, safe assigned exits, existing-chunk loading and manual frame/exit recovery; schema 14. See [portal setup](docs/portal-sites.md). Ownership, tolls and closure policy remain separate future work.
 - [ ] **[P2][L] Design a narrow livestock-raid context.** Current battles continue to protect ordinary entities. A later explicit event may permit eligible participants to attach leads and physically steal registered livestock; killing, affected-headcount limits, costs, warnings, and political consequences remain provisional because finite animal death is not repairable.
 
 ### Government, civic decisions, and economic exchange

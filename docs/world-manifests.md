@@ -2,7 +2,8 @@
 
 S1 registers immutable resource geography. Import alone does not alter gameplay. S2a adds
 an explicit, audited cane activation workflow: see [cane-policy.md](cane-policy.md).
-Diamond/cattle/portal enforcement remains unimplemented.
+Diamond/cattle enforcement remains unimplemented. Fixed Nether portal pairs have a separate
+[setup format](portal-sites.md).
 
 ## Operator workflow
 

@@ -120,6 +120,8 @@ class JdbcCivilizationsRepository(
 private open class JdbcReadContext(
     protected val connection: Connection,
 ) : CivilizationsReadContext {
+    override fun findPortalNetwork() = JdbcPortalNetwork(connection).find()
+
     override fun findCaneActivation() = JdbcCaneActivation(connection).find()
 
     override fun listWorldManifests() = JdbcWorldManifests(connection).list()
@@ -1248,6 +1250,8 @@ private open class JdbcReadContext(
 private class JdbcWriteContext(
     connection: Connection,
 ) : JdbcReadContext(connection), CivilizationsWriteContext {
+    override fun insertPortalNetwork(network: io.bennyc.civilizations.application.scarcity.PortalNetwork) = JdbcPortalNetwork(connection).insert(network)
+
     override fun insertCaneActivation(record: io.bennyc.civilizations.application.scarcity.CaneActivation) = JdbcCaneActivation(connection).insert(record)
 
     override fun insertWorldManifest(record: io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest) {
