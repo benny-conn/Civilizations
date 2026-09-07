@@ -2662,5 +2662,6 @@ object CivilizationsSchema {
             ),
         ),
         ScarcitySchema.migration,
+        CaneSchema.migration,
     )
 }

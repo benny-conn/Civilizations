@@ -66,6 +66,8 @@ interface CivilizationsRepository {
 }
 
 interface CivilizationsReadContext {
+    fun findCaneActivation(): io.bennyc.civilizations.application.scarcity.CaneActivation?
+
     fun listWorldManifests(): List<io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest>
 
     fun findActiveSeasonId(): SeasonId?
@@ -265,6 +267,8 @@ interface CivilizationsReadContext {
 }
 
 interface CivilizationsWriteContext : CivilizationsReadContext {
+    fun insertCaneActivation(record: io.bennyc.civilizations.application.scarcity.CaneActivation)
+
     fun insertWorldManifest(record: io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest)
 
     fun setActiveSeasonId(seasonId: SeasonId?)

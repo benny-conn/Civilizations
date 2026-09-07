@@ -84,7 +84,7 @@ class WorldManifestTest {
             service.validate(m, loaded(m), "console").appliedValue()
             assertTrue(db.repository.read { listWorldManifests() }.isEmpty())
             val accepted = service.register(m, loaded(m), "console").appliedValue()
-            assertFalse(accepted.enforcementEnabled)
+            assertNull(db.repository.read { findCaneActivation() })
             val restored = JdbcCivilizationsRepository(db.connectionFactory).read { listWorldManifests() }.single()
             assertTrue(restored.manifest.sameDefinition(m))
             assertEquals(accepted.importedAt, restored.importedAt)
@@ -136,7 +136,7 @@ class WorldManifestTest {
             SchemaMigrator(db.connectionFactory, CivilizationsSchema.migrations.take(11)).migrate()
             val season = SeasonService(db.repository, SequentialIdGenerator(), clock).create("Existing").appliedValue()
             val result = db.migrator.migrate()
-            assertEquals(listOf(12), result.appliedVersions)
+            assertEquals(listOf(12, 13), result.appliedVersions)
             assertEquals(season, db.repository.read { findSeason(season.id) })
             assertTrue(db.repository.read { listWorldManifests() }.isEmpty())
         }

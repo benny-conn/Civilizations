@@ -75,9 +75,10 @@ sequence and a [dated progress/handoff record](scarcity-world-plan.md#progress-a
 The 512-map compatibility check and 2048-map export are complete. S1 registration is
 implemented on `benny/scarcity-world-zones` (schema 12), with strict imports, memory index,
 admin commands and passing build/Paper recovery checks. See [the contract](world-manifests.md).
-Enforcement is OFF. S2a sugar-cane policy is the next proposed slice; portal linking is
-separate, and animal mechanics still require the S0 experiment. No parallel merge queue
-is active for these follow-ups.
+Enforcement defaults OFF. S2a cane policy is complete on `benny/scarcity-cane` (schema 13):
+audited one-time activation, frozen zones, column checks, and verified Paper growth/harvest/
+restart. See [cane policy](cane-policy.md). S2b paired portal sites is next; animal mechanics
+still require the S0 experiment. No parallel merge queue is active for these follow-ups.
 
 After the MVP loop is complete, separate worktrees can take player-facing roster/claim UX, season reset/history, scarcity experiments, assassination, or occupation. Assassination must be its own persisted conflict context with targeted PVP eligibility and atomic succession; it is not a special case hidden inside ordinary claim protection.
 Teammate-locked post-elimination viewing may be added as a separate bounded Paper UX slice

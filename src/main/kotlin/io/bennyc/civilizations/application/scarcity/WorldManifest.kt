@@ -61,8 +61,6 @@ data class RegisteredWorldManifest(val manifest: WorldManifest, val importedAt: 
         require(actor.isNotBlank() && actor.length <= 128) { "actor: must contain 1–128 characters" }
         require(importedAt.toEpochMilli() >= 0) { "importedAt: must not precede epoch" }
     }
-    /** No activation capability exists until enforcement/release validation is implemented. */
-    val enforcementEnabled: Boolean get() = false
 }
 
 data class LoadedResourceWorld(val id: WorldId, val uuid: UUID, val minHeight: Int, val maxHeightExclusive: Int)

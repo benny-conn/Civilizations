@@ -407,3 +407,19 @@ or Paper access, and land-protection-only refreshes preserve this index. This do
 change claim ownership or gameplay authorization. See [world-manifests.md](world-manifests.md)
 for the input contract and safety limits. Animal event/recovery experiments and all
 scarcity enforcement remain separate slices.
+
+## Cane enforcement (S2a)
+
+Schema 13 stores one immutable server-wide `CaneActivation` with season, maximum column
+height (1–3), actor/reason and timestamp. `CaneActivationService` requires active SETUP,
+registered cane zones and matching loaded-world observations. Activation freezes further
+manifest/zone insertion for its season. It is independent of subsequent active-season
+selection and cannot silently turn off on archival/restart. An audited reset/release
+lifecycle is future work; this bounded experiment does not claim a complete supply audit.
+
+`CaneGrowthPolicy` reads the existing index for the activated season and checks an entire
+column against one zone. Ready snapshots recover both the activation and index. The Paper
+listener cancels unauthorized creation using bounded loaded-chunk reads, never SQL, and
+never grants a claim permission or rewrites a block. Existing harvest, piston destruction,
+and transportation remain ordinary gameplay. See [cane-policy.md](cane-policy.md) for
+exact scope, authoring controls, failure behavior and verified routes.

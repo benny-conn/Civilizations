@@ -120,6 +120,8 @@ class JdbcCivilizationsRepository(
 private open class JdbcReadContext(
     protected val connection: Connection,
 ) : CivilizationsReadContext {
+    override fun findCaneActivation() = JdbcCaneActivation(connection).find()
+
     override fun listWorldManifests() = JdbcWorldManifests(connection).list()
 
     override fun findActiveSeasonId(): SeasonId? = queryOne(
@@ -1246,6 +1248,8 @@ private open class JdbcReadContext(
 private class JdbcWriteContext(
     connection: Connection,
 ) : JdbcReadContext(connection), CivilizationsWriteContext {
+    override fun insertCaneActivation(record: io.bennyc.civilizations.application.scarcity.CaneActivation) = JdbcCaneActivation(connection).insert(record)
+
     override fun insertWorldManifest(record: io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest) {
         JdbcWorldManifests(connection).insert(record)
     }

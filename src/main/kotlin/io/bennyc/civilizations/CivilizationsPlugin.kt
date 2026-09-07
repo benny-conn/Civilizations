@@ -13,6 +13,7 @@ import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleEntryListener
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleCombatListener
 import io.bennyc.civilizations.infrastructure.paper.war.PaperBattleResolutionCoordinator
 import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntime
+import io.bennyc.civilizations.infrastructure.runtime.CivilizationsRuntimeState
 import io.bennyc.civilizations.infrastructure.runtime.RuntimeStartOutcome
 import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
@@ -107,6 +108,11 @@ class CivilizationsPlugin : JavaPlugin() {
         )
         server.pluginManager.registerEvents(repairMenu, this)
 
+        server.pluginManager.registerEvents(
+            io.bennyc.civilizations.infrastructure.paper.scarcity.PaperCaneListener {
+                (runtime.state as? CivilizationsRuntimeState.Ready)?.canePolicy
+            }, this,
+        )
         registerCommand("civworld", "Register and inspect scarcity world manifests", emptyList(),
             io.bennyc.civilizations.infrastructure.paper.scarcity.CivilizationsWorldCommand(runtime, dataFolder.toPath().resolve("manifests")))
         registerCommand(

@@ -2,7 +2,7 @@
 
 Research date: 2026-09-07. Baseline: `9a43165`, Paper 26.2 build 121.
 
-Status: **prototype authored; S1 world/zone registration implemented and verified; enforcement pending**.
+Status: **prototype authored; S1 registration and opt-in S2a cane policy implemented and verified**.
 This develops [server-design.md](server-design.md#regional-scarcity-and-strategic-infrastructure)
 and the [scarcity backlog](../TODO.md#scarcity-and-specialization). Gameplay numbers below
 remain proposals. See the dated handoff below for actual progress and user decisions.
@@ -21,7 +21,8 @@ artifacts and next work; do not wait until the entire slice is finished.
 | S0 managed-animal mechanics experiment | Not started | Birth/death event ordering, cancellation effects and crash windows remain unverified. Do not mark all of S0 complete. |
 | 2,048-square authored prototype | Export complete; user accepted overview | All 16,384 chunks verified offline; three settlement spawn columns have solid grass and two air blocks. User explicitly declined a further playtest. Not imported or verified on Paper; acceptance of appearance is not runtime verification. |
 | S1 world manifest / resource zones | Complete (registration scope) | Schema 12, validated immutable YAML imports, memory index and admin inspection; 165 tests and isolated Paper import/restart passed. Enforcement/activation intentionally absent. |
-| S2–S6 | Not started | No crop/portal enforcement, registered herds, finite deposits, supply audit or season release. |
+| S2a sugar-cane policy | Complete; Desktop not activated | Schema 13 explicit activation, frozen geography and bounded creation checks. 173 tests and Paper growth/harvest/restart passed. |
+| S2b / S3–S6 | Not started | No portal enforcement, registered herds, finite deposits, supply audit or season release. |
 | Proximity text chat | Explicitly deferred | Recorded in worktree roadmap; ordinary text chat retains existing behavior. |
 
 ### S1 implementation progress
@@ -63,6 +64,41 @@ artifacts and next work; do not wait until the entire slice is finished.
   against current `origin/main` (already current), fast-forwarded into main and pushed.
   No additional migration or Paper changes followed verification. This handoff update
   records the completed integration; no S1 implementation work remains.
+
+### S2a implementation progress
+
+- Started on `benny/scarcity-cane` from pushed main `ccf50af` in the isolated
+  `civilizations-s2a` worktree. Desktop server remains off.
+- Policy/storage step implemented and verified: explicit one-time server-wide cane
+  experiment activation in active SETUP, SQL audit and max height (1–3) snapshot, frozen
+  season manifests, exact single-zone column policy, migration 13 and runtime publication.
+  Registration alone remains inert. Policy persists across season/phase selection so
+  switching seasons cannot open an unrestricted dimension. Reset/deactivation is deferred
+  to an audited lifecycle; this is a crop experiment, not a full supply-audited release.
+- Paper/admin step implemented: growth, placement, fertilization batch, spread/form and
+  entity placement callbacks cancel unauthorized cane creation without granting any claim
+  bypass. Column checks read only a loaded chunk and six vertical neighbors at most.
+  `/civworld enable-cane <height> <reason>` and `cane-status` expose durable activation.
+- `./gradlew clean build` passed all 173 tests, including migration 12→13, recovery,
+  inactive-season bypass prevention, full-column geometry and Paper adapter cases.
+  Isolated build-121 fixture prepared on loopback 25577 for actual growth/harvest checks.
+- Real-Paper step passed: native cane random ticks grow inside zones and deny outside;
+  explicit height-2 activation prevents a third block; fertilization batches and an
+  unregistered-dimension event reject. Vanilla bonemeal did not grow cane. Powered piston
+  harvesting left the root, and ordinary breaking worked. A fixture assertion initially
+  expected AIR where the piston head replaces harvested cane; the corrected fixture also
+  supplies supported sand and ticking chunks. No production piston restriction was added.
+- Restart and season-selection checks passed with the same SQL audit timestamp and height,
+  including actual growth/harvest checks after selecting another active season. Conflicting
+  activation rejects and identical retry after PEACE preserves history. SQL integrity and
+  foreign keys are clean. Final fixture log contains no ERROR; expected missing-Vault
+  warning applies to this Civilizations-plus-test-probe fixture.
+- Operator contract added in `docs/cane-policy.md`; existing manifest, architecture and
+  backlog docs updated. Local evidence: `civilizations-s2a/server/verification/`, especially
+  `cane-restart-and-harvest.log` and `probe-src/CaneProbe.java`. The probe is an ignored test
+  artifact, never part of the shipped plugin. Placement was adapter-tested, not client-tested.
+- Isolated server stopped; Desktop server, plugin JAR and WorldPainter maps unchanged.
+  Remaining delivery step: rebase, merge and push this completed slice.
 
 ### Local artifacts and running environment
 
@@ -112,15 +148,18 @@ backup/recovery proposal below is not a requirement to back up this current test
 
 ### Next agent's coding starting point
 
-S1 registration is implemented; start from [the manifest contract](world-manifests.md)
-and current main. The recommended next bounded slice is **S2a sugar-cane growth policy**:
-choose explicit authorized growth heights/footprints and activation/release rules, then
-implement immutable policy inputs, memory-only Paper checks, denial diagnostics, and
-accepted/rejected growth tests. Address bonemeal, planting, pistons, harvesting/replanting,
-and unauthorized dimensions deliberately; registration alone must not switch rules on.
-Portal-site linking/creation is a separate S2b slice because the present manifest does not
-model paired portal sites. Animal lifecycle work remains blocked on the unfinished S0
-birth/death/crash experiment. No managed herds or finite deposits have been implemented.
+S1 registration and S2a cane policy are complete; read [the manifest contract](world-manifests.md)
+and [cane activation contract](cane-policy.md). The next bounded feature is **S2b registered
+portal sites**: define immutable site pairs, complete portal geometry, same-season world
+identity and target validation, creation/travel restrictions (including already-existing
+portals and entities), denial diagnostics and audited recovery. Do not infer portal sites
+from cane zones; the manifest has no paired-site model yet. Define how ordinary/admin travel
+interacts with the policy before enabling it, and test actual Paper event ordering.
+
+Animal lifecycle work remains blocked on the unfinished S0 birth/death/crash experiment.
+No managed herds, finite deposits or full supply audit have been implemented. Cane
+activation is an explicit server-wide experiment, defaults OFF, and has only been enabled
+in the isolated S2a fixture. Do not silently activate it on the Desktop server.
 
 The accepted 2048 export remains offline and unregistered. Before a later integrated test,
 load it, obtain its actual UUID, choose exact 3D boxes from the proposed JSON, and register
@@ -349,7 +388,7 @@ existing government/economy product sequence.
 | --- | --- | --- |
 | S0 — compatibility and mechanics spike | Operations; no production policy. Test WorldPainter export and the managed birth/death event sequence on a separate 26.2 fixture. | Small world survives restart; documented event ordering, cancellation side effects and crash windows; go/no-go for chosen tools. |
 | S1 — world manifest and zones | Complete as registration only; foundational work separated from the unfinished animal spike. Application values, SQL import, spatial index and admin validation/status. Activation deferred until enforceable release policy exists. | Invalid/overlapping zones and mismatched worlds reject; snapshot recovery, randomized geometry tests, Paper import/restart pass. |
-| S2 — crop and portal enforcement | Paper lane, after S1. Read-only hot-path policy and clear denial messages. | Allowed/denied growth and paired travel work with non-operators; existing portals, automation and restarts cannot bypass rules. |
+| S2 — crop and portal enforcement | S2a cane complete with schema 13; S2b portal pairs pending in serialized durable/Paper lanes. | Cane growth/harvest/restart verified; paired travel, existing portals and entity travel still require implementation and tests. |
 | S3 — managed cattle lifecycle | Durable lane then Paper lane, after S0/S1. Seeding, birth reservations, maturity, deaths, reconciliation and staff diagnostics. | Duplicate events and crashes at each boundary cannot create a second authorized animal; unload is never mistaken for death; ambiguity is visible and contained. |
 | S4 — extraction and repair boundary | Serialized durable/Paper changes as necessary, after S1. Ore preparation, loot/trade decisions, resource exclusions and diagnostics. | No unauthorized new supply in the release audit; adversarial harvest → battle/exposure repair → harvest fails to multiply selected resources. |
 | S5 — integrated resource playtest | After S2–S4. 2,048-square map, three civilizations, three resource types and registered portals. | At least two meaningful resource exchanges, successful herd relocation and reproduction, visible depletion, and no permanent basic-food lockout. |

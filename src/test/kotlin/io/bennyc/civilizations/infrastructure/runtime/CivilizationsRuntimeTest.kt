@@ -69,7 +69,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(12, started.migration.currentVersion)
+            assertEquals(13, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -542,7 +542,7 @@ class CivilizationsRuntimeTest {
             val season = runtime.submitAwait { seasons.create("Scarcity") }.awaitCompleted().appliedValue()
             val bounds = io.bennyc.civilizations.application.scarcity.ResourceBounds(-16, -64, -16, 16, 319, 16)
             val zone = io.bennyc.civilizations.application.scarcity.ResourceZone("diamond",
-                io.bennyc.civilizations.application.scarcity.ResourceKind.DIAMOND, bounds)
+                io.bennyc.civilizations.application.scarcity.ResourceKind.SUGAR_CANE, bounds)
             val manifest = io.bennyc.civilizations.application.scarcity.WorldManifest(
                 java.util.UUID(0, 123), season.id, WorldId("minecraft:scarcity"), java.util.UUID(0, 456), 1,
                 "a".repeat(64), bounds, listOf(zone))
@@ -554,9 +554,16 @@ class CivilizationsRuntimeTest {
                 assertTrue(state.worldManifests.single().manifest.sameDefinition(manifest))
             }
             check(assertIs<CivilizationsRuntimeState.Ready>(runtime.state))
+            runtime.submitAwait { caneActivation.enable(season.id, 3, "console", "recovery test",
+                listOf(io.bennyc.civilizations.application.scarcity.LoadedResourceWorld(manifest.worldId, manifest.worldUuid, -64, 320)))
+            }.awaitCompleted().appliedValue()
             runtime.close()
             val restarted = database.runtime()
-            check(restarted.startAwait().state)
+            val recovered = restarted.startAwait().state
+            check(recovered)
+            assertEquals(3, recovered.caneActivation?.maxHeight)
+            assertTrue(recovered.canePolicy.permits(manifest.worldId, manifest.worldUuid, 0, 0, 0, 2))
+            assertEquals(false, recovered.canePolicy.permits(manifest.worldId, manifest.worldUuid, 0, 0, 0, 3))
             restarted.close()
         }
     }

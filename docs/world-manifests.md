@@ -1,8 +1,8 @@
 # World manifests (S1)
 
-S1 registers immutable resource geography. It does **not** alter mining, spawning, breeding,
-crop growth, portals, borders, world generation, or claims. Enforcement is always OFF;
-there is no activation command or configuration switch in this slice.
+S1 registers immutable resource geography. Import alone does not alter gameplay. S2a adds
+an explicit, audited cane activation workflow: see [cane-policy.md](cane-policy.md).
+Diamond/cattle/portal enforcement remains unimplemented.
 
 ## Operator workflow
 
@@ -20,12 +20,12 @@ there is no activation command or configuration switch in this slice.
 6. Restart and inspect again. YAML is never read at startup or automatically reloaded;
    accepted SQL records recover even if the authoring file is moved or deleted.
 
-New registration requires SETUP. A byte-identical repeat returns the original record,
+New registration requires SETUP and is frozen for a season after cane activation. A byte-identical repeat returns the original record,
 including actor/time, even after a phase change. Changed bytes under the same manifest ID
 are rejected (including comments/formatting, because the source SHA256 changes). A world
 key or UUID cannot be rebound under another manifest/season. Revision is a positive
-provenance label, not an update mechanism. Replacement, season reuse, and activation need
-an explicit audited lifecycle in a later slice. Do not edit SQL to bypass this boundary.
+provenance label, not an update mechanism. Replacement and season reuse need
+an explicit audited lifecycle in a later slice; cane activation is described separately. Do not edit SQL to bypass this boundary.
 An unloaded/replaced world is reported by inspection; index lookup also requires its UUID.
 Loaded identity is captured on the server thread when an import is submitted.
 
