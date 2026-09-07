@@ -66,6 +66,8 @@ interface CivilizationsRepository {
 }
 
 interface CivilizationsReadContext {
+    fun listWorldManifests(): List<io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest>
+
     fun findActiveSeasonId(): SeasonId?
 
     fun findSeason(id: SeasonId): Season?
@@ -263,6 +265,8 @@ interface CivilizationsReadContext {
 }
 
 interface CivilizationsWriteContext : CivilizationsReadContext {
+    fun insertWorldManifest(record: io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest)
+
     fun setActiveSeasonId(seasonId: SeasonId?)
 
     fun insertSeason(season: Season)

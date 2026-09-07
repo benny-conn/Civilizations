@@ -107,6 +107,8 @@ class CivilizationsPlugin : JavaPlugin() {
         )
         server.pluginManager.registerEvents(repairMenu, this)
 
+        registerCommand("civworld", "Register and inspect scarcity world manifests", emptyList(),
+            io.bennyc.civilizations.infrastructure.paper.scarcity.CivilizationsWorldCommand(runtime, dataFolder.toPath().resolve("manifests")))
         registerCommand(
             "civadmin",
             "Administer Civilizations",

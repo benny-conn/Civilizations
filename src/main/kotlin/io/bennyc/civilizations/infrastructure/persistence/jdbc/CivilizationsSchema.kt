@@ -2661,5 +2661,6 @@ object CivilizationsSchema {
                 """.trimIndent(),
             ),
         ),
+        ScarcitySchema.migration,
     )
 }

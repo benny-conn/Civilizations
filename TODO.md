@@ -272,6 +272,7 @@ See [the researched world/scarcity proposal](docs/scarcity-world-plan.md) for to
 the proposed three-resource experiment, and staged acceptance gates. The items below
 remain unimplemented; proposed balancing values are not approved defaults.
 
+- [x] **S1: register immutable season worlds and resource zones.** Schema 12, strict YAML import, identity checks, memory index and admin commands; [contract](docs/world-manifests.md). Enforcement remains off; isolated Paper import/restart and automated tests passed.
 - [ ] **[P2][L] Design regional scarcity as a policy system, not a world-wide entity scan.** Choose a small number of strategically meaningful resources with multiple geographically restricted sources for the first experiment. Initial candidates include livestock habitats, ore deposits, special crops, villager access, and registered Nether portal sites.
 - [ ] **[P2][XL] Add finite strategic-species registries and spawning rules.** Seed selected passive species once, deny later ordinary natural spawns, persist births/deaths and wall-clock juvenile maturity, enforce slow habitat-aware breeding cooldowns, optionally disable villager breeding, handle chunks/restarts, and expose population/extinction diagnostics without a world-wide scan.
 - [ ] **[P2][L] Add anti-bypass rules for eggs, spawn eggs, breeding, curing, transformations, wandering traders, alternate dimensions, loot tables, generated structures, and later-generated chunks only as each scarce resource requires.**

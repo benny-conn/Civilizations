@@ -69,7 +69,7 @@ class CivilizationsRuntimeTest {
         RuntimeDatabase().use { database ->
             val runtime = database.runtime()
             val started = runtime.startAwait()
-            assertEquals(11, started.migration.currentVersion)
+            assertEquals(12, started.migration.currentVersion)
             assertEquals(null, started.state.activeSeason)
 
             val seasonFuture = runtime.submitAwait {
@@ -531,6 +531,33 @@ class CivilizationsRuntimeTest {
             assertIs<RuntimeMutationOutcome.NotReady>(outcome)
             assertEquals(null, runtime.startAwait().state.activeSeason)
             runtime.close()
+        }
+    }
+
+    @Test
+    fun `world manifest index publishes and recovers independently of active season`() {
+        RuntimeDatabase().use { database ->
+            val runtime = database.runtime()
+            runtime.startAwait()
+            val season = runtime.submitAwait { seasons.create("Scarcity") }.awaitCompleted().appliedValue()
+            val bounds = io.bennyc.civilizations.application.scarcity.ResourceBounds(-16, -64, -16, 16, 319, 16)
+            val zone = io.bennyc.civilizations.application.scarcity.ResourceZone("diamond",
+                io.bennyc.civilizations.application.scarcity.ResourceKind.DIAMOND, bounds)
+            val manifest = io.bennyc.civilizations.application.scarcity.WorldManifest(
+                java.util.UUID(0, 123), season.id, WorldId("minecraft:scarcity"), java.util.UUID(0, 456), 1,
+                "a".repeat(64), bounds, listOf(zone))
+            runtime.submitAwait { worldManifests.register(manifest,
+                listOf(io.bennyc.civilizations.application.scarcity.LoadedResourceWorld(manifest.worldId, manifest.worldUuid, -64, 320)),
+                "console") }.awaitCompleted().appliedValue()
+            fun check(state: CivilizationsRuntimeState.Ready) {
+                assertEquals(listOf(zone), state.resourceZoneIndex.at(season.id, manifest.worldId, manifest.worldUuid, -16, 0, 16))
+                assertTrue(state.worldManifests.single().manifest.sameDefinition(manifest))
+            }
+            check(assertIs<CivilizationsRuntimeState.Ready>(runtime.state))
+            runtime.close()
+            val restarted = database.runtime()
+            check(restarted.startAwait().state)
+            restarted.close()
         }
     }
 

@@ -2,7 +2,7 @@
 
 Research date: 2026-09-07. Baseline: `9a43165`, Paper 26.2 build 121.
 
-Status: **map authoring complete for the prototype; scarcity code not started**.
+Status: **prototype authored; S1 world/zone registration implemented and verified; enforcement pending**.
 This develops [server-design.md](server-design.md#regional-scarcity-and-strategic-infrastructure)
 and the [scarcity backlog](../TODO.md#scarcity-and-specialization). Gameplay numbers below
 remain proposals. See the dated handoff below for actual progress and user decisions.
@@ -20,9 +20,46 @@ artifacts and next work; do not wait until the entire slice is finished.
 | S0 map compatibility sample | Map portion complete | WorldPainter exported all 1,024 chunks of a 512-square world. Multiverse imported it on Paper; spawn, mountain, water and cave block checks passed before/after restart; UUID and 512-block border persisted. User subsequently joined and proceeded to the larger map. |
 | S0 managed-animal mechanics experiment | Not started | Birth/death event ordering, cancellation effects and crash windows remain unverified. Do not mark all of S0 complete. |
 | 2,048-square authored prototype | Export complete; user accepted overview | All 16,384 chunks verified offline; three settlement spawn columns have solid grass and two air blocks. User explicitly declined a further playtest. Not imported or verified on Paper; acceptance of appearance is not runtime verification. |
-| S1 world manifest / resource zones | Recommended next code slice; not started | No scarcity schema, services, commands or activation controls exist yet. Latest user discussion identifies this as the next recommendation, not a completed implementation or instruction to start coding. |
+| S1 world manifest / resource zones | Complete (registration scope) | Schema 12, validated immutable YAML imports, memory index and admin inspection; 165 tests and isolated Paper import/restart passed. Enforcement/activation intentionally absent. |
 | S2–S6 | Not started | No crop/portal enforcement, registered herds, finite deposits, supply audit or season release. |
 | Proximity text chat | Explicitly deferred | Recorded in worktree roadmap; ordinary text chat retains existing behavior. |
+
+### S1 implementation progress
+
+- Scope selected: immutable world/zone registration and explicit YAML import; registration
+  never activates scarcity. Conflicting replacement/rebinding is rejected until a future
+  audited revision/release lifecycle exists. The YAML file is authoring input, SQL is
+  authoritative; loaded-world identity/build-height validation stays in the Paper adapter.
+- Model/storage step implemented: immutable typed bounds/zones, SHA256 provenance, world
+  binding, migration 12, repository access and runtime index publication.
+- Import/admin step implemented: `/civworld validate|import|list|inspect|here` with existing
+  admin permission, worker-owned bounded YAML reads, live identity capture on the server
+  thread, strict duplicate/unknown-key rejection, and source hash/audit inspection.
+- Focused model/service/parser/migration/recovery checks pass except an existing runtime
+  assertion still expecting schema 11; updated that expectation to 12. Full build and
+  isolated Paper import/restart checks are next.
+- Full `./gradlew clean build` passed, including randomized index comparisons and
+  migration-11 upgrade preservation. Isolated build-121 fixture prepared at this worktree's
+  ignored `server/`, loopback port 25576; Desktop server remains unchanged/off.
+- Worktree: `/Users/benjaminconn/workspace/minecraft/civilizations-s1`, branch
+  `benny/scarcity-world-zones`. Code and checks are complete; integration into main is pending. Desktop server stays off;
+  real-Paper checks use an isolated fixture for this slice.
+- Paper import step passed on 26.2 build 121: loaded-world discovery, dry-run leaving SQL
+  empty, two-zone import, identical retry, changed-source conflict, UUID mismatch, duplicate
+  YAML keys, traversal and new-registration-after-SETUP rejection. Inspection showed the
+  matching world, SHA256, actor and timestamp. First fixture boot had an empty flat-generator
+  settings error; explicit layers corrected the fixture and the next boot had no ERROR.
+  Missing Vault provider warning is expected in this one-plugin fixture.
+- Operator contract and architecture documentation added in `docs/world-manifests.md`.
+  Accepted YAML moved out of the import directory before the pending recovery check;
+  `server/verification/s1-import.log` preserves local command evidence.
+- Recovery step passed: clean build-121 restart with accepted YAML removed; manifest,
+  both zones, PEACE season, world UUID, SHA256 and original audit timestamp recovered.
+  SQLite integrity and foreign-key checks passed. `server/verification/s1-restart.log`
+  records recovery and clean shutdown; no ERROR lines. All 165 tests passed in the final
+  clean build. Isolated fixture is stopped; Desktop server/plugin/world remain unchanged.
+  Player `/civworld here` geometry is covered by automated index tests, not a client playtest.
+- Remaining delivery step: commit, rebase against latest main, merge and push.
 
 ### Local artifacts and running environment
 
@@ -72,20 +109,22 @@ backup/recovery proposal below is not a requirement to back up this current test
 
 ### Next agent's coding starting point
 
-Recommend a bounded S1 slice: season/world binding, validated application-owned resource
-zones and rule revision, durable import through the repository port, immutable spatial
-index, and admin inspection/validation. Leave scarcity off until explicitly activated.
-Choose the actual import contract rather than treating the proposed JSON as established.
-Reconcile the original S1-after-S0 dependency by keeping animal lifecycle implementation
-blocked on its unfinished experiment; foundational world/zone work can proceed separately
-once assigned. Sugar-cane growth is the recommended first enforcement feature after S1.
+S1 registration is implemented; start from [the manifest contract](world-manifests.md)
+and current main. The recommended next bounded slice is **S2a sugar-cane growth policy**:
+choose explicit authorized growth heights/footprints and activation/release rules, then
+implement immutable policy inputs, memory-only Paper checks, denial diagnostics, and
+accepted/rejected growth tests. Address bonemeal, planting, pistons, harvesting/replanting,
+and unauthorized dimensions deliberately; registration alone must not switch rules on.
+Portal-site linking/creation is a separate S2b slice because the present manifest does not
+model paired portal sites. Animal lifecycle work remains blocked on the unfinished S0
+birth/death/crash experiment. No managed herds or finite deposits have been implemented.
 
-Read AGENTS.md and the architecture/roadmap before coding. Use one slice per worktree,
-serialize SQL migrations and Paper lifecycle changes, allocate migrations from current
-main, and keep hot paths free of SQL. No scarcity code or new schema migration was made
-in this task. The documentation was developed on `benny/scarcity-world-plan`. The user requested
-merging this handoff into main and pushing it on 2026-09-07; inspect Git history for the
-latest progress entry when resuming.
+The accepted 2048 export remains offline and unregistered. Before a later integrated test,
+load it, obtain its actual UUID, choose exact 3D boxes from the proposed JSON, and register
+through the documented format. Do not treat marker locations as an audited resource supply.
+Read AGENTS.md and the architecture/roadmap, serialize migrations/runtime changes, and
+update this progress record after every step. User requested merge/push of completed work;
+inspect Git history for the latest integration entry.
 
 ## Recommendation
 
@@ -306,7 +345,7 @@ existing government/economy product sequence.
 | Slice | Scope and dependencies | Required result |
 | --- | --- | --- |
 | S0 — compatibility and mechanics spike | Operations; no production policy. Test WorldPainter export and the managed birth/death event sequence on a separate 26.2 fixture. | Small world survives restart; documented event ordering, cancellation side effects and crash windows; go/no-go for chosen tools. |
-| S1 — world manifest and zones | Durable lane, after S0. Application rules, SQL import/activation, spatial index and admin validation/status. | Invalid/overlapping zones and mismatched worlds reject; snapshot recovery and randomized geometry tests pass. |
+| S1 — world manifest and zones | Complete as registration only; foundational work separated from the unfinished animal spike. Application values, SQL import, spatial index and admin validation/status. Activation deferred until enforceable release policy exists. | Invalid/overlapping zones and mismatched worlds reject; snapshot recovery, randomized geometry tests, Paper import/restart pass. |
 | S2 — crop and portal enforcement | Paper lane, after S1. Read-only hot-path policy and clear denial messages. | Allowed/denied growth and paired travel work with non-operators; existing portals, automation and restarts cannot bypass rules. |
 | S3 — managed cattle lifecycle | Durable lane then Paper lane, after S0/S1. Seeding, birth reservations, maturity, deaths, reconciliation and staff diagnostics. | Duplicate events and crashes at each boundary cannot create a second authorized animal; unload is never mistaken for death; ambiguity is visible and contained. |
 | S4 — extraction and repair boundary | Serialized durable/Paper changes as necessary, after S1. Ore preparation, loot/trade decisions, resource exclusions and diagnostics. | No unauthorized new supply in the release audit; adversarial harvest → battle/exposure repair → harvest fails to multiply selected resources. |

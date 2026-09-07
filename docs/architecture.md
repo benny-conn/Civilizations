@@ -389,3 +389,21 @@ The architecture rework has no remaining slice. Net-new MVP work is split into a
 The 2026 architecture cleanup permanently removed the Foundation lifecycle, command framework, settings/localization framework, menus/conversations, legacy Vault hooks, unrestricted JitPack repository use, coroutine helper, global managers, Towny/Factions adapters, mutable legacy civilization/claim/raid graph, JSON-blob datastore, and all legacy tasks/listeners/commands. A2 later introduced the deliberately narrow, compile-only Vault player-wallet adapter and group-restricted VaultAPI repository described above; it does not restore the legacy economy architecture. `CivilizationsPlugin` is a native `JavaPlugin`; `/civadmin` and `/civ` are native Paper `BasicCommand` adapters; configuration uses Bukkit's configuration API at the Paper boundary; user-facing components use Adventure.
 
 An architecture regression test scans all production sources and the build file for retired framework imports/dependencies. Reusing an old behavior means designing it against the current domain/services and persistence ports, not copying the deleted implementation back into production.
+
+## Scarcity world registration (S1)
+
+`WorldManifestService` owns immutable season/world registration through the repository
+port. Migration 12 records bounds, resource zones, world key/UUID, authoring revision,
+source SHA256, actor and import time. New bindings require SETUP; conflicting IDs and
+world reassignment reject until a later audited lifecycle exists. Registration cannot
+activate enforcement. WorldPainter authoring files are external artifacts, not durable
+runtime state.
+
+`WorldManifestYaml` parses explicit bounded imports on the storage worker; the Paper
+command captures loaded-world identity/build heights on the server thread and passes
+immutable values inward. Ready snapshots publish a bounded `ResourceZoneIndex` keyed by
+season, world key/UUID and chunk with exact 3D filtering. Index lookup performs no SQL
+or Paper access, and land-protection-only refreshes preserve this index. This does not
+change claim ownership or gameplay authorization. See [world-manifests.md](world-manifests.md)
+for the input contract and safety limits. Animal event/recovery experiments and all
+scarcity enforcement remain separate slices.

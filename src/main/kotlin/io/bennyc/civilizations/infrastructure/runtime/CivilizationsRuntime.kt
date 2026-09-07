@@ -1,5 +1,9 @@
 package io.bennyc.civilizations.infrastructure.runtime
 
+import io.bennyc.civilizations.application.scarcity.WorldManifestService
+import io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest
+import io.bennyc.civilizations.application.scarcity.ResourceZoneIndex
+
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.civilization.CivilizationService
 import io.bennyc.civilizations.application.claim.ClaimRules
@@ -98,6 +102,7 @@ class CivilizationsRuntime private constructor(
     private val mutationScope = RuntimeMutationScope(
         repository = repository,
         seasons = SeasonService(repository, idGenerator, clock),
+        worldManifests = WorldManifestService(repository, clock),
         civilizations = CivilizationService(repository, idGenerator, clock, phaseRules),
         claims = ClaimService(repository, idGenerator, claimRules, phaseRules, clock),
         wars = WarService(repository, idGenerator, clock, economyRules.battleCasualties),
@@ -277,8 +282,8 @@ class CivilizationsRuntime private constructor(
                         if (ready == null || active == null) {
                             completion(RuntimeMutationOutcome.NotReady(state))
                         } else {
-                            val refreshed = CivilizationsRuntimeState.Ready(
-                                active.copy(landProtectionStates = states),
+                            val refreshed = ready.copy(
+                                activeSeason = active.copy(landProtectionStates = states),
                             )
                             state = refreshed
                             completion(RuntimeMutationOutcome.Completed(result, refreshed))
@@ -394,6 +399,7 @@ class CivilizationsRuntime private constructor(
     }
 
     private fun loadReadyState(): CivilizationsRuntimeState.Ready {
+        val worldManifests = java.util.List.copyOf(repository.read { listWorldManifests() })
         repository.read { findActiveSeasonId() }?.let { activeSeasonId ->
             mutationScope.combat.recoverExpiredBattles(activeSeasonId)
             when (val economy = mutationScope.economy.ensureSeasonAccounts(activeSeasonId)) {
@@ -459,7 +465,7 @@ class CivilizationsRuntime private constructor(
         }
 
         return when (loaded) {
-            LoadedActiveSeason.None -> CivilizationsRuntimeState.Ready(activeSeason = null)
+            LoadedActiveSeason.None -> CivilizationsRuntimeState.Ready(activeSeason = null, worldManifests = worldManifests)
             is LoadedActiveSeason.Present -> {
                 validate(loaded)
                 val index = ClaimSpatialIndex(loaded.season.id, loaded.claims)
@@ -472,6 +478,7 @@ class CivilizationsRuntime private constructor(
                     phaseRules = phaseRules,
                 )
                 CivilizationsRuntimeState.Ready(
+                    worldManifests = worldManifests,
                     activeSeason = ActiveSeasonRuntimeState(
                         season = loaded.season,
                         civilizations = loaded.civilizations,
@@ -930,6 +937,7 @@ class CivilizationsRuntime private constructor(
 class RuntimeMutationScope internal constructor(
     val repository: CivilizationsRepository,
     val seasons: SeasonService,
+    val worldManifests: WorldManifestService,
     val civilizations: CivilizationService,
     val claims: ClaimService,
     val wars: WarService,
@@ -978,6 +986,8 @@ sealed interface CivilizationsRuntimeState {
 
     data class Ready(
         val activeSeason: ActiveSeasonRuntimeState?,
+        val worldManifests: List<RegisteredWorldManifest> = emptyList(),
+        val resourceZoneIndex: ResourceZoneIndex = ResourceZoneIndex(worldManifests),
     ) : CivilizationsRuntimeState
 
     data class Failed(

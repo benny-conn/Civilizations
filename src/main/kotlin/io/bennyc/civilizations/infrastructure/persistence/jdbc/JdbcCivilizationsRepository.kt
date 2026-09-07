@@ -120,6 +120,8 @@ class JdbcCivilizationsRepository(
 private open class JdbcReadContext(
     protected val connection: Connection,
 ) : CivilizationsReadContext {
+    override fun listWorldManifests() = JdbcWorldManifests(connection).list()
+
     override fun findActiveSeasonId(): SeasonId? = queryOne(
         sql = "SELECT active_season_id FROM runtime_state WHERE singleton_id = 1",
         map = {
@@ -1244,6 +1246,10 @@ private open class JdbcReadContext(
 private class JdbcWriteContext(
     connection: Connection,
 ) : JdbcReadContext(connection), CivilizationsWriteContext {
+    override fun insertWorldManifest(record: io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest) {
+        JdbcWorldManifests(connection).insert(record)
+    }
+
     override fun setActiveSeasonId(seasonId: SeasonId?) {
         val updated = executeUpdate(
             sql = "UPDATE runtime_state SET active_season_id = ? WHERE singleton_id = 1",

@@ -144,6 +144,10 @@ Claim size/count/prices/group tiers, land upkeep/reserve/grace/exposure, safe ga
 
 Operators have the explicit `civilizations.admin.bypass` permission. Ordinary members may mutate their own claims; outsiders cannot build, break, use containers/switches, move fluids or pistons across a border, damage protected entities, or PVP inside claimed land. Movement and teleportation are not blocked by land ownership, but a horizontal block transition or teleport into a hostile claim can start an eligible declared battle. Entry candidates are resolved from published memory and coalesced behind a bounded queue before durable work runs off-thread.
 
+S1 adds `/civworld worlds|validate|import|list|inspect|here` for immutable season/world
+resource-zone registration (schema 12). Scarcity enforcement remains OFF. See the
+[manifest format and operator workflow](docs/world-manifests.md).
+
 ## Local test server
 
 The repository includes a reproducible development server workflow. Server binaries, worlds, logs, plugin data, and configuration live in the ignored `server/` directory at the repository root.
