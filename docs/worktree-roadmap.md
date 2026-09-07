@@ -68,6 +68,10 @@ No product decision currently blocks the completed E1 slice. Civilization-scoped
 
 ## Later parallel tracks
 
+[Scarcity and season-world planning](scarcity-world-plan.md) contains a proposed S0–S6
+sequence, starting with an isolated generation and entity-lifecycle compatibility spike.
+It is a researched proposal, not a new active merge queue or a change to product priority.
+
 After the MVP loop is complete, separate worktrees can take player-facing roster/claim UX, season reset/history, scarcity experiments, assassination, or occupation. Assassination must be its own persisted conflict context with targeted PVP eligibility and atomic succession; it is not a special case hidden inside ordinary claim protection.
 Teammate-locked post-elimination viewing may be added as a separate bounded Paper UX slice
 after playtesting; unrestricted spectator free-camera remains disallowed.

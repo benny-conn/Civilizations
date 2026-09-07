@@ -131,6 +131,10 @@ exploration notebook, not an implementation contract.
 
 ## Regional scarcity and strategic infrastructure
 
+The [researched implementation proposal](scarcity-world-plan.md) compares generation
+tools, proposes a small resource prototype, and defines compatibility and recovery gates.
+Its staging values are recommendations, not finalized season rules.
+
 Regional resource asymmetry is part of the intended season design, not merely a future
 novelty. The first real season should use a finite authored or configured world in which a
 small number of strategically meaningful resources have geographically restricted
