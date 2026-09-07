@@ -42,7 +42,7 @@ artifacts and next work; do not wait until the entire slice is finished.
   migration-11 upgrade preservation. Isolated build-121 fixture prepared at this worktree's
   ignored `server/`, loopback port 25576; Desktop server remains unchanged/off.
 - Worktree: `/Users/benjaminconn/workspace/minecraft/civilizations-s1`, branch
-  `benny/scarcity-world-zones`. Code and checks are complete; integration into main is pending. Desktop server stays off;
+  `benny/scarcity-world-zones`. Code and checks are complete; integrated into main. Desktop server stays off;
   real-Paper checks use an isolated fixture for this slice.
 - Paper import step passed on 26.2 build 121: loaded-world discovery, dry-run leaving SQL
   empty, two-zone import, identical retry, changed-source conflict, UUID mismatch, duplicate
@@ -59,7 +59,10 @@ artifacts and next work; do not wait until the entire slice is finished.
   records recovery and clean shutdown; no ERROR lines. All 165 tests passed in the final
   clean build. Isolated fixture is stopped; Desktop server/plugin/world remain unchanged.
   Player `/civworld here` geometry is covered by automated index tests, not a client playtest.
-- Remaining delivery step: commit, rebase against latest main, merge and push.
+- Delivery complete: feature commit `2bd6a0b` on `benny/scarcity-world-zones`, rebased
+  against current `origin/main` (already current), fast-forwarded into main and pushed.
+  No additional migration or Paper changes followed verification. This handoff update
+  records the completed integration; no S1 implementation work remains.
 
 ### Local artifacts and running environment
 
