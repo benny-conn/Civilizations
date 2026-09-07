@@ -18,7 +18,7 @@ artifacts and next work; do not wait until the entire slice is finished.
 | Desktop Paper environment | Complete, currently stopped by user request | Paper 26.2 build 121 / Java 25; 18 plugins enabled on last boot. Do not restart merely to inspect progress. |
 | WorldPainter installation | Complete | Official 2.27.1 portable Mac app installed at `/Applications/WorldPainter.app`; publisher archive SHA256 verified. Gatekeeper remains enabled. |
 | S0 map compatibility sample | Map portion complete | WorldPainter exported all 1,024 chunks of a 512-square world. Multiverse imported it on Paper; spawn, mountain, water and cave block checks passed before/after restart; UUID and 512-block border persisted. User subsequently joined and proceeded to the larger map. |
-| S0 managed-animal mechanics experiment | Not started | Birth/death event ordering, cancellation effects and crash windows remain unverified. Do not mark all of S0 complete. |
+| S0 managed-animal mechanics experiment | Complete | Native feeding/breeding/death, unload/reload, restart and hard-halt checkpoints verified on Paper 26.2-121. [Findings and S3 contract](animal-mechanics-spike.md); no production animal registry yet. |
 | 2,048-square authored prototype | Export complete; user accepted overview | All 16,384 chunks verified offline; three settlement spawn columns have solid grass and two air blocks. User explicitly declined a further playtest. Not imported or verified on Paper; acceptance of appearance is not runtime verification. |
 | S1 world manifest / resource zones | Complete (registration scope) | Schema 12, validated immutable YAML imports, memory index and admin inspection; 165 tests and isolated Paper import/restart passed. Enforcement/activation intentionally absent. |
 | S2a sugar-cane policy | Complete; Desktop not activated | Schema 13 explicit activation, frozen geography and bounded creation checks. 173 tests and Paper growth/harvest/restart passed. |
@@ -195,16 +195,36 @@ User instructions: keep the server off for now; no backups needed for this dispo
 playground; larger-map playtest declined; defer proximity chat. The later season-release
 backup/recovery proposal below is not a requirement to back up this current test work.
 
+### S0 animal experiment progress
+
+- Native AI breeding reached the event with an unspawned child. Cancellation reset both
+  love timers without applying the vanilla cooldown; acceptance applied the cooldown.
+- Lethal damage cancellation revived the cow at the requested health; later completion
+  produced a second death callback. The initial XP counter counted repeated notifications;
+  the probe now deduplicates by orb UUID before assessing emitted rewards.
+- Reproducible disposable-only harness is in `experiments/animals`; native feeding and clean restart checks passed. Two native feed interactions consumed
+  two wheat; cancelling the subsequent birth did not refund them. Cancelled death emitted
+  no rewards; completion emitted exactly one diamond and seven XP by unique entity ID.
+  Abrupt shutdown checks passed: unsaved removal recovered the old animal, durable intent
+  survived before mutation, and a flushed child survived before operation acknowledgment. Desktop server remains untouched and off.
+
+- Final verification: `./gradlew clean build` passed (182 tests, zero failures); probe
+  compiled with Java 25. Fixture stopped. No production changes or migrations. Detailed
+  [report](animal-mechanics-spike.md) and checked-in observation excerpts preserve pickup
+  evidence. S3 is now the next item; integration pending below.
+
 ### Next agent's coding starting point
 
 S1 registration, S2a cane and S2b fixed portal pairs are implemented. Read the
 [manifest contract](world-manifests.md), [cane contract](cane-policy.md), and
-[portal setup](portal-sites.md). The next step is the unfinished **S0 managed-animal
-mechanics experiment**, which is required before S3: verify actual Paper birth/death event
-ordering, cancellation effects on parents/food/XP/drops, unload/reload identity, and
-restart/crash windows. Use an isolated fixture and record observed behavior before
-implementing persistent managed herds. A missing entity in an unloaded chunk is not proof
-of death. No population registry, finite-deposit enforcement or full supply audit exists.
+[portal setup](portal-sites.md). S0 mechanics is complete; read the
+[animal experiment and implementation contract](animal-mechanics-spike.md). Next is **S3
+managed cattle lifecycle**: start with application-owned identities, durable parent/birth
+reservations, maturity/cooldown snapshots, death intents/tombstones and reconciliation
+states; then add the Paper adapter and crash-injection tests against the actual SQL path.
+The spike's fixture checkpoints are not a tested production registry. Do not replay
+ambiguous births or rewards. A missing unloaded entity is not dead. No population registry,
+finite-deposit enforcement or full supply audit exists.
 
 User preference: rectangular geometry is enough; irregular zones may come later. Do not
 add draft editing, revisions or visible boundary previews. Keep configuration/setup direct.
@@ -436,16 +456,16 @@ existing government/economy product sequence.
 | Slice | Scope and dependencies | Required result |
 | --- | --- | --- |
 | S0 — compatibility and mechanics spike | Operations; no production policy. Test WorldPainter export and the managed birth/death event sequence on a separate 26.2 fixture. | Small world survives restart; documented event ordering, cancellation side effects and crash windows; go/no-go for chosen tools. |
-| S1 — world manifest and zones | Complete as registration only; foundational work separated from the unfinished animal spike. Application values, SQL import, spatial index and admin validation/status. Activation deferred until enforceable release policy exists. | Invalid/overlapping zones and mismatched worlds reject; snapshot recovery, randomized geometry tests, Paper import/restart pass. |
+| S1 — world manifest and zones | Complete as registration only; foundational work delivered before the now-completed animal spike. Application values, SQL import, spatial index and admin validation/status. Activation deferred until enforceable release policy exists. | Invalid/overlapping zones and mismatched worlds reject; snapshot recovery, randomized geometry tests, Paper import/restart pass. |
 | S2 — crop and portal enforcement | S2a cane (schema 13) and S2b fixed pairs (schema 14) implemented. | Cane growth/harvest and fixed two-way entity travel, unregistered/blocked cases and runtime recovery tested. Player portal routing is adapter-tested; no client playtest claimed. |
 | S3 — managed cattle lifecycle | Durable lane then Paper lane, after S0/S1. Seeding, birth reservations, maturity, deaths, reconciliation and staff diagnostics. | Duplicate events and crashes at each boundary cannot create a second authorized animal; unload is never mistaken for death; ambiguity is visible and contained. |
 | S4 — extraction and repair boundary | Serialized durable/Paper changes as necessary, after S1. Ore preparation, loot/trade decisions, resource exclusions and diagnostics. | No unauthorized new supply in the release audit; adversarial harvest → battle/exposure repair → harvest fails to multiply selected resources. |
 | S5 — integrated resource playtest | After S2–S4. 2,048-square map, three civilizations, three resource types and registered portals. | At least two meaningful resource exchanges, successful herd relocation and reproduction, visible depletion, and no permanent basic-food lockout. |
 | S6 — season release | After tuning and the existing first-season governance/economy prerequisites. Full map and supply manifest, backups, recovery drill, player guide. | Staff can restore world and SQL together, explain every restriction, and show all acceptance evidence. |
 
-S0 is the next concrete deliverable I recommend. It avoids spending weeks on a map or an
-animal registry before proving the two riskiest external boundaries. No production runtime
-dependency or world replacement is necessary to complete that spike.
+S0 is complete. S3 is the next concrete deliverable, using the observed mechanics and
+recovery requirements in the animal experiment report. No production animal rules were
+added by the spike.
 
 ## Playtest measurements and stop conditions
 

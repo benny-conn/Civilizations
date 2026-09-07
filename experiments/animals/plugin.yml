@@ -1,0 +1,8 @@
+name: AnimalProbe
+version: '1.0'
+main: AnimalProbe
+api-version: '26.2'
+depend: [Civilizations]
+commands:
+  animalprobe:
+    permission: civilizations.admin

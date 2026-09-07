@@ -442,3 +442,12 @@ released on completion/shutdown; pre-existing tickets are preserved. No event pa
 SQL or generates a destination. End portals are unchanged. Physical repair/re-lighting
 and exit clearing provide recovery without automatic rebuilding or revision machinery.
 See [portal-sites.md](portal-sites.md) for exact geometry, landing and integration scope.
+
+## Managed cattle mechanics decision (S0)
+
+The [Paper mechanics experiment](animal-mechanics-spike.md) validates the entry points
+for S3, not an implemented animal registry. Births require durable parent reservations
+and reconciliation; delayed death requires a pending state and a guarded second callback.
+SQL/world saves are independent. Missing unloaded entities are not deaths, and ambiguous
+births or payouts must never be automatically replayed. NMS fixture code remains under
+`experiments/animals` and is excluded from the production build.

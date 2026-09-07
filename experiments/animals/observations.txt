@@ -1,0 +1,130 @@
+Paper 26.2-121, Java 25, 2026-09-07. Selected raw observation lines.
+Initial counter and unflushed checkpoint failures are explained in docs/animal-mechanics-spike.md.
+
+SOURCE initial-observations.log
+[19:02:07] [Server thread/INFO]: [AnimalProbe] OBS breed callback childValid=false parent ages=0,0 love=542,543 exp=3
+[19:02:07] [Server thread/INFO]: [AnimalProbe] OBS breed next tick ages=0,0 love=0,0 childValid=false
+[19:02:16] [Server thread/INFO]: [AnimalProbe] OBS breed summary events=1 cows=2 ages=0,0 love=0,0 xp=0
+[19:02:16] [Server thread/INFO]: [AnimalProbe] OBS PASS native breed event occurred
+[19:02:27] [Server thread/INFO]: [AnimalProbe] OBS breed callback childValid=false parent ages=0,0 love=543,543 exp=6
+[19:02:27] [Server thread/INFO]: [AnimalProbe] OBS XP spawn 6
+[19:02:27] [Server thread/INFO]: [AnimalProbe] OBS XP spawn 6
+[19:02:27] [Server thread/INFO]: [AnimalProbe] OBS BREEDING spawn after breed callback
+[19:02:27] [Server thread/INFO]: [AnimalProbe] OBS breed next tick ages=5999,5999 love=0,0 childValid=true
+[19:02:37] [Server thread/INFO]: [AnimalProbe] OBS breed summary events=1 cows=3 ages=5818,5818 love=0,0 xp=12
+[19:02:37] [Server thread/INFO]: [AnimalProbe] OBS PASS native breed event occurred
+[19:02:53] [Server thread/INFO]: [AnimalProbe] OBS death callback=1 cancelled=true health=0.0
+[19:02:53] [Server thread/INFO]: [AnimalProbe] OBS PASS cancelled lethal damage revives at requested health
+[19:02:54] [Server thread/INFO]: [AnimalProbe] OBS PASS cancelled death emitted no drops or XP
+[19:02:54] [Server thread/INFO]: [AnimalProbe] OBS death callback=2 cancelled=false health=0.0
+[19:02:54] [Server thread/INFO]: [AnimalProbe] OBS XP spawn 7
+[19:02:54] [Server thread/INFO]: [AnimalProbe] OBS XP spawn 7
+[19:02:54] [Server thread/INFO]: [AnimalProbe] OBS item spawn ItemStack{DIAMOND x 1}
+[19:02:55] [Server thread/INFO]: [AnimalProbe] OBS PASS completion fires another death callback
+java.lang.IllegalStateException: FAIL one controlled reward batch on completion
+[19:03:03] [Server thread/INFO]: [AnimalProbe] OBS seed saved 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+[19:03:23] [Server thread/INFO]: [AnimalProbe] OBS entity unload d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:03:23] [Server thread/INFO]: [AnimalProbe] OBS entity unload 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:03:23] [Server thread/INFO]: [AnimalProbe] OBS entity unload 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS PASS chunk unload accepted
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS PASS unloaded UUID absent from live lookup
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS entity load d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS entity load 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS entity load 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS PASS same UUID recovered after entity load
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS PASS saved entity exists
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS PASS logical PDC survives reload/restart
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS pending intent=false
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS entity unload d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS entity unload 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:03:26] [Server thread/INFO]: [AnimalProbe] OBS entity unload 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+
+SOURCE feeding-death-restart-removal.log
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS entity load d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS entity load 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS entity load 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS PASS saved entity exists
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS PASS logical PDC survives reload/restart
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS pending intent=false
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS PASS native feeding consumes two wheat before breeding
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS breed callback childValid=false parent ages=0,0 love=600,600 exp=3
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS PASS cancelled native breeding does not refund wheat
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS death callback=1 cancelled=true health=0.0
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS PASS cancelled lethal damage revives at requested health
+[19:04:24] [Server thread/INFO]: [AnimalProbe] OBS breed next tick ages=0,0 love=0,0 childValid=false
+[19:04:25] [Server thread/INFO]: [AnimalProbe] OBS PASS cancelled death emitted no drops or XP
+[19:04:25] [Server thread/INFO]: [AnimalProbe] OBS death callback=2 cancelled=false health=0.0
+[19:04:25] [Server thread/INFO]: [AnimalProbe] OBS XP spawn 7
+[19:04:25] [Server thread/INFO]: [AnimalProbe] OBS item spawn ItemStack{DIAMOND x 1}
+[19:04:27] [Server thread/INFO]: [AnimalProbe] OBS PASS completion fires another death callback
+[19:04:27] [Server thread/INFO]: [AnimalProbe] OBS PASS one controlled reward batch on completion
+[19:04:39] [Server thread/INFO]: [AnimalProbe] OBS PASS saved entity exists
+[19:04:39] [Server thread/INFO]: [AnimalProbe] OBS PASS logical PDC survives reload/restart
+[19:04:39] [Server thread/INFO]: [AnimalProbe] OBS pending intent=false
+[19:04:39] [Server thread/INFO]: [AnimalProbe] OBS PASS remove bypasses death callback
+[19:04:39] [Server thread/INFO]: [AnimalProbe] OBS removal applied without world save; halting disposable JVM
+
+SOURCE crash-intent.log
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS entity load d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS entity load 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS entity load 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS PASS saved entity exists
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS PASS logical PDC survives reload/restart
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS pending intent=false
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS PASS saved entity exists
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS PASS logical PDC survives reload/restart
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS pending intent=false
+[19:05:17] [Server thread/INFO]: [AnimalProbe] OBS intent fsynced before world mutation; halting disposable JVM
+
+SOURCE intent-recovery-removal.log
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS entity load d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS entity load 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS entity load 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS PASS saved entity exists
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS PASS logical PDC survives reload/restart
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS pending intent=true
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS PASS saved entity exists
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS PASS logical PDC survives reload/restart
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS pending intent=true
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS PASS remove bypasses death callback
+[19:06:35] [Server thread/INFO]: [AnimalProbe] OBS removal applied without world save; halting disposable JVM
+
+SOURCE removal-recovery.log
+[19:07:05] [Server thread/INFO]: [AnimalProbe] OBS entity load d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:07:05] [Server thread/INFO]: [AnimalProbe] OBS entity load 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:07:05] [Server thread/INFO]: [AnimalProbe] OBS entity load 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+[19:07:05] [Server thread/INFO]: [AnimalProbe] OBS PASS saved entity exists
+[19:07:05] [Server thread/INFO]: [AnimalProbe] OBS PASS logical PDC survives reload/restart
+[19:07:05] [Server thread/INFO]: [AnimalProbe] OBS pending intent=true
+
+SOURCE birth-crash.log
+[19:07:46] [Server thread/INFO]: [AnimalProbe] OBS entity load d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:07:46] [Server thread/INFO]: [AnimalProbe] OBS entity load 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:07:46] [Server thread/INFO]: [AnimalProbe] OBS entity load 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+[19:07:49] [Server thread/INFO]: [AnimalProbe] OBS breed callback childValid=false parent ages=0,0 love=543,543 exp=5
+[19:07:49] [Server thread/INFO]: [AnimalProbe] OBS XP spawn 5
+[19:07:49] [Server thread/INFO]: [AnimalProbe] OBS BREEDING spawn after breed callback
+[19:07:49] [Server thread/INFO]: [AnimalProbe] OBS breed next tick ages=5999,5999 love=0,0 childValid=true
+[19:07:58] [Server thread/INFO]: [AnimalProbe] OBS breed summary events=1 cows=3 ages=5818,5818 love=0,0 xp=5
+[19:07:58] [Server thread/INFO]: [AnimalProbe] OBS PASS native breed event occurred
+[19:08:05] [Server thread/INFO]: [AnimalProbe] OBS child saved with operation still PREPARED; halting disposable JVM
+
+SOURCE unflushed-birth-recovery.log
+[19:08:25] [Server thread/INFO]: [AnimalProbe] OBS entity load d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:08:25] [Server thread/INFO]: [AnimalProbe] OBS entity load 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:08:25] [Server thread/INFO]: [AnimalProbe] OBS entity load 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+java.lang.IllegalStateException: FAIL applied child survived before completion acknowledgment
+[19:08:25] [Server thread/INFO]: [AnimalProbe] OBS entity unload d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:08:25] [Server thread/INFO]: [AnimalProbe] OBS entity unload 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:08:25] [Server thread/INFO]: [AnimalProbe] OBS entity unload 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+
+SOURCE flushed-birth-crash.log
+[19:09:05] [Server thread/INFO]: [AnimalProbe] OBS entity load d33f73b3-f7f3-44c4-8339-49771a71abb7
+[19:09:05] [Server thread/INFO]: [AnimalProbe] OBS entity load 8f6e1e43-5415-441d-a1c3-4d2e16c7620d
+[19:09:05] [Server thread/INFO]: [AnimalProbe] OBS entity load 0b9da86c-36f5-49f2-8dc3-d409fcc77b6c
+[19:09:05] [Server thread/INFO]: [AnimalProbe] OBS PASS world checkpoint flushed
+[19:09:05] [Server thread/INFO]: [AnimalProbe] OBS child saved with operation still PREPARED; halting disposable JVM
+
+SOURCE flushed-birth-recovery.log
+[19:09:23] [Server thread/INFO]: [AnimalProbe] OBS PASS applied child survived before completion acknowledgment
+[19:09:23] [Server thread/INFO]: [AnimalProbe] OBS PASS operation remains prepared: respawn retry would duplicate child
