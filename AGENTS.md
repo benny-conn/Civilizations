@@ -33,3 +33,7 @@ Read these documents before making architectural or gameplay changes:
 - Run `./gradlew clean build` before handing off a completed slice. Use the ignored root `server/` workflow for real Paper behavior when a slice reaches an integration boundary.
 - Preserve unrelated user changes and keep commits scoped to the active slice.
 - Rebase onto the latest `main` before handoff, then report the branch name, commit, tests, migrations, and any real-Paper verification. Do not merge another agent's branch unless explicitly assigned integration ownership.
+
+## Progress tracking
+
+- Update the relevant plan/progress document after every completed step, including artifacts, verification, remaining work, and user scope changes, so another agent can resume. For scarcity/world work, use the progress and pickup section in `docs/scarcity-world-plan.md`.

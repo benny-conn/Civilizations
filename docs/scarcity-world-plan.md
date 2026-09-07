@@ -10,7 +10,8 @@ remain proposals. See the dated handoff below for actual progress and user decis
 ## Progress and pickup instructions — 2026-09-07
 
 This section records completed work, not merely the intended delivery sequence.
-Update it when a slice completes or the user changes scope.
+User agreement: update this record after every completed step, including verification,
+artifacts and next work; do not wait until the entire slice is finished.
 
 | Work | Status | Evidence / remaining boundary |
 | --- | --- | --- |
@@ -82,8 +83,9 @@ once assigned. Sugar-cane growth is the recommended first enforcement feature af
 Read AGENTS.md and the architecture/roadmap before coding. Use one slice per worktree,
 serialize SQL migrations and Paper lifecycle changes, allocate migrations from current
 main, and keep hot paths free of SQL. No scarcity code or new schema migration was made
-in this task. The current documentation branch is `benny/scarcity-world-plan`; inspect
-Git history for the latest handoff commit rather than assuming these changes are on main.
+in this task. The documentation was developed on `benny/scarcity-world-plan`. The user requested
+merging this handoff into main and pushing it on 2026-09-07; inspect Git history for the
+latest progress entry when resuming.
 
 ## Recommendation
 
