@@ -145,7 +145,9 @@ artifacts and next work; do not wait until the entire slice is finished.
   `portal-first-checks.log`, and `probe-src/PortalProbe.java`. The ignored probe is never
   shipped in the plugin. Player routing is adapter-tested; no client playtest claimed.
 - Isolated server stopped; Desktop server/JAR/maps unchanged. No draft, revision or preview
-  features added. Remaining delivery step: commit, rebase, merge and push.
+  features added. Delivery complete: feature `ea21d84` on `benny/scarcity-portals`
+  rebased against current origin/main (already current), fast-forwarded into main and
+  pushed. This final progress entry records integration; no S2b implementation work remains.
 
 ### Local artifacts and running environment
 
