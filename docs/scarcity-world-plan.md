@@ -98,7 +98,9 @@ artifacts and next work; do not wait until the entire slice is finished.
   `cane-restart-and-harvest.log` and `probe-src/CaneProbe.java`. The probe is an ignored test
   artifact, never part of the shipped plugin. Placement was adapter-tested, not client-tested.
 - Isolated server stopped; Desktop server, plugin JAR and WorldPainter maps unchanged.
-  Remaining delivery step: rebase, merge and push this completed slice.
+  Delivery complete: `0f8d263` on `benny/scarcity-cane` rebased against current
+  `origin/main` (already current), fast-forwarded into main and pushed. No S2a code work
+  remains; this final handoff entry records the integration.
 
 ### Local artifacts and running environment
 
