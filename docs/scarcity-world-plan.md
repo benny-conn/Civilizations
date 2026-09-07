@@ -2,11 +2,88 @@
 
 Research date: 2026-09-07. Baseline: `9a43165`, Paper 26.2 build 121.
 
-Status: **researched proposal, not approved gameplay defaults or implemented behavior**.
+Status: **map authoring complete for the prototype; scarcity code not started**.
 This develops [server-design.md](server-design.md#regional-scarcity-and-strategic-infrastructure)
-and the [scarcity backlog](../TODO.md#scarcity-and-specialization). It does not change
-the existing architecture, deployment, world, or roadmap priorities. The Desktop test
-server remains stopped.
+and the [scarcity backlog](../TODO.md#scarcity-and-specialization). Gameplay numbers below
+remain proposals. See the dated handoff below for actual progress and user decisions.
+
+## Progress and pickup instructions — 2026-09-07
+
+This section records completed work, not merely the intended delivery sequence.
+Update it when a slice completes or the user changes scope.
+
+| Work | Status | Evidence / remaining boundary |
+| --- | --- | --- |
+| Desktop Paper environment | Complete, currently stopped by user request | Paper 26.2 build 121 / Java 25; 18 plugins enabled on last boot. Do not restart merely to inspect progress. |
+| WorldPainter installation | Complete | Official 2.27.1 portable Mac app installed at `/Applications/WorldPainter.app`; publisher archive SHA256 verified. Gatekeeper remains enabled. |
+| S0 map compatibility sample | Map portion complete | WorldPainter exported all 1,024 chunks of a 512-square world. Multiverse imported it on Paper; spawn, mountain, water and cave block checks passed before/after restart; UUID and 512-block border persisted. User subsequently joined and proceeded to the larger map. |
+| S0 managed-animal mechanics experiment | Not started | Birth/death event ordering, cancellation effects and crash windows remain unverified. Do not mark all of S0 complete. |
+| 2,048-square authored prototype | Export complete; user accepted overview | All 16,384 chunks verified offline; three settlement spawn columns have solid grass and two air blocks. User explicitly declined a further playtest. Not imported or verified on Paper; acceptance of appearance is not runtime verification. |
+| S1 world manifest / resource zones | Recommended next code slice; not started | No scarcity schema, services, commands or activation controls exist yet. Latest user discussion identifies this as the next recommendation, not a completed implementation or instruction to start coding. |
+| S2–S6 | Not started | No crop/portal enforcement, registered herds, finite deposits, supply audit or season release. |
+| Proximity text chat | Explicitly deferred | Recorded in worktree roadmap; ordinary text chat retains existing behavior. |
+
+### Local artifacts and running environment
+
+These are local desktop artifacts, not committed to Git. A different machine needs the
+artifacts transferred or regenerated before continuing map work.
+
+- Server: `/Users/benjaminconn/Desktop/Civilizations Server`.
+  Repository `server` is a symlink to it; it appears untracked and must not be committed.
+  Use `start-playtest.command` for the pinned build 121 rather than silently replacing it
+  with the repository build-112 fixture. `SERVER-READY.md`, `ACTIVE-PLUGINS.json`,
+  `STARTUP-VERIFICATION.log`, and current `logs/latest.log` record operations and versions.
+- Editable small map and script:
+  `/Users/benjaminconn/Desktop/Civilizations WorldPainter Sample/Scarcity-Sample.world`
+  and `create-sample.js`. `manifest.json` and `paper-restart-verification.log` record checks.
+  Live world key `minecraft:scarcity_sample`; UUID
+  `413d14c0-e8f1-47f0-af81-59fe8e77e7f6`; spawn `110.5,75,110.5`.
+  Paper migrated the data to the server's `world/dimensions/minecraft/scarcity_sample`.
+  `/mvtp scarcity_sample` enters it; `/mvtp world` returns to the mechanics world.
+- Larger prototype folder:
+  `/Users/benjaminconn/Desktop/Civilizations 2048 Prototype`.
+  `Civilizations-2048.world` is editable; `create-prototype.js` reproduces it;
+  `heightmap.png`, `Map-Overview.png`, `manifest.json`, and `READ-ME.md` accompany it.
+  `exports/scarcity_prototype_2048` is the completed Minecraft export (about 82 MiB of
+  region data), not a registered live world. WorldPainter's official `wpscript` was used
+  because desktop control could not attach to its Java window.
+- Prototype coordinates: x/z `0..2047`, seed `202609072048`, water level 62,
+  build range `-64..319`. Sites: Westhaven `440.5,79,520.5`, Eastwatch
+  `1570.5,81,630.5`, Southmeadow `1110.5,77,1530.5`.
+- `resource-layout.proposed.json` contains six candidate diamond regions, three cattle
+  habitats and three cane basins. It is an authoring proposal, **not a supported runtime
+  import format**. Marker locations do not mean deposits/animals were placed; ordinary
+  resources remain in the export. No exact supply budget has been enforced.
+
+The server plugin stack includes LuckPerms, Staff++, AxGraves, FAWE/WorldGuard, Multiverse,
+BlueMap, Plan, voice chat, ProtocolLib, ViaVersion and Grim, plus the existing Civilizations,
+BattleLock and economy plugins. ViaBackwards was removed at user request. CoreProtect was
+built from unchanged official source commit `b95fb65dde7cb2947acc418267c1d270f9fe83e4`
+with Java 25 and `-Dproject.branch=development` because its published 24.0 JAR rejects 26.2;
+the source build enabled and initialized FAWE logging through a restart. See server notes
+for development-build warnings and exact hashes. Graves never expire; frozen disconnects
+do not auto-ban; Grim uses testing permissions; dashboards bind to loopback. These are
+startup checks, not comprehensive multiplayer integration tests.
+
+User instructions: keep the server off for now; no backups needed for this disposable
+playground; larger-map playtest declined; defer proximity chat. The later season-release
+backup/recovery proposal below is not a requirement to back up this current test work.
+
+### Next agent's coding starting point
+
+Recommend a bounded S1 slice: season/world binding, validated application-owned resource
+zones and rule revision, durable import through the repository port, immutable spatial
+index, and admin inspection/validation. Leave scarcity off until explicitly activated.
+Choose the actual import contract rather than treating the proposed JSON as established.
+Reconcile the original S1-after-S0 dependency by keeping animal lifecycle implementation
+blocked on its unfinished experiment; foundational world/zone work can proceed separately
+once assigned. Sugar-cane growth is the recommended first enforcement feature after S1.
+
+Read AGENTS.md and the architecture/roadmap before coding. Use one slice per worktree,
+serialize SQL migrations and Paper lifecycle changes, allocate migrations from current
+main, and keep hot paths free of SQL. No scarcity code or new schema migration was made
+in this task. The current documentation branch is `benny/scarcity-world-plan`; inspect
+Git history for the latest handoff commit rather than assuming these changes are on main.
 
 ## Recommendation
 
@@ -45,7 +122,8 @@ Compatibility caveats: WorldPainter's main page currently describes the Mac inst
 older than its current portable archive. The changelog also contains an inconsistent future
 date on its 2.27.1 entry. Select an actual downloadable artifact, record its checksum, and
 prove export/import/spawn behavior rather than treating either page as a tested build.
-No generator was installed or compatibility-tested during this research.
+The initial research did not test a generator; subsequent WorldPainter installation and
+512-sample verification are recorded in the progress section above.
 
 ## Proposed first resource rules
 
