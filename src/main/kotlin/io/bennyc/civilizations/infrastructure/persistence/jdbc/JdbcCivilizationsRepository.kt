@@ -120,6 +120,13 @@ class JdbcCivilizationsRepository(
 private open class JdbcReadContext(
     protected val connection: Connection,
 ) : CivilizationsReadContext {
+    override fun findManagedMob(id: java.util.UUID) = JdbcManagedMobs(connection).find(id)
+    override fun findMobCreation(operationId: java.util.UUID) = JdbcManagedMobs(connection).creation(operationId)
+    override fun findManagedMobByEntity(entityUuid: java.util.UUID) = JdbcManagedMobs(connection).entity(entityUuid)
+    override fun listManagedMobs(seasonId: SeasonId, after: java.util.UUID?, limit: Int) = JdbcManagedMobs(connection).page(seasonId, after, limit)
+    override fun hasMobReservation(parentId: java.util.UUID) = JdbcManagedMobs(connection).reserved(parentId)
+    override fun findMobDeathForMob(mobId: java.util.UUID) = JdbcManagedMobs(connection).deathForMob(mobId)
+    override fun findMobDeath(operationId: java.util.UUID) = JdbcManagedMobs(connection).death(operationId)
     override fun findPortalNetwork() = JdbcPortalNetwork(connection).find()
 
     override fun findCaneActivation() = JdbcCaneActivation(connection).find()
@@ -1250,6 +1257,10 @@ private open class JdbcReadContext(
 private class JdbcWriteContext(
     connection: Connection,
 ) : JdbcReadContext(connection), CivilizationsWriteContext {
+    override fun insertManagedMob(mob: io.bennyc.civilizations.application.mob.ManagedMob) = JdbcManagedMobs(connection).insert(mob)
+    override fun updateManagedMob(mob: io.bennyc.civilizations.application.mob.ManagedMob) = JdbcManagedMobs(connection).update(mob)
+    override fun insertMobDeath(death: io.bennyc.civilizations.application.mob.MobDeath) = JdbcManagedMobs(connection).insertDeath(death)
+    override fun updateMobDeath(death: io.bennyc.civilizations.application.mob.MobDeath) = JdbcManagedMobs(connection).updateDeath(death)
     override fun insertPortalNetwork(network: io.bennyc.civilizations.application.scarcity.PortalNetwork) = JdbcPortalNetwork(connection).insert(network)
 
     override fun insertCaneActivation(record: io.bennyc.civilizations.application.scarcity.CaneActivation) = JdbcCaneActivation(connection).insert(record)

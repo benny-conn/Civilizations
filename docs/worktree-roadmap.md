@@ -81,7 +81,9 @@ restart. See [cane policy](cane-policy.md). S2b fixed portal pairs are implement
 `benny/scarcity-portals` (schema 14), with simple YAML setup, safe assigned exits and
 creation/travel checks; see [portal setup](portal-sites.md). The S0 animal mechanics
 experiment is complete; [findings](animal-mechanics-spike.md) define the recovery contract.
-S3 managed cattle lifecycle is next, starting in the durable lane. User explicitly deferred irregular geometry and declined
+S3a shared managed-mob persistence is implemented (schema 15); see the
+[contract](managed-mobs.md). S3b opt-in cattle Paper integration is next. The common
+identity model also supports later sheep, chicken, villager and other species adapters. User explicitly deferred irregular geometry and declined
 draft/revision/preview tooling. No parallel merge queue is active for these follow-ups.
 
 After the MVP loop is complete, separate worktrees can take player-facing roster/claim UX, season reset/history, scarcity experiments, assassination, or occupation. Assassination must be its own persisted conflict context with targeted PVP eligibility and atomic succession; it is not a special case hidden inside ordinary claim protection.

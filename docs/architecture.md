@@ -451,3 +451,13 @@ and reconciliation; delayed death requires a pending state and a guarded second 
 SQL/world saves are independent. Missing unloaded entities are not deaths, and ambiguous
 births or payouts must never be automatically replayed. NMS fixture code remains under
 `experiments/animals` and is excluded from the production build.
+
+## Managed mob persistence (S3a)
+
+Migration 15 adds shared managed-mob identities, creation/parent reservations and durable
+death operations. Application-owned namespaced species keys support cattle first and
+later sheep, chickens, villagers or other selected mobs without a cow-specific identity
+schema. Species-specific production policy remains in later integrations. The
+[managed-mob contract](managed-mobs.md) defines single-attempt world authorization,
+immutable rule snapshots, recovery and bounded paging. No Paper animal enforcement is
+installed by S3a, and persistence never implies force-loading chunks.

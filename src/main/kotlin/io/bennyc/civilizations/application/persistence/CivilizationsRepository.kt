@@ -66,6 +66,14 @@ interface CivilizationsRepository {
 }
 
 interface CivilizationsReadContext {
+    fun findManagedMob(id: java.util.UUID): io.bennyc.civilizations.application.mob.ManagedMob?
+    fun findMobCreation(operationId: java.util.UUID): io.bennyc.civilizations.application.mob.ManagedMob?
+    fun findManagedMobByEntity(entityUuid: java.util.UUID): io.bennyc.civilizations.application.mob.ManagedMob?
+    fun listManagedMobs(seasonId: SeasonId, after: java.util.UUID?, limit: Int): List<io.bennyc.civilizations.application.mob.ManagedMob>
+    fun hasMobReservation(parentId: java.util.UUID): Boolean
+    fun findMobDeathForMob(mobId: java.util.UUID): io.bennyc.civilizations.application.mob.MobDeath?
+    fun findMobDeath(operationId: java.util.UUID): io.bennyc.civilizations.application.mob.MobDeath?
+
     fun findPortalNetwork(): io.bennyc.civilizations.application.scarcity.PortalNetwork?
 
     fun findCaneActivation(): io.bennyc.civilizations.application.scarcity.CaneActivation?
@@ -269,6 +277,11 @@ interface CivilizationsReadContext {
 }
 
 interface CivilizationsWriteContext : CivilizationsReadContext {
+    fun insertManagedMob(mob: io.bennyc.civilizations.application.mob.ManagedMob)
+    fun updateManagedMob(mob: io.bennyc.civilizations.application.mob.ManagedMob)
+    fun insertMobDeath(death: io.bennyc.civilizations.application.mob.MobDeath)
+    fun updateMobDeath(death: io.bennyc.civilizations.application.mob.MobDeath)
+
     fun insertPortalNetwork(network: io.bennyc.civilizations.application.scarcity.PortalNetwork)
 
     fun insertCaneActivation(record: io.bennyc.civilizations.application.scarcity.CaneActivation)

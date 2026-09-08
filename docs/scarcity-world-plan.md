@@ -23,7 +23,8 @@ artifacts and next work; do not wait until the entire slice is finished.
 | S1 world manifest / resource zones | Complete (registration scope) | Schema 12, validated immutable YAML imports, memory index and admin inspection; 165 tests and isolated Paper import/restart passed. Enforcement/activation intentionally absent. |
 | S2a sugar-cane policy | Complete; Desktop not activated | Schema 13 explicit activation, frozen geography and bounded creation checks. 173 tests and Paper growth/harvest/restart passed. |
 | S2b fixed Nether pairs | Complete; Desktop not activated | Schema 14, simple YAML setup, exact pairing, safe exits and relighting; 182 tests, real bidirectional entity travel, denials and unloaded-destination/restart recovery passed. |
-| S3–S6 | Not started | No registered herds, finite deposits, supply audit or season release. |
+| S3a managed-mob persistence | Complete | Schema 15; shared species identities, creation/parent reservations, deadlines, death intents/tombstones and bounded recovery reads. [Contract](managed-mobs.md). |
+| S3b–S6 | Not started | No live managed-species activation, registered herds, finite deposits, supply audit or season release. |
 | Proximity text chat | Explicitly deferred | Recorded in worktree roadmap; ordinary text chat retains existing behavior. |
 
 ### S1 implementation progress
@@ -215,18 +216,43 @@ backup/recovery proposal below is not a requirement to back up this current test
   `benny/animal-mechanics-spike`, rebased onto current main, fast-forward merged and pushed
   to `origin/main`. Desktop server and its untracked root symlink were preserved.
 
+### S3a progress — shared managed-mob persistence
+
+- Started `benny/managed-mob-registry` from pushed main `0146723`. This durable slice
+  implements generic species identities, creation/birth reservations, snapshotted maturity
+  and cooldown deadlines, death intents/tombstones and recovery decisions. Paper activation
+  and cattle gameplay are the following S3b slice.
+- User clarified that cattle is only the first integration: sheep, chickens, villagers and
+  other resource-producing mobs must share the persistence foundation. Store namespaced
+  species keys, not a cow-only identity type. Persistence does not imply keeping chunks
+  loaded or making every mob/resource finite. Species-specific harvesting, egg hatching,
+  curing/conversion and reproduction adapters need their own enforcement/tests.
+- Durable implementation and nine SQLite tests completed: multi-species identities,
+  idempotent operations, atomic parent locks, cancellation, deadlines, tombstones, rollback
+  and schema-14 upgrade. Competing birth requests admitted exactly one reservation.
+- `./gradlew clean build deployTestServerPlugin` passed: 191 tests, zero failures.
+  Isolated Paper 26.2-121 on loopback port 25580 upgraded a copied schema-14 fixture to
+  schema 15; integrity check passed and no mobs were implicitly registered. Upgrade log:
+  `civilizations-s3a/server/verification/schema-15-upgrade.log`. Clean restart passed; `schema-15-restart.log` records the ready runtime and
+  clean shutdown. Fixture stopped; no Paper errors on either boot (expected no-Vault
+  warning only).
+  Desktop server remains off and unchanged. Integration pending.
+- Existing CATTLE habitat zones remain the first map integration; broader species policies
+  and habitats are future integrations, not silently enabled by accepting a species key.
+
 ### Next agent's coding starting point
 
 S1 registration, S2a cane and S2b fixed portal pairs are implemented. Read the
 [manifest contract](world-manifests.md), [cane contract](cane-policy.md), and
 [portal setup](portal-sites.md). S0 mechanics is complete; read the
-[animal experiment and implementation contract](animal-mechanics-spike.md). Next is **S3
-managed cattle lifecycle**: start with application-owned identities, durable parent/birth
-reservations, maturity/cooldown snapshots, death intents/tombstones and reconciliation
-states; then add the Paper adapter and crash-injection tests against the actual SQL path.
-The spike's fixture checkpoints are not a tested production registry. Do not replay
-ambiguous births or rewards. A missing unloaded entity is not dead. No population registry,
-finite-deposit enforcement or full supply audit exists.
+[animal experiment and implementation contract](animal-mechanics-spike.md). Next is **S3b: managed-mob Paper integration, cattle first**. S3a's shared durable model is now implemented; read the
+[managed-mob contract](managed-mobs.md). Next add opt-in cattle configuration/activation,
+seeding, PDC markers, main-thread event gates, bounded worker/index publication, pending
+animal containment and recovery diagnostics. Test real SQL/world crash windows. Cattle
+is the first adapter, not the only persistable species: sheep, chickens, villagers and
+other selected resource mobs must reuse the identity/lifecycle foundation with their own
+resource and transformation policies. No live population enforcement, finite deposits or
+full supply audit exists yet.
 
 User preference: rectangular geometry is enough; irregular zones may come later. Do not
 add draft editing, revisions or visible boundary previews. Keep configuration/setup direct.
@@ -460,12 +486,12 @@ existing government/economy product sequence.
 | S0 — compatibility and mechanics spike | Operations; no production policy. Test WorldPainter export and the managed birth/death event sequence on a separate 26.2 fixture. | Small world survives restart; documented event ordering, cancellation side effects and crash windows; go/no-go for chosen tools. |
 | S1 — world manifest and zones | Complete as registration only; foundational work delivered before the now-completed animal spike. Application values, SQL import, spatial index and admin validation/status. Activation deferred until enforceable release policy exists. | Invalid/overlapping zones and mismatched worlds reject; snapshot recovery, randomized geometry tests, Paper import/restart pass. |
 | S2 — crop and portal enforcement | S2a cane (schema 13) and S2b fixed pairs (schema 14) implemented. | Cane growth/harvest and fixed two-way entity travel, unregistered/blocked cases and runtime recovery tested. Player portal routing is adapter-tested; no client playtest claimed. |
-| S3 — managed cattle lifecycle | Durable lane then Paper lane, after S0/S1. Seeding, birth reservations, maturity, deaths, reconciliation and staff diagnostics. | Duplicate events and crashes at each boundary cannot create a second authorized animal; unload is never mistaken for death; ambiguity is visible and contained. |
+| S3 — managed mob lifecycle, cattle first | S3a shared durable foundation complete (schema 15); S3b Paper integration next. Then species-specific sheep/chicken/villager and other resource-mob adapters. | Duplicate events and crashes at each boundary cannot create a second authorized animal; unload is never mistaken for death; ambiguity is visible and contained. |
 | S4 — extraction and repair boundary | Serialized durable/Paper changes as necessary, after S1. Ore preparation, loot/trade decisions, resource exclusions and diagnostics. | No unauthorized new supply in the release audit; adversarial harvest → battle/exposure repair → harvest fails to multiply selected resources. |
 | S5 — integrated resource playtest | After S2–S4. 2,048-square map, three civilizations, three resource types and registered portals. | At least two meaningful resource exchanges, successful herd relocation and reproduction, visible depletion, and no permanent basic-food lockout. |
 | S6 — season release | After tuning and the existing first-season governance/economy prerequisites. Full map and supply manifest, backups, recovery drill, player guide. | Staff can restore world and SQL together, explain every restriction, and show all acceptance evidence. |
 
-S0 is complete. S3 is the next concrete deliverable, using the observed mechanics and
+S0 and S3a are complete. S3b is next, using the shared managed-mob foundation and
 recovery requirements in the animal experiment report. No production animal rules were
 added by the spike.
 

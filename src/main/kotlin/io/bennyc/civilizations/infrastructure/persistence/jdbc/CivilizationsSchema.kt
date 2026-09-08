@@ -2664,5 +2664,6 @@ object CivilizationsSchema {
         ScarcitySchema.migration,
         CaneSchema.migration,
         PortalSchema.migration,
+        ManagedMobSchema.migration,
     )
 }

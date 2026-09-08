@@ -136,7 +136,7 @@ class WorldManifestTest {
             SchemaMigrator(db.connectionFactory, CivilizationsSchema.migrations.take(11)).migrate()
             val season = SeasonService(db.repository, SequentialIdGenerator(), clock).create("Existing").appliedValue()
             val result = db.migrator.migrate()
-            assertEquals(listOf(12, 13, 14), result.appliedVersions)
+            assertEquals(listOf(12, 13, 14, 15), result.appliedVersions)
             assertEquals(season, db.repository.read { findSeason(season.id) })
             assertTrue(db.repository.read { listWorldManifests() }.isEmpty())
         }
