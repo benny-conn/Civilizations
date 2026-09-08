@@ -199,3 +199,13 @@ The unopened-export tool creates deterministic finite deposits with source/outpu
 policy in SQL (migration 17); import alone activates nothing. Resource-bearing blocks
 are always excluded from battle/exposure reconstruction, including saved repair work.
 See [preparation, activation and release boundary](docs/diamond-scarcity.md).
+
+## Integrated scarcity sample (S5)
+
+The isolated 2048 sample combines three fixture civilizations, cane, finite diamonds,
+managed cattle and registered Nether crossings. Native relocation/birth, scripted resource
+transfers, saved supply and restart checks passed. Explicit `zones: []` now supports a
+resource-free transit world. No new migration; schema remains 17. See the
+[reproduction guide and limits](experiments/integration/README.md) and
+[progress/pickup record](docs/scarcity-world-plan.md). Human trading, real-time population
+balance and production release acceptance remain pending; the Desktop server is unchanged.

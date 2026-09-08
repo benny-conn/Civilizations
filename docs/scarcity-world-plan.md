@@ -25,9 +25,72 @@ artifacts and next work; do not wait until the entire slice is finished.
 | S2b fixed Nether pairs | Complete; Desktop not activated | Schema 14, simple YAML setup, exact pairing, safe exits and relighting; 182 tests, real bidirectional entity travel, denials and unloaded-destination/restart recovery passed. |
 | S3a managed-mob persistence | Complete | Schema 15; shared species identities, creation/parent reservations, deadlines, death intents/tombstones and bounded recovery reads. [Contract](managed-mobs.md). |
 | S3b cattle Paper integration | Complete | Opt-in SQL activation/fixed slots, bounded event coordination, native breeding/death, load reconciliation and pending-death settlement. [Setup](cattle-policy.md). Verified only in isolated fixture; Desktop unchanged. |
-| S4 finite extraction / repair boundary | Complete (isolated verification) | Deterministic 2048 preparation, six finite deposits, schema 17 diamond policy, resource-safe battle/exposure reconstruction. [Contract](diamond-scarcity.md). Integrated release audit remains S5. |
-| S5–S6 | Not started | Finite deposits/repair exclusions, integrated supply audit and season release remain. Other resource-mob adapters remain a staged follow-up. |
+| S4 finite extraction / repair boundary | Complete (isolated verification) | Deterministic 2048 preparation, six finite deposits, schema 17 diamond policy, resource-safe battle/exposure reconstruction. [Contract](diamond-scarcity.md). S5 fixture audit complete; production release remains open. |
+| S5 | Technical integration complete; human gates pending | 2048 sample, three civilizations, all three resource policies, registered Nether relay, native herd/birth, finite supply and restart audit. [Reproduce](../experiments/integration/README.md). Human exchange/session and long-term balance remain unverified. |
+| S6 | Not started | Full season map, tuning, release/recovery drill and player guide follow outstanding acceptance and governance/economy prerequisites. Other resource-mob adapters remain a staged follow-up. |
 | Proximity text chat | Explicitly deferred | Recorded in worktree roadmap; ordinary text chat retains existing behavior. |
+
+### S5 implementation progress
+
+- Worktree `../civilizations-s5`, branch `benny/scarcity-integration`; fixture port 25583.
+  Copied and checksum-verified the pristine S4 prepared artifact, not its mutated live world.
+  Desktop remains unchanged/off. Automation covers technical integration; the previously
+  declined client playtest and 48-hour seasonal balance trial will not be claimed complete.
+- Found registration required a fabricated resource zone in a resource-free receiving world.
+  Allowed explicit `zones: []` in application/parser, preserving strict missing/null rejection,
+  identity/geometry limits and activation resource requirements. No SQL migration.
+- Prepared a bounded empty Nether transit dimension and closed the End in fixture settings;
+  planned 24 cows, three habitats/cane basins, six diamond deposits and three free portal pairs.
+  Cattle timings are explicitly accelerated only in this disposable fixture (8s/4s).
+- First assembly/audit passed: 16,384 full Overworld chunks, all six deposits still 256 ore;
+  576 full empty Nether chunks cover the 256-square border plus a 64-block buffer. Paper also
+  created 1,540 empty partial neighbor chunks; these are included in the inventory audit.
+  End is not loaded. Both world manifests, three civilizations and three 961-block claims
+  were registered. Portal/seed/crop sites were prepared before policy activation.
+- Audit exposed the original WorldPainter creative authoring kit (including End portal
+  frames) in one chest. Cleared that inventory only in the stopped isolated copy and reran
+  the audit. Remaining initial items: 72 wheat seeds, 48 carrots, 48 potatoes in public
+  farms; 81 cane blocks at prepared basins, zero cows before explicit seeding, zero selected
+  diamond items, lazy loot tables or merchant offers. Audit hash:
+  `05e4516c9a07d5b4b5eed5d4bb3adf71e371e3130a8db975d44612ccf00f3d57`.
+  Source/pristine S4 artifact and Desktop remain untouched.
+- Enabled diamond equipment policy with that assembled audit SHA, cane height 3, the three
+  portal pairs, and 24 fixed cattle seeds. Native cane grows inside basins and rejects
+  outside/cap growth. Native public wheat growth/harvest and non-selected chickens work.
+  All nine fixture leader/public-farm combinations allow access through the actual runtime
+  protection policy; town claims remain owner-only. This is not a connected-client test.
+- Two registered adults crossed the western native portal, walked the Nether relay using
+  pathfinding, and crossed the eastern native portal. Staff staged them at the first
+  entrance and together at the receiver; one native birth occurred outside origin habitats.
+  Accelerated maturity/cooldown (8s/4s) are test snapshots, not production balancing.
+- Two scripted physical inventory exchanges transferred native-harvested diamond/cane and
+  wheat/cane without creating items. One ore was consumed. This demonstrates bookkeeping,
+  not human negotiation or meaningful interdependence. Season advanced to PEACE.
+- Stopped-world post-integration audit: 1,535 remaining ores, one mined diamond, zero ore
+  outside deposits; all 25 ALIVE logical IDs map exactly to saved entity UUIDs, one birth,
+  zero unresolved records or parent reservations. SHA256
+  `f7e12cd3b41edfe8c68bc30e88aa4f8a71922faa45f8626eb1730428e47c4311`.
+- Restart recovered all four policy activations, borders, depleted block and barter stock.
+  All three portal pairs were ready; native unregistered contact rejected. Repeating seed
+  produced no replacement cows. Removing cattle YAML overrides did not reinterpret SQL:
+  8000/4000 ms remained snapshotted. Final loaded subset was 23; all 25 ALIVE records were
+  present on disk (24 Overworld, one Nether after free return through a registered portal).
+  Zero quarantine. Restart audit SHA256
+  `90f1d639c909d6aeda8cceb051bf6e354914a02ab8badb71cbe87a6f3e25ca5a`.
+- Verification: `./gradlew clean build deployTestServerPlugin` passed, 208 tests with zero
+  failures/errors/skips. No new SQL migration (schema remains 17). Preparation, integration
+  and restart logs have no ERROR/SEVERE; expected missing Vault provider warning remains.
+  Idle/probe TPS was 20, recent average 0.6ms / 1-minute max 4.1ms; no player-load/p99 claim.
+- [Fixture instructions](../experiments/integration/README.md) and
+  [observation excerpts](../experiments/integration/observations.txt) preserve the procedure.
+  Full logs, world, SQL, layout, private deposit specification and all three audits are in
+  `civilizations-s5/server/verification` (SQL in `server/plugins/Civilizations`). The S5 world
+  is deliberately mutated test data, not a pristine season release. Fixture is stopped.
+- Remaining S5 acceptance: 90–120-minute human exchanges/geography session, 48-hour real-time
+  population trial, two-account battle/repair interactions, loaded-player performance and
+  full Desktop plugin-stack compatibility. The user previously declined another playtest;
+  none was silently substituted or claimed. S6 release is not approved by automated checks.
+  The Nether is a bounded empty transit fixture; full survival Nether authoring remains open.
 
 ### S4 implementation progress
 
@@ -317,33 +380,33 @@ backup/recovery proposal below is not a requirement to back up this current test
 
 ### Next agent's coding starting point
 
-S1 registration, S2a cane and S2b fixed portal pairs are implemented. Read the
-[manifest contract](world-manifests.md), [cane contract](cane-policy.md), and
-[portal setup](portal-sites.md). S0 mechanics is complete; read the
-[animal experiment and implementation contract](animal-mechanics-spike.md). S3b is implemented; read [cattle setup and recovery](cattle-policy.md). Next planned
-slice is **S5: integrated scarcity sample**. S4 is implemented; read [finite diamonds and
-reconstruction](diamond-scarcity.md). Assemble the prepared 2048 copy with real 3D manifests,
-cane, cattle and registered portal pairs, establish every accessible dimension/border,
-and run the three-civilization supply/interdependence audit. Use a fresh isolated fixture;
-S4's live fixture includes deliberate probe mutations and generated test Nether/End worlds
-and is not a release artifact. Follow the serialized durable/Paper lanes.
+S1, S2a, S2b, S3a, S3b and S4 are implemented. **S5 technical integration is complete;
+its human/balance acceptance gates remain pending**, as listed above. Read the
+[fixture and reproduction guide](../experiments/integration/README.md),
+[manifest contract](world-manifests.md), [cane contract](cane-policy.md),
+[portal setup](portal-sites.md), [cattle recovery](cattle-policy.md) and
+[finite diamonds/reconstruction](diamond-scarcity.md). Do not treat scripted inventory
+exchanges as meaningful player trade or accelerated births as seasonal balance evidence.
+S6 release/recovery/player-guide work follows tuning and governance/economy prerequisites;
+no full season-release activation/reset lifecycle was invented here.
+
+The stopped `civilizations-s5/server` fixture preserves the integrated sample, SQL and
+private verification artifacts. Do not deploy its mutated world to Desktop or promote it
+as a pristine release. It has three fixture rosters, three claims, twelve resource zones,
+a registered zero-zone Nether, 25 managed cows, 1,535 ores plus one mined diamond and all
+four policies enabled. It uses accelerated durable cattle rules. For a fresh run start
+from `civilizations-s4/server/verification/prepared-2048` and its private audit/specification;
+register the newly loaded identities and author all boxes before activation freezes them.
+The accepted original WorldPainter export and Desktop server remain unchanged/stopped.
 
 Cattle remains the first species adapter. Sheep (wool/regrowth), chickens (eggs/hatching),
 villagers (food/beds/trades/curing), and other selected resource mobs must reuse the shared
-identity core with explicit resource/transformation policies. Their live adapters are not
-implemented by S3b. Larger-map activation and multiplayer integration remain S5.
+identity core with explicit resource/transformation policies. Those adapters are future
+work. Rectangular zones are enough; do not add draft editing, revisions or boundary previews.
+Six 256-ore budgets, eight cattle per habitat and accelerated test clocks are not settled
+season balancing. Public farms are currently accessible; future claims/ownership and a
+full survival Nether need player-facing design and testing.
 
-User preference: rectangular geometry is enough; irregular zones may come later. Do not
-add draft editing, revisions or visible boundary previews. Keep configuration/setup direct.
-Cane and portal enforcement were enabled only in their isolated fixtures, not on Desktop.
-
-The accepted original 2048 export remains unchanged. S4 prepared a separate finite-diamond
-copy at `civilizations-s4/server/verification/prepared-2048`; use that pristine artifact,
-not S4's mutated live `server/world`, for integrated work. Transfer the private specification
-and audit reports with it. Obtain the new Paper UUID on import, then register all diamond,
-cane and cattle boxes together before any activation freezes geography. S4's six 256-ore
-budgets are configurable test values, not settled season balancing. Proposed cattle/cane
-marker locations still need precise boxes and live setup.
 Read AGENTS.md and the architecture/roadmap, serialize migrations/runtime changes, and
 update this progress record after every step. User requested merge/push of completed work;
 inspect Git history for the latest integration entry.
@@ -574,8 +637,9 @@ existing government/economy product sequence.
 | S5 — integrated resource playtest | After S2–S4. 2,048-square map, three civilizations, three resource types and registered portals. | At least two meaningful resource exchanges, successful herd relocation and reproduction, visible depletion, and no permanent basic-food lockout. |
 | S6 — season release | After tuning and the existing first-season governance/economy prerequisites. Full map and supply manifest, backups, recovery drill, player guide. | Staff can restore world and SQL together, explain every restriction, and show all acceptance evidence. |
 
-S0, S3a, S3b and S4 are complete. S5 integrated verification is next. The cattle adapter is opt-in and tested in
-an isolated fixture; broader species policies and the full resource supply audit remain.
+S0, S3a, S3b and S4 are complete. S5 technical integration and the isolated two-dimension
+supply audit are complete; meaningful human exchange, long-term balance and release gates
+remain pending. Broader species policies are not enabled by the cattle adapter.
 
 ## Playtest measurements and stop conditions
 

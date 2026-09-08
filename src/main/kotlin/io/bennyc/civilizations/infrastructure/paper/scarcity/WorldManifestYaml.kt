@@ -46,7 +46,7 @@ class WorldManifestYaml(private val directory: Path) {
             val world = map(root["world"], "world")
             keys(world, setOf("key", "uuid"), "world")
             val zones = root["zones"] as? List<*> ?: errorValue("zones: expected a list")
-            require(zones.size in 1..256) { "zones: must contain 1–256 zones" }
+            require(zones.size in 0..256) { "zones: must contain 0–256 zones" }
             return WorldManifest(
                 uuid(root, "id", "id"), SeasonId(uuid(root, "season", "season")),
                 WorldId(string(world, "key", "world.key")), uuid(world, "uuid", "world.uuid"),

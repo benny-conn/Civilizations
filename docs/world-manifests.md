@@ -65,7 +65,7 @@ may not intersect, including shared boundary blocks. Different resources may ove
 same-resource zones with disjoint Y ranges are allowed. Zones must fit inside world bounds;
 world Y bounds must fit inside the loaded world's build height. Namespaced world keys and
 lowercase zone IDs (1–64 letters/digits/hyphens/underscores) are validated. Safety limits:
-1–256 uniquely named zones per manifest, 32 manifests total, horizontal world span at most
+0–256 uniquely named zones per manifest, 32 manifests total, horizontal world span at most
 8192 blocks per axis, x/z within ±29,999,984, Y within -2048..2047, and at most 262,144
 zone/chunk entries globally. These are bounded execution limits, not balancing settings.
 
@@ -87,3 +87,7 @@ read-only validation, transaction rollback, SETUP/identity gates, duplicate and 
 rejection, SQL history guards, schema-11 upgrade preservation, and runtime restart recovery.
 The dated Paper verification and remaining scope are recorded in
 [scarcity-world-plan.md](scarcity-world-plan.md#s1-implementation-progress).
+
+S5 allows explicit `zones: []` for a resource-free transit world. This registers its
+identity/bounds for managed transport without granting a crop zone, deposit or seed habitat.
+Omitting `zones` still rejects; activation still requires the appropriate zones elsewhere.

@@ -1,0 +1,8 @@
+name: IntegrationProbe
+version: '1'
+main: IntegrationProbe
+api-version: '26.2'
+depend: [Civilizations]
+commands:
+  s5probe:
+    permission: civilizations.admin

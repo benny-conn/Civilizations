@@ -18,6 +18,13 @@ class WorldManifestYamlTest {
             resource: DIAMOND
             bounds: {min-x: 0, min-y: -60, min-z: 0, max-x: 100, max-y: 0, max-z: 100}
     """.trimIndent()
+    @Test fun `explicit empty zones registers geography but missing null or mapped zones reject`() {
+        val prefix = valid.substringBefore("zones:")
+        assertTrue(WorldManifestYaml.parse((prefix + "zones: []").toByteArray()).zones.isEmpty())
+        listOf("", "zones:", "zones: {}", "zones: false").forEach {
+            assertFails { WorldManifestYaml.parse((prefix + it).toByteArray()) }
+        }
+    }
     @Test fun `strict authoring format accepts valid source and hashes original bytes`() {
         val m = WorldManifestYaml.parse(valid.toByteArray())
         assertEquals(1, m.zones.size)

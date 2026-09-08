@@ -1,0 +1,87 @@
+S5 technical integration — 2026-09-07 America/New_York (2026-09-08 UTC)
+Paper 26.2-121-main@a2a42c5; Java 25; loopback 25583; no connected players.
+Three plugins only: Civilizations, IntegrationProbe, TransitGenerator.
+Schema remains 17. clean build: 208 tests; zero failures/errors/skips.
+Before activation: Overworld 16384 full chunks, 1536 ores in six deposits; Nether 576 full / 2116 total chunks, zero selected resource supply.
+Assembled audit SHA256: 05e4516c9a07d5b4b5eed5d4bb3adf71e371e3130a8db975d44612ccf00f3d57
+Post-integration audit SHA256: f7e12cd3b41edfe8c68bc30e88aa4f8a71922faa45f8626eb1730428e47c4311
+Restart audit SHA256: 90f1d639c909d6aeda8cceb051bf6e354914a02ab8badb71cbe87a6f3e25ca5a
+Both post-run audits: 1535 ores + 1 mined diamond; no ore outside deposits; 25 exact entity/logical-ID bindings match ALIVE SQL rows; 1 birth; 0 unresolved; 0 parent reservations.
+Final cows: 24 Overworld, 1 Nether (free to re-enter the registered portal after relocation). Restart loaded subset=23; unloaded records remain ALIVE and present on disk.
+SQL cattle snapshot remains maturity_ms=8000, cooldown_ms=4000 after removing YAML overrides and restarting.
+No ERROR/SEVERE in preparation, integration or restart logs. Expected no-Vault-provider warning; treasury works but player-wallet bridge unavailable.
+Idle/probe smoke TPS 20/20/20; recent average 0.6 ms, 1-minute max 4.1 ms. Not a multiplayer/p99 benchmark.
+Native assertions excerpted below. Full local logs and private artifacts: civilizations-s5/server/verification. Fixture stopped; Desktop unchanged/off.
+Human negotiated exchanges, 48-hour balance, client battle tests and full third-party stack remain unverified.
+
+integration-paper.log
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS native cane grows in registered basin
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS native cane reaches three blocks
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS cane height cap survives integrated policy
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS native growth denied outside basin
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS public wheat matures at settlement 0
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS public wheat harvest remains available 0
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS public wheat matures at settlement 1
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS public wheat harvest remains available 1
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS public wheat matures at settlement 2
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS public wheat harvest remains available 2
+[23:10:36] [Server thread/INFO]: [IntegrationProbe] PASS non-selected food animals remain available
+[23:11:17] [Server thread/INFO]: [IntegrationProbe] PASS two registered west adults ready for relocation
+[23:11:17] [Server thread/INFO]: [IntegrationProbe] PASS stage cow at registered western crossing
+[23:11:17] [Server thread/INFO]: [IntegrationProbe] PASS stage cow at registered western crossing
+[23:11:17] [Server thread/INFO]: [IntegrationProbe] PASS scripted exchanges run once
+[23:11:17] [Server thread/INFO]: [IntegrationProbe] PASS finite deposit present before extraction
+[23:11:17] [Server thread/INFO]: [IntegrationProbe] PASS harvest deposited without overflow
+[23:11:17] [Server thread/INFO]: [IntegrationProbe] PASS finite ore visibly depleted
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS harvest deposited without overflow
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS harvest deposited without overflow
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS harvest deposited without overflow
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS harvest deposited without overflow
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS harvest deposited without overflow
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS harvest deposited without overflow
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS all barter stock comes from native harvests
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter source has 1 DIAMOND
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter debit complete
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter credit complete
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter source has 2 SUGAR_CANE
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter debit complete
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter credit complete
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter source has 1 WHEAT
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter debit complete
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter credit complete
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter source has 2 SUGAR_CANE
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter debit complete
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS barter credit complete
+[23:11:18] [Server thread/INFO]: [IntegrationProbe] PASS two SCRIPTED barter exchanges conserve harvested resources
+[23:11:21] [Server thread/INFO]: [IntegrationProbe] PASS both managed cows cross native western portal
+[23:11:44] [Server thread/INFO]: [IntegrationProbe] PASS herd walked Nether relay and crossed native eastern portal; ticks=460
+[23:12:02] [Server thread/INFO]: [IntegrationProbe] PASS relocated registered adults reconciled outside origin habitat
+[23:12:02] [Server thread/INFO]: [IntegrationProbe] PASS position relocated parent at receiver
+[23:12:02] [Server thread/INFO]: [IntegrationProbe] PASS position relocated parent at receiver
+[23:12:14] [Server thread/INFO]: [IntegrationProbe] PASS one native birth outside original habitats after relocation
+
+restart-paper.log
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS borders and End closure survive restart
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS harvested ore remains absent after restart
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS scripted recipient stock persists 0
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS scripted recipient stock persists 1
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS scripted recipient stock persists 2
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS public farm access: civilization 0 farm 0
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS town claims remain owner-only 0/0
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS public farm access: civilization 0 farm 1
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS town claims remain owner-only 0/1
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS public farm access: civilization 0 farm 2
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS town claims remain owner-only 0/2
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS public farm access: civilization 1 farm 0
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS town claims remain owner-only 1/0
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS public farm access: civilization 1 farm 1
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS town claims remain owner-only 1/1
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS public farm access: civilization 1 farm 2
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS town claims remain owner-only 1/2
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS public farm access: civilization 2 farm 0
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS town claims remain owner-only 2/0
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS public farm access: civilization 2 farm 1
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS town claims remain owner-only 2/1
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS public farm access: civilization 2 farm 2
+[23:21:00] [Server thread/INFO]: [IntegrationProbe] PASS town claims remain owner-only 2/2
+[23:21:04] [Server thread/INFO]: [IntegrationProbe] PASS native unregistered portal contact denied

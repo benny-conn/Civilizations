@@ -22,6 +22,21 @@ class WorldManifestTest {
         WorldManifest(id, season, world, uuid, 1, hash, bounds, zones)
     private fun loaded(m: WorldManifest) = listOf(LoadedResourceWorld(m.worldId, m.worldUuid, -64, 320))
 
+    @Test fun `resource-free transit world persists without inventing a zone or permitting cane`() {
+        SqliteTestDatabase().use { db ->
+            db.migrator.migrate()
+            val season = SeasonService(db.repository, SequentialIdGenerator(), clock).create("Transit").appliedValue()
+            val m = manifest(season = season.id, zones = emptyList())
+            WorldManifestService(db.repository, clock).register(m, loaded(m), "console").appliedValue()
+            val records = JdbcCivilizationsRepository(db.connectionFactory).read { listWorldManifests() }
+            assertTrue(records.single().manifest.zones.isEmpty())
+            val policy = CaneGrowthPolicy(CaneActivation(season.id, 3, "console", "test", clock.instant()), ResourceZoneIndex(records))
+            assertFalse(policy.permits(m.worldId, m.worldUuid, 0, 0, 0, 1))
+            CaneActivationService(db.repository, clock).enable(season.id, 3, "console", "test", loaded(m)).rejection()
+            DiamondActivationService(db.repository, clock).enable(season.id, true, "b".repeat(64), "console", "test", loaded(m)).rejection()
+        }
+    }
+
     @Test fun `index handles negative chunks exact inclusive edges and identity isolation`() {
         val m = manifest()
         val index = ResourceZoneIndex(listOf(RegisteredWorldManifest(m, clock.instant(), "console")))
@@ -59,7 +74,7 @@ class WorldManifestTest {
         assertFailsWith<IllegalArgumentException> { ResourceBounds(Int.MIN_VALUE, 0, 0, Int.MAX_VALUE, 1, 1) }
         assertFailsWith<IllegalArgumentException> { ResourceBounds(0, 0, 0, 8192, 1, 1) }
         assertFailsWith<IllegalArgumentException> { ResourceBounds(2, 0, 0, 1, 1, 1) }
-        assertFailsWith<IllegalArgumentException> { manifest(zones = emptyList()) }
+        assertEquals(0L, manifest(zones = emptyList()).chunkEntries)
         assertFailsWith<IllegalArgumentException> { manifest(hash = "invalid") }
         val mutable = mutableListOf(zone, zone.copy(id = "cattle", resource = ResourceKind.CATTLE),
             zone.copy(id = "upper", bounds = ResourceBounds(-17, 1, -17, 0, 2, 0)))

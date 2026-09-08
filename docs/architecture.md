@@ -397,7 +397,10 @@ port. Migration 12 records bounds, resource zones, world key/UUID, authoring rev
 source SHA256, actor and import time. New bindings require SETUP; conflicting IDs and
 world reassignment reject until a later audited lifecycle exists. Registration cannot
 activate enforcement. WorldPainter authoring files are external artifacts, not durable
-runtime state.
+runtime state. S5 permits explicit empty resource-zone lists for registered transit
+worlds: identity/bounds enable managed transport but confer no resource-production or
+seed authorization. Missing zone lists still reject; activations still require their
+resource zones. This uses the existing schema 12 tables, with no S5 migration.
 
 `WorldManifestYaml` parses explicit bounded imports on the storage worker; the Paper
 command captures loaded-world identity/build heights on the server thread and passes

@@ -42,7 +42,7 @@ class WorldManifest(
         require(worldId.value.matches(Regex("[a-z0-9_.-]+:[a-z0-9/._-]+"))) { "world.key: expected a namespaced key" }
         require(revision > 0) { "revision: must be positive" }
         require(sourceSha256.matches(Regex("[0-9a-f]{64}"))) { "sourceSha256: expected lowercase SHA256" }
-        require(this.zones.size in 1..256) { "zones: must contain 1–256 zones" }
+        require(this.zones.size in 0..256) { "zones: must contain 0–256 zones" }
         require(this.zones.map { it.id }.distinct().size == this.zones.size) { "zones: duplicate IDs" }
         this.zones.forEach { require(bounds.contains(it.bounds)) { "zones.${it.id}.bounds: outside world bounds" } }
         this.zones.forEachIndexed { i, a -> this.zones.drop(i + 1).forEach { b ->
