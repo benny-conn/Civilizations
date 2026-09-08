@@ -70,7 +70,8 @@ artifacts and next work; do not wait until the entire slice is finished.
   `a72b4f2d582528218e2d13624c331878dfb723370fb44903c637a6b6106bdf42`.
   Probe sources and reproduction notes: `experiments/scarcity/`. Desktop remains off/unchanged.
   Final SQL integrity and foreign-key checks pass; both Paper boots/shutdowns have no ERROR.
-  Original export file hashes still match. Fixture is stopped. Integration commit is recorded after delivery.
+  Original export file hashes still match. Fixture is stopped. Delivery: feature commit `3717367` on `benny/scarcity-extraction`, rebased onto latest
+  main, fast-forward merged and pushed to `origin/main`. S5 is the next pickup.
 
 ### S1 implementation progress
 
