@@ -91,6 +91,10 @@ artifacts and next work; do not wait until the entire slice is finished.
   full Desktop plugin-stack compatibility. The user previously declined another playtest;
   none was silently substituted or claimed. S6 release is not approved by automated checks.
   The Nether is a bounded empty transit fixture; full survival Nether authoring remains open.
+- Integration complete: feature commit `8d5b465` on `benny/scarcity-integration` rebased
+  onto current main, fast-forward merged and pushed to `origin/main`. This follow-up
+  documentation commit records delivery. No technical S5 implementation remains; human
+  and balance acceptance above remain pending. Both Desktop and S5 servers are stopped.
 
 ### S4 implementation progress
 
