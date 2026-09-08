@@ -461,3 +461,15 @@ schema. Species-specific production policy remains in later integrations. The
 [managed-mob contract](managed-mobs.md) defines single-attempt world authorization,
 immutable rule snapshots, recovery and bounded paging. No Paper animal enforcement is
 installed by S3a, and persistence never implies force-loading chunks.
+
+## Cattle Paper coordination (S3b)
+
+Migration 16 records immutable opt-in cattle activation and fixed seed slots. The bounded
+Paper coordinator uses the existing storage worker without rebuilding the full gameplay
+snapshot on each animal operation. Only loaded identity views serve hot event paths;
+unload drops presence and never records death. PDC identifies observations, not spawn
+authorization. APPLYING births reconcile observed children without replacement; death
+payout is single-attempt, tombstones suppress old saved entities, and pending deaths stay
+held for explicit no-reward settlement. No chunk tickets or world generation are used.
+The [cattle contract](cattle-policy.md) records controls, bounds, defaults and remaining
+species/multiplayer coverage. Broader mobs still share the generic durable model.

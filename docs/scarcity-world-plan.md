@@ -24,7 +24,8 @@ artifacts and next work; do not wait until the entire slice is finished.
 | S2a sugar-cane policy | Complete; Desktop not activated | Schema 13 explicit activation, frozen geography and bounded creation checks. 173 tests and Paper growth/harvest/restart passed. |
 | S2b fixed Nether pairs | Complete; Desktop not activated | Schema 14, simple YAML setup, exact pairing, safe exits and relighting; 182 tests, real bidirectional entity travel, denials and unloaded-destination/restart recovery passed. |
 | S3a managed-mob persistence | Complete | Schema 15; shared species identities, creation/parent reservations, deadlines, death intents/tombstones and bounded recovery reads. [Contract](managed-mobs.md). |
-| S3b–S6 | Not started | No live managed-species activation, registered herds, finite deposits, supply audit or season release. |
+| S3b cattle Paper integration | Complete | Opt-in SQL activation/fixed slots, bounded event coordination, native breeding/death, load reconciliation and pending-death settlement. [Setup](cattle-policy.md). Verified only in isolated fixture; Desktop unchanged. |
+| S4–S6 | Not started | Finite deposits/repair exclusions, integrated supply audit and season release remain. Other resource-mob adapters remain a staged follow-up. |
 | Proximity text chat | Explicitly deferred | Recorded in worktree roadmap; ordinary text chat retains existing behavior. |
 
 ### S1 implementation progress
@@ -242,19 +243,47 @@ backup/recovery proposal below is not a requirement to back up this current test
 - Existing CATTLE habitat zones remain the first map integration; broader species policies
   and habitats are future integrations, not silently enabled by accepting a species key.
 
+### S3b progress
+
+- Started `benny/cattle-paper` from pushed main `df736a9`. Implementing opt-in cattle
+  activation and fixed seed slots, bounded Paper coordination over the shared registry,
+  birth/death containment and reconciliation. Desktop server remains off and untouched.
+- Activation, bounded Paper queues and SQL-backed birth/death paths compile; 194 tests
+  passed including setting validation and activation invariants. Live fixture port 25581
+  uses 4-second maturity / 2-second cooldown for verification. Live activation, two seed
+  slots, repeat-seed idempotency, unregistered-cow containment, CUSTOM spawn denial and
+  native breeding to a third registered cow passed. Forced birth shutdown preserved a
+  fourth world entity while SQL remained APPLYING with both parent reservations. Recovery
+  completed automatically: four ALIVE records/entities, zero parent reservations, no
+  duplicate spawn. A completed death tombstone suppressed an older world snapshot after
+  a second halt; repeating seed did not replace the dead slot. Unload/reload preserved
+  live identities. A third halt left DEATH_PENDING/PREPARED, held after restart and
+  explicitly settled without rewards.
+- Final clean build passed 194 tests. The fixture shutdown after replacing a running JAR
+  hit a class-loading error; the final fresh JVM boot/shutdown passed cleanly with
+  the final artifact held unchanged. SQL integrity passed; final counts ALIVE=2, DEAD=2,
+  unresolved=0. Restoring config defaults did not alter the persisted 4s/2s test policy.
+  Fixture is stopped; Desktop remains off and untouched. Migration 16 adds immutable activation/seed tables.
+  Reproducible probe: `experiments/cattle`; logs: `civilizations-s3b/server/verification`.
+  Integration pending. No Desktop deployment or client playtest is claimed.
+- Activation freezes 6-hour breeding / 12-hour maturity defaults into SQL; initial seeds
+  come from a simple file of habitat positions. Broader species remain later adapters.
+
 ### Next agent's coding starting point
 
 S1 registration, S2a cane and S2b fixed portal pairs are implemented. Read the
 [manifest contract](world-manifests.md), [cane contract](cane-policy.md), and
 [portal setup](portal-sites.md). S0 mechanics is complete; read the
-[animal experiment and implementation contract](animal-mechanics-spike.md). Next is **S3b: managed-mob Paper integration, cattle first**. S3a's shared durable model is now implemented; read the
-[managed-mob contract](managed-mobs.md). Next add opt-in cattle configuration/activation,
-seeding, PDC markers, main-thread event gates, bounded worker/index publication, pending
-animal containment and recovery diagnostics. Test real SQL/world crash windows. Cattle
-is the first adapter, not the only persistable species: sheep, chickens, villagers and
-other selected resource mobs must reuse the identity/lifecycle foundation with their own
-resource and transformation policies. No live population enforcement, finite deposits or
-full supply audit exists yet.
+[animal experiment and implementation contract](animal-mechanics-spike.md). S3b is implemented; read [cattle setup and recovery](cattle-policy.md). Next planned
+slice is **S4: finite resource extraction and the repair boundary**. Specify selected
+finite ore/deposit supply, prevent battle/exposure repair from recreating harvestable
+resources, and cover relevant loot/trade alternate supply before calling the scarcity
+audit complete. Follow the serialized durable/Paper lanes.
+
+Cattle remains the first species adapter. Sheep (wool/regrowth), chickens (eggs/hatching),
+villagers (food/beds/trades/curing), and other selected resource mobs must reuse the shared
+identity core with explicit resource/transformation policies. Their live adapters are not
+implemented by S3b. Larger-map activation and multiplayer integration remain S5.
 
 User preference: rectangular geometry is enough; irregular zones may come later. Do not
 add draft editing, revisions or visible boundary previews. Keep configuration/setup direct.
@@ -488,14 +517,13 @@ existing government/economy product sequence.
 | S0 — compatibility and mechanics spike | Operations; no production policy. Test WorldPainter export and the managed birth/death event sequence on a separate 26.2 fixture. | Small world survives restart; documented event ordering, cancellation side effects and crash windows; go/no-go for chosen tools. |
 | S1 — world manifest and zones | Complete as registration only; foundational work delivered before the now-completed animal spike. Application values, SQL import, spatial index and admin validation/status. Activation deferred until enforceable release policy exists. | Invalid/overlapping zones and mismatched worlds reject; snapshot recovery, randomized geometry tests, Paper import/restart pass. |
 | S2 — crop and portal enforcement | S2a cane (schema 13) and S2b fixed pairs (schema 14) implemented. | Cane growth/harvest and fixed two-way entity travel, unregistered/blocked cases and runtime recovery tested. Player portal routing is adapter-tested; no client playtest claimed. |
-| S3 — managed mob lifecycle, cattle first | S3a shared durable foundation complete (schema 15); S3b Paper integration next. Then species-specific sheep/chicken/villager and other resource-mob adapters. | Duplicate events and crashes at each boundary cannot create a second authorized animal; unload is never mistaken for death; ambiguity is visible and contained. |
+| S3 — managed mob lifecycle, cattle first | S3a shared durable foundation complete (schema 15); S3b cattle Paper integration complete. Then species-specific sheep/chicken/villager and other resource-mob adapters. | Duplicate events and crashes at each boundary cannot create a second authorized animal; unload is never mistaken for death; ambiguity is visible and contained. |
 | S4 — extraction and repair boundary | Serialized durable/Paper changes as necessary, after S1. Ore preparation, loot/trade decisions, resource exclusions and diagnostics. | No unauthorized new supply in the release audit; adversarial harvest → battle/exposure repair → harvest fails to multiply selected resources. |
 | S5 — integrated resource playtest | After S2–S4. 2,048-square map, three civilizations, three resource types and registered portals. | At least two meaningful resource exchanges, successful herd relocation and reproduction, visible depletion, and no permanent basic-food lockout. |
 | S6 — season release | After tuning and the existing first-season governance/economy prerequisites. Full map and supply manifest, backups, recovery drill, player guide. | Staff can restore world and SQL together, explain every restriction, and show all acceptance evidence. |
 
-S0 and S3a are complete. S3b is next, using the shared managed-mob foundation and
-recovery requirements in the animal experiment report. No production animal rules were
-added by the spike.
+S0, S3a and S3b are complete. S4 is next. The cattle adapter is opt-in and tested in
+an isolated fixture; broader species policies and the full resource supply audit remain.
 
 ## Playtest measurements and stop conditions
 

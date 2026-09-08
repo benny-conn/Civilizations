@@ -66,6 +66,7 @@ interface CivilizationsRepository {
 }
 
 interface CivilizationsReadContext {
+    fun findCattleActivation(): io.bennyc.civilizations.application.mob.CattleActivation?
     fun findManagedMob(id: java.util.UUID): io.bennyc.civilizations.application.mob.ManagedMob?
     fun findMobCreation(operationId: java.util.UUID): io.bennyc.civilizations.application.mob.ManagedMob?
     fun findManagedMobByEntity(entityUuid: java.util.UUID): io.bennyc.civilizations.application.mob.ManagedMob?
@@ -277,6 +278,7 @@ interface CivilizationsReadContext {
 }
 
 interface CivilizationsWriteContext : CivilizationsReadContext {
+    fun insertCattleActivation(activation: io.bennyc.civilizations.application.mob.CattleActivation)
     fun insertManagedMob(mob: io.bennyc.civilizations.application.mob.ManagedMob)
     fun updateManagedMob(mob: io.bennyc.civilizations.application.mob.ManagedMob)
     fun insertMobDeath(death: io.bennyc.civilizations.application.mob.MobDeath)

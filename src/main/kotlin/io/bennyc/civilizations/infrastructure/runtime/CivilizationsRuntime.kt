@@ -110,6 +110,8 @@ class CivilizationsRuntime private constructor(
         worldManifests = WorldManifestService(repository, clock),
         caneActivation = CaneActivationService(repository, clock),
         portals = PortalNetworkService(repository, clock),
+        mobs = io.bennyc.civilizations.application.mob.ManagedMobService(repository, clock),
+        cattle = io.bennyc.civilizations.application.mob.CattleActivationService(repository, clock),
         civilizations = CivilizationService(repository, idGenerator, clock, phaseRules),
         claims = ClaimService(repository, idGenerator, claimRules, phaseRules, clock),
         wars = WarService(repository, idGenerator, clock, economyRules.battleCasualties),
@@ -200,6 +202,43 @@ class CivilizationsRuntime private constructor(
      * from event-time state. A newly paid job still uses [submitMutation] because it changes
      * a civilization treasury balance.
      */
+    fun <T> submitMobOperation(
+        operation: RuntimeMutationScope.() -> ApplicationResult<T>,
+        completion: (RuntimeMutationOutcome<T>) -> Unit,
+    ) {
+        val current = state
+        if (closed.get() || current !is CivilizationsRuntimeState.Ready) {
+            dispatchToServer {
+                completion(RuntimeMutationOutcome.NotReady(state))
+            }
+            return
+        }
+
+        try {
+            worker.execute {
+                try {
+                    val result = mutationScope.operation()
+                    dispatchToServer {
+                        val ready = state as? CivilizationsRuntimeState.Ready
+                        if (ready == null) {
+                            completion(RuntimeMutationOutcome.NotReady(state))
+                        } else {
+                            completion(RuntimeMutationOutcome.Completed(result, ready))
+                        }
+                    }
+                } catch (failure: Throwable) {
+                    publishFatal(failure) {
+                        completion(RuntimeMutationOutcome.Failed(failure))
+                    }
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            dispatchToServer {
+                completion(RuntimeMutationOutcome.NotReady(state))
+            }
+        }
+    }
+
     fun <T> submitRepairOperation(
         operation: RepairJobService.() -> ApplicationResult<T>,
         completion: (RuntimeMutationOutcome<T>) -> Unit,
@@ -951,6 +990,8 @@ class RuntimeMutationScope internal constructor(
     val worldManifests: WorldManifestService,
     val caneActivation: CaneActivationService,
     val portals: PortalNetworkService,
+    val mobs: io.bennyc.civilizations.application.mob.ManagedMobService,
+    val cattle: io.bennyc.civilizations.application.mob.CattleActivationService,
     val civilizations: CivilizationService,
     val claims: ClaimService,
     val wars: WarService,

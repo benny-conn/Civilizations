@@ -28,12 +28,14 @@ class CivilizationsPlugin : JavaPlugin() {
     private lateinit var battleResolutionCoordinator: PaperBattleResolutionCoordinator
     private lateinit var repairCoordinator: PaperRepairCoordinator
     private lateinit var landProtectionCoordinator: PaperLandProtectionCoordinator
+    private lateinit var cattleController: io.bennyc.civilizations.infrastructure.paper.mob.PaperCattle
     private lateinit var portalListener: io.bennyc.civilizations.infrastructure.paper.scarcity.PaperPortalListener
     private lateinit var repairMenu: PaperRepairMenu
 
     override fun onEnable() {
         saveDefaultConfig()
         val runtimeConfiguration = CivilizationsConfiguration.load(dataFolder.toPath(), config)
+        val cattleRules = io.bennyc.civilizations.infrastructure.paper.mob.CattleSettings.read(config)
         val serverThread = Executor { action ->
             if (Bukkit.isPrimaryThread()) {
                 action.run()
@@ -114,6 +116,9 @@ class CivilizationsPlugin : JavaPlugin() {
                 (runtime.state as? CivilizationsRuntimeState.Ready)?.canePolicy
             }, this,
         )
+        cattleController = io.bennyc.civilizations.infrastructure.paper.mob.PaperCattle(this, runtime, cattleRules)
+        server.pluginManager.registerEvents(cattleController, this)
+        registerCommand("civcattle", "Manage the opt-in cattle experiment", emptyList(), cattleController)
         portalListener = io.bennyc.civilizations.infrastructure.paper.scarcity.PaperPortalListener(this, { runtime.state })
         server.pluginManager.registerEvents(portalListener, this)
         registerCommand("civportal", "Set up fixed Nether portal pairs", emptyList(),
@@ -192,6 +197,7 @@ class CivilizationsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::cattleController.isInitialized) cattleController.close()
         if (::portalListener.isInitialized) portalListener.close()
         if (::repairMenu.isInitialized) {
             repairMenu.close()

@@ -97,3 +97,10 @@ repair:
   assessment:
     # Maximum live block observations in one server tick before quoting a repair.
     blocks-per-tick: 200
+
+scarcity:
+  cattle:
+    # Used at one-time activation only; copied into SQL. Restart required before activation.
+    # No activation record means OFF. Later config edits cannot change an existing policy.
+    maturity-seconds: 43200
+    breeding-cooldown-seconds: 21600

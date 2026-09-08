@@ -2665,5 +2665,6 @@ object CivilizationsSchema {
         CaneSchema.migration,
         PortalSchema.migration,
         ManagedMobSchema.migration,
+        CattleSchema.migration,
     )
 }

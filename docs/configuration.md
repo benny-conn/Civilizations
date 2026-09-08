@@ -159,3 +159,13 @@ When adding a key:
 3. Preserve hard lifecycle and data-integrity bounds in application code.
 4. Add the key and its default to `config.yml` and this reference.
 5. Test both an accepted override and malformed or unsafe input.
+
+## Cattle activation defaults
+
+`scarcity.cattle.maturity-seconds` defaults to `43200`, and
+`scarcity.cattle.breeding-cooldown-seconds` defaults to `21600`. Both require integer seconds
+from `1` through `31536000`; absent keys use defaults and invalid paths fail startup.
+Restart after editing and before one-time activation. Activation snapshots these settings
+into SQL; subsequent config changes cannot reinterpret that activation or existing births.
+There is no YAML enable flag: `/civcattle enable <file.yml>` performs durable activation.
+See [cattle setup and recovery](cattle-policy.md).

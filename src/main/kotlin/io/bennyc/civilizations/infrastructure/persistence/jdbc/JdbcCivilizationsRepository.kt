@@ -120,6 +120,7 @@ class JdbcCivilizationsRepository(
 private open class JdbcReadContext(
     protected val connection: Connection,
 ) : CivilizationsReadContext {
+    override fun findCattleActivation() = JdbcCattleActivation(connection).find()
     override fun findManagedMob(id: java.util.UUID) = JdbcManagedMobs(connection).find(id)
     override fun findMobCreation(operationId: java.util.UUID) = JdbcManagedMobs(connection).creation(operationId)
     override fun findManagedMobByEntity(entityUuid: java.util.UUID) = JdbcManagedMobs(connection).entity(entityUuid)
@@ -1257,6 +1258,7 @@ private open class JdbcReadContext(
 private class JdbcWriteContext(
     connection: Connection,
 ) : JdbcReadContext(connection), CivilizationsWriteContext {
+    override fun insertCattleActivation(activation: io.bennyc.civilizations.application.mob.CattleActivation) = JdbcCattleActivation(connection).insert(activation)
     override fun insertManagedMob(mob: io.bennyc.civilizations.application.mob.ManagedMob) = JdbcManagedMobs(connection).insert(mob)
     override fun updateManagedMob(mob: io.bennyc.civilizations.application.mob.ManagedMob) = JdbcManagedMobs(connection).update(mob)
     override fun insertMobDeath(death: io.bennyc.civilizations.application.mob.MobDeath) = JdbcManagedMobs(connection).insertDeath(death)

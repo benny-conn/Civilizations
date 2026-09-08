@@ -92,7 +92,7 @@ class CanePolicyTest {
             val season = SeasonService(db.repository, SequentialIdGenerator(), clock).create("Old").appliedValue()
             val m = manifest(season.id)
             db.repository.transaction { insertWorldManifest(RegisteredWorldManifest(m, clock.instant(), "console")) }
-            assertEquals(listOf(13, 14, 15), db.migrator.migrate().appliedVersions)
+            assertEquals(listOf(13, 14, 15, 16), db.migrator.migrate().appliedVersions)
             assertTrue(db.repository.read { listWorldManifests() }.single().manifest.sameDefinition(m))
             assertNull(db.repository.read { findCaneActivation() })
         }

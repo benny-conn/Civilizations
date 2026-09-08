@@ -124,6 +124,13 @@ co-loaded, followed by clean shutdown and restart while preserving the active se
 full claim purchase, shortened upkeep/grace/exposure, outsider damage cap, manual rebuild,
 and paid restoration scenario remains in the manual multiplayer checklist.
 
+## Managed cattle experiment
+
+Opt-in cattle now uses the shared species-neutral registry. `/civcattle` installs fixed
+seed slots and supports breeding/death recovery; default maturity is 12 hours and breeding
+cooldown is 6 hours. Migration 16 stores activation. See [setup and limitations](docs/cattle-policy.md).
+The Desktop test server has not been activated; verification used an isolated fixture.
+
 ## Administration
 
 The native Paper `/civadmin` command requires `civilizations.admin`, which defaults to operators. Run `/civadmin` for help. The current commands support:

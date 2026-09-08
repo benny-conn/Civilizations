@@ -1,0 +1,46 @@
+Paper 26.2-121 / Java 25, isolated port 25581; 2026-09-07.
+Selected live evidence. SQL checkpoint observations are recorded in docs/cattle-policy.md.
+
+SOURCE cattle-birth-crash.log
+[20:59:41] [Server thread/INFO]: Cattle enabled; 2 fixed seed slots. Run /civcattle seed.
+[21:00:06] [Server thread/INFO]: [CattleProbe] PASS preexisting unregistered cow contained
+[21:00:06] [Server thread/INFO]: [CattleProbe] PASS unauthorized CUSTOM spawn cancelled
+[21:00:06] [Server thread/INFO]: [CattleProbe] PASS two adult managed parents ready
+[21:00:06] [Server thread/INFO]: first: ALIVE; no replacement spawned
+[21:00:06] [Server thread/INFO]: second: ALIVE; no replacement spawned
+[21:00:06] [Server thread/INFO]: Durable {ALIVE=2}; unresolved IDs (first 20)=[]
+[21:00:18] [Server thread/INFO]: [CattleProbe] PASS native breeding produced managed child
+[21:00:43] [Server thread/INFO]: [CattleProbe] PASS preexisting unregistered cow contained
+[21:00:43] [Server thread/INFO]: Durable {ALIVE=3}; unresolved IDs (first 20)=[]
+[21:00:58] [Server thread/INFO]: [CattleProbe] PASS two adult managed parents ready
+[21:01:01] [Server thread/INFO]: [CattleProbe] HALT child world saved while SQL acknowledgment blocked
+
+SOURCE cattle-death-crash.log
+[21:03:52] [Server thread/INFO]: [CattleProbe] PASS preexisting unregistered cow contained
+[21:03:52] [Server thread/INFO]: Durable {ALIVE=4}; unresolved IDs (first 20)=[]
+[21:04:02] [Server thread/INFO]: [CattleProbe] DEATH cancelled=true items=[ItemStack{BEEF x 2}] xp=0
+[21:04:03] [Server thread/INFO]: [CattleProbe] DEATH cancelled=false items=[ItemStack{BEEF x 2}] xp=0
+[21:04:06] [Server thread/INFO]: [CattleProbe] PASS managed death completed
+[21:04:06] [Server thread/INFO]: [CattleProbe] HALT after durable death, before next world save
+
+SOURCE cattle-pending-crash.log
+[21:06:06] [Server thread/INFO]: [CattleProbe] PASS tombstoned world snapshot suppressed after restart
+[21:06:06] [Server thread/INFO]: first: DEAD; no replacement spawned
+[21:06:06] [Server thread/INFO]: second: ALIVE; no replacement spawned
+[21:06:06] [Server thread/INFO]: Durable {ALIVE=3, DEAD=1}; unresolved IDs (first 20)=[]
+[21:06:09] [Server thread/INFO]: [CattleProbe] PASS chunk unloaded
+[21:06:09] [Server thread/INFO]: [CattleProbe] PASS unload removes only live presence
+[21:06:11] [Server thread/INFO]: [CattleProbe] PASS same cows reconciled after unload and reload
+[21:07:18] [Server thread/INFO]: [CattleProbe] DEATH cancelled=true items=[ItemStack{BEEF x 2}] xp=0
+[21:07:18] [Server thread/INFO]: [CattleProbe] HALT world saved while next SQL operation blocked
+
+SOURCE cattle-pending-recovery.log
+[21:08:18] [Server thread/INFO]: [CattleProbe] PASS pending death contained after restart
+[21:08:18] [Server thread/INFO]: [CattleProbe] SETTLE 3010e760-9468-4333-b3b6-25d4a7688d6c
+[21:08:18] [Server thread/INFO]: Durable {ALIVE=2, DEATH_PENDING=1, DEAD=1}; unresolved IDs (first 20)=[6f139db2-da3f-4346-95ea-e195bd183fef]
+[21:08:57] [Server thread/INFO]: Death settled without rewards
+[21:10:07] [Server thread/ERROR]: Error occurred while disabling Civilizations v0.0.16-BETA
+
+SOURCE cattle-final-restart.log
+[21:12:05] [Server thread/INFO]: [CattleProbe] PASS preexisting unregistered cow contained
+[21:12:05] [Server thread/INFO]: Durable {ALIVE=2, DEAD=2}; unresolved IDs (first 20)=[]

@@ -99,8 +99,8 @@ Full `clean build` passed all 191 tests. Isolated Paper 26.2-121 upgraded a copi
 schema-14 database to 15, passed integrity checks, started with no registered mobs, and
 restarted cleanly. The Desktop server was not changed; both servers remain off.
 
-Next is **S3b: opt-in cattle Paper integration**: configuration/activation, one-time seeds,
+**S3b is now implemented**; see [cattle setup](cattle-policy.md) for configuration/activation, one-time seeds,
 PDC markers, event gates, bounded queues/indexes, pending-animal containment and observation,
-recovery diagnostics and actual SQL/world crash injection. Broader species integrations
+recovery diagnostics and actual SQL/world crash injection. S4 extraction/repair boundaries are next in the plan. Broader species integrations
 follow with their resource-specific tests. See the [mechanics experiment](animal-mechanics-spike.md)
 and the [progress/pickup record](scarcity-world-plan.md).

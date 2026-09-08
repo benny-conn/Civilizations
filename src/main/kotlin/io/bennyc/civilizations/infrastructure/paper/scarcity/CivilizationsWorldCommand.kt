@@ -108,8 +108,8 @@ class CivilizationsWorldCommand(private val runtime: CivilizationsRuntime, direc
         }
     }
     private fun status(ready: CivilizationsRuntimeState.Ready): String = ready.caneActivation?.let {
-        "cane=ON season=${it.seasonId} max-height=${it.maxHeight}; diamond/cattle=OFF"
-    } ?: "cane=OFF; diamond/cattle=OFF"
+        "cane=ON season=${it.seasonId} max-height=${it.maxHeight}; diamond=OFF; cattle: /civcattle status"
+    } ?: "cane=OFF; diamond=OFF; cattle: /civcattle status"
     private fun help(sender: CommandSender) = tell(sender, "/civworld validate|import <file.yml> | worlds | list | inspect <manifest-uuid> | here | cane-status | enable-cane <height> <reason>.")
     private fun tell(sender: CommandSender, message: String) { sender.sendMessage(Component.text(message)) }
 }

@@ -1,0 +1,8 @@
+name: CattleProbe
+version: '1.0'
+main: CattleProbe
+api-version: '26.2'
+depend: [Civilizations]
+commands:
+  cattleprobe:
+    permission: civilizations.admin
