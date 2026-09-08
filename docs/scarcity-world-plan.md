@@ -236,7 +236,9 @@ backup/recovery proposal below is not a requirement to back up this current test
   `civilizations-s3a/server/verification/schema-15-upgrade.log`. Clean restart passed; `schema-15-restart.log` records the ready runtime and
   clean shutdown. Fixture stopped; no Paper errors on either boot (expected no-Vault
   warning only).
-  Desktop server remains off and unchanged. Integration pending.
+  Desktop server remains off and unchanged. Delivery complete: `6abe881` on
+  `benny/managed-mob-registry`, rebased onto current main, fast-forward merged and pushed
+  to `origin/main`. S3b cattle Paper integration is next; broader species reuse this core.
 - Existing CATTLE habitat zones remain the first map integration; broader species policies
   and habitats are future integrations, not silently enabled by accepting a species key.
 
