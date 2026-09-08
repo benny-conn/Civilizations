@@ -1,5 +1,8 @@
 package io.bennyc.civilizations.application.repair
 
+import io.bennyc.civilizations.application.scarcity.ReconstructionResourcePolicy
+import io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied
+
 import io.bennyc.civilizations.application.ApplicationFailure
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.economy.EconomyAmountOverflow
@@ -63,6 +66,9 @@ class RepairJobService(
         basis: RepairAssessmentBasis,
         observations: List<CurrentRepairObservation>,
     ): ApplicationResult<RepairAssessment> {
+        if (basis.eligibleChanges.any {
+                !ReconstructionResourcePolicy.permits(it.journalEntry.originalState, it.reportEntry.finalState)
+            }) return ApplicationResult.Rejected(ResourceReconstructionDenied)
         val statesById = observations.associateBy(CurrentRepairObservation::blockChangeId)
         if (statesById.size != observations.size ||
             statesById.keys != basis.eligibleChanges.mapTo(linkedSetOf()) {

@@ -31,6 +31,18 @@ class RepairBlockDecisionTest {
     private val work = workItem(original, damaged)
 
     @Test
+    fun `saved resource originals and placements cannot be reconstructed even after manual restoration`() {
+        listOf("diamond_ore", "deepslate_diamond_ore", "diamond_block").forEach { material ->
+            val resource = SimpleBlockSnapshot("minecraft:$material")
+            listOf(workItem(resource, damaged), workItem(damaged, resource)).forEach { historical ->
+                listOf(damaged, resource, original).forEach { current ->
+                    assertEquals(RepairBlockDecision.ResourceDenied, RepairBlockDecision.decide(historical, current))
+                }
+            }
+        }
+    }
+
+    @Test
     fun `sealed damaged state restores the immutable original`() {
         val decision = assertIs<RepairBlockDecision.Restore>(
             RepairBlockDecision.decide(work, damaged),

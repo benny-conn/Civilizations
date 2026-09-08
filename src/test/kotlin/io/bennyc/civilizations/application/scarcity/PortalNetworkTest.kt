@@ -35,7 +35,7 @@ class PortalNetworkTest {
             SchemaMigrator(db.connectionFactory,CivilizationsSchema.migrations.take(13)).migrate()
             val seasons=SeasonService(db.repository,SequentialIdGenerator(),Clock.systemUTC())
             val season=seasons.create("Portals").appliedValue()
-            assertEquals(listOf(14, 15, 16),db.migrator.migrate().appliedVersions)
+            assertEquals(listOf(14, 15, 16, 17),db.migrator.migrate().appliedVersions)
             assertNull(db.repository.read { findPortalNetwork() })
             val service=PortalNetworkService(db.repository,Clock.systemUTC())
             val accepted=service.install(season.id,listOf(pair),"a".repeat(64),"console").appliedValue()

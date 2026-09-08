@@ -78,6 +78,7 @@ interface CivilizationsReadContext {
     fun findPortalNetwork(): io.bennyc.civilizations.application.scarcity.PortalNetwork?
 
     fun findCaneActivation(): io.bennyc.civilizations.application.scarcity.CaneActivation?
+    fun findDiamondActivation(): io.bennyc.civilizations.application.scarcity.DiamondActivation?
 
     fun listWorldManifests(): List<io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest>
 
@@ -287,6 +288,7 @@ interface CivilizationsWriteContext : CivilizationsReadContext {
     fun insertPortalNetwork(network: io.bennyc.civilizations.application.scarcity.PortalNetwork)
 
     fun insertCaneActivation(record: io.bennyc.civilizations.application.scarcity.CaneActivation)
+    fun insertDiamondActivation(record: io.bennyc.civilizations.application.scarcity.DiamondActivation)
 
     fun insertWorldManifest(record: io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest)
 

@@ -1,5 +1,7 @@
 package io.bennyc.civilizations.infrastructure.paper.protection
 
+import io.bennyc.civilizations.application.scarcity.ReconstructionResourcePolicy
+
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.block.TileState
@@ -19,7 +21,9 @@ internal object SimpleBattleBlockPolicy {
     private fun isSimpleBuildingBlock(block: Block): Boolean {
         val material = block.type
         val data = block.blockData
-        return !block.isEmpty &&
+        return !ReconstructionResourcePolicy.excludes(
+            io.bennyc.civilizations.domain.damage.SimpleBlockSnapshot(data.getAsString(false)),
+        ) && !block.isEmpty &&
             block.isSolid &&
             !material.hasUnsafeGravity() &&
             !block.isLiquid &&

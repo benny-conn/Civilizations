@@ -16,13 +16,38 @@ class CivilizationsWorldCommand(private val runtime: CivilizationsRuntime, direc
     private val parser = WorldManifestYaml(directory)
     override fun permission() = "civilizations.admin"
     override fun suggest(source: CommandSourceStack, args: Array<out String>): Collection<String> =
-        if (args.size <= 1) listOf("cane-status", "enable-cane", "worlds", "validate", "import", "list", "inspect", "here").filter { it.startsWith(args.lastOrNull().orEmpty()) } else emptyList()
+        if (args.size <= 1) listOf("diamond-status", "enable-diamonds", "cane-status", "enable-cane", "worlds", "validate", "import", "list", "inspect", "here").filter { it.startsWith(args.lastOrNull().orEmpty()) } else emptyList()
 
     override fun execute(source: CommandSourceStack, args: Array<out String>) {
         val sender = source.sender
         if (!sender.hasPermission(permission())) return
         val ready = runtime.state as? CivilizationsRuntimeState.Ready ?: return tell(sender, "Civilizations is not ready")
         when (args.firstOrNull()) {
+            "diamond-status" -> {
+                if (args.size != 1) return help(sender)
+                val d = ready.diamondActivation
+                tell(sender, if (d == null) "diamond=OFF; reconstruction resource exclusions always apply" else
+                    "diamond=ON season=${d.seasonId} equipment=${d.includeEquipment} audit=${d.auditSha256}; actor=${d.actor}; at=${d.activatedAt}; reason=${d.reason}")
+            }
+            "enable-diamonds" -> {
+                if (args.size < 4 || args[1] !in setOf("raw-only", "equipment")) return tell(sender,
+                    "/civworld enable-diamonds <raw-only|equipment> <audit-sha256> <reason>. Permanent server-wide loot/trade restriction; hash attests a reviewed unopened-world audit, not automatic release certification.")
+                val season = ready.activeSeason?.season ?: return tell(sender, "No active season")
+                val actor = (sender as? Player)?.uniqueId?.toString() ?: "console"
+                val worlds = java.util.List.copyOf(sender.server.worlds.map { LoadedResourceWorld(WorldId(it.key.asString()), it.uid, it.minHeight, it.maxHeight) })
+                runtime.submitMutation(operation = {
+                    diamondActivation.enable(season.id, args[1] == "equipment", args[2], actor, args.drop(3).joinToString(" "), worlds)
+                }, completion = { outcome ->
+                    when (outcome) {
+                        is RuntimeMutationOutcome.Completed -> when (val result = outcome.result) {
+                            is ApplicationResult.Rejected -> tell(sender, "Rejected: ${result.failure.description}")
+                            else -> tell(sender, "Diamond policy enabled; /civworld diamond-status")
+                        }
+                        is RuntimeMutationOutcome.Failed -> tell(sender, "Storage failed; see server log")
+                        is RuntimeMutationOutcome.NotReady -> tell(sender, "Civilizations is not ready")
+                    }
+                })
+            }
             "cane-status" -> {
                 if (args.size != 1) return help(sender)
                 tell(sender, status(ready))
@@ -108,8 +133,8 @@ class CivilizationsWorldCommand(private val runtime: CivilizationsRuntime, direc
         }
     }
     private fun status(ready: CivilizationsRuntimeState.Ready): String = ready.caneActivation?.let {
-        "cane=ON season=${it.seasonId} max-height=${it.maxHeight}; diamond=OFF; cattle: /civcattle status"
-    } ?: "cane=OFF; diamond=OFF; cattle: /civcattle status"
-    private fun help(sender: CommandSender) = tell(sender, "/civworld validate|import <file.yml> | worlds | list | inspect <manifest-uuid> | here | cane-status | enable-cane <height> <reason>.")
+        "cane=ON season=${it.seasonId} max-height=${it.maxHeight}; diamond=${if (ready.diamondActivation == null) "OFF" else "ON"}; cattle: /civcattle status"
+    } ?: "cane=OFF; diamond=${if (ready.diamondActivation == null) "OFF" else "ON"}; cattle: /civcattle status"
+    private fun help(sender: CommandSender) = tell(sender, "/civworld validate|import <file.yml> | worlds | list | inspect <manifest-uuid> | here | diamond-status | enable-diamonds <raw-only|equipment> <audit-sha256> <reason> | cane-status | enable-cane <height> <reason>.")
     private fun tell(sender: CommandSender, message: String) { sender.sendMessage(Component.text(message)) }
 }

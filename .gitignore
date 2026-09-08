@@ -4,3 +4,5 @@ Civilizations.iml
 .kotlin/
 build/
 server/
+
+__pycache__/

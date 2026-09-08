@@ -1,5 +1,8 @@
 package io.bennyc.civilizations.application.protection
 
+import io.bennyc.civilizations.application.scarcity.ReconstructionResourcePolicy
+import io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied
+
 import io.bennyc.civilizations.application.ApplicationFailure
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.economy.EconomyLedger
@@ -343,6 +346,9 @@ class ProtectionRepairService(
         observations: List<ProtectionDamageObservation>,
         previouslyResolvedCount: Long,
     ): ApplicationResult<ProtectionRepairAssessment> {
+        if (damage.any {
+                !ReconstructionResourcePolicy.permits(it.site.originalState, it.latestEvent.expectedState)
+            }) return ApplicationResult.Rejected(ResourceReconstructionDenied)
         require(previouslyResolvedCount >= 0)
         val byId = observations.associateBy(ProtectionDamageObservation::siteId)
         if (byId.size != observations.size || byId.keys != damage.mapTo(linkedSetOf()) { it.site.id }) {

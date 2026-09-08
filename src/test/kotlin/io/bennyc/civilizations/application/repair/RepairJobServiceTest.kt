@@ -57,6 +57,46 @@ class RepairJobServiceTest {
     private val clock = Clock.fixed(Instant.parse("2026-08-28T12:00:00Z"), ZoneOffset.UTC)
 
     @Test
+    fun `new season selection cannot hide old repair history from diamond activation`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database, damageCount = 1)
+            val seasons = SeasonService(database.repository, fixture.ids, clock)
+            val next = seasons.create("Next").appliedValue()
+            seasons.selectActive(next.id).appliedValue()
+            val uuid = java.util.UUID(0, 1234)
+            val bounds = io.bennyc.civilizations.application.scarcity.ResourceBounds(0, -64, 0, 15, 319, 15)
+            val loaded = listOf(io.bennyc.civilizations.application.scarcity.LoadedResourceWorld(world, uuid, -64, 320))
+            val manifest = io.bennyc.civilizations.application.scarcity.WorldManifest(java.util.UUID(0, 1235), next.id, world, uuid, 1, "a".repeat(64), bounds,
+                listOf(io.bennyc.civilizations.application.scarcity.ResourceZone("ore", io.bennyc.civilizations.application.scarcity.ResourceKind.DIAMOND, bounds)))
+            io.bennyc.civilizations.application.scarcity.WorldManifestService(database.repository, clock)
+                .register(manifest, loaded, "console").appliedValue()
+            val rejected = io.bennyc.civilizations.application.scarcity.DiamondActivationService(database.repository, clock)
+                .enable(next.id, true, "b".repeat(64), "console", "test", loaded).rejection()
+            assertEquals(true, rejected.description.contains("history"))
+            assertNull(database.repository.read { findDiamondActivation() })
+        }
+    }
+
+    @Test
+    fun `historical resource report rejects assessment before any new repair charge`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database, damageCount = 1)
+            val basis = fixture.repairs.loadAssessmentBasis(fixture.battleId, fixture.southId).appliedValue()
+            val before = database.repository.read { listRepairJobsForBattle(fixture.battleId, 50) }
+            val change = basis.eligibleChanges.single()
+            val resource = SimpleBlockSnapshot("minecraft:diamond_ore")
+            val historical = basis.copy(eligibleChanges = listOf(change.copy(
+                journalEntry = change.journalEntry.copy(originalState = resource),
+            )))
+            assertIs<io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied>(
+                fixture.repairs.assess(historical, fixture.observations()).rejection(),
+            )
+            assertEquals(before, database.repository.read { listRepairJobsForBattle(fixture.battleId, 50) })
+            assertEquals(basis, fixture.repairs.loadAssessmentBasis(fixture.battleId, fixture.southId).appliedValue())
+        }
+    }
+
+    @Test
     fun `manual rebuilding reduces a later target from fifty to forty seven percent`() {
         SqliteTestDatabase().use { database ->
             val fixture = fixture(database, damageCount = 100)

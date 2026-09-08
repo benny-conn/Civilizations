@@ -1,5 +1,8 @@
 package io.bennyc.civilizations.infrastructure.paper.repair
 
+import io.bennyc.civilizations.application.scarcity.ReconstructionResourcePolicy
+import io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied
+
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.repair.CreateRepairJobRequest
 import io.bennyc.civilizations.application.repair.CreatedRepairJob
@@ -541,6 +544,9 @@ class PaperRepairCoordinator(
     }
 
     private fun execute(item: RepairWorkItem): RepairExecution {
+        if (!ReconstructionResourcePolicy.permits(
+                item.change.journalEntry.originalState, item.change.reportEntry.finalState,
+            )) return RepairExecution.Unavailable(ResourceReconstructionDenied.description)
         val position = item.change.journalEntry.position
         val world = world(position.worldId)
             ?: return RepairExecution.Unavailable("World ${position.worldId} became unavailable")
@@ -552,6 +558,7 @@ class PaperRepairCoordinator(
         val block = world.getBlockAt(position.x, position.y, position.z)
         val current = SimpleBlockSnapshot(block.blockData.getAsString(false))
         return when (val decision = RepairBlockDecision.decide(item, current)) {
+            RepairBlockDecision.ResourceDenied -> RepairExecution.Unavailable(ResourceReconstructionDenied.description)
             RepairBlockDecision.AlreadyRestored -> {
                 metrics.alreadyRestored++
                 RepairExecution.Completed(restored(item))
@@ -851,13 +858,17 @@ class PaperRepairCoordinator(
 internal sealed interface RepairBlockDecision {
     data object AlreadyRestored : RepairBlockDecision
     data object Conflict : RepairBlockDecision
+    data object ResourceDenied : RepairBlockDecision
     data class Restore(val original: SimpleBlockSnapshot) : RepairBlockDecision
 
     companion object {
         fun decide(item: RepairWorkItem, current: SimpleBlockSnapshot): RepairBlockDecision =
-            when (current) {
-                item.change.journalEntry.originalState -> AlreadyRestored
-                item.change.reportEntry.finalState -> Restore(item.change.journalEntry.originalState)
+            when {
+                !ReconstructionResourcePolicy.permits(
+                    item.change.journalEntry.originalState, item.change.reportEntry.finalState,
+                ) -> ResourceDenied
+                current == item.change.journalEntry.originalState -> AlreadyRestored
+                current == item.change.reportEntry.finalState -> Restore(item.change.journalEntry.originalState)
                 else -> Conflict
             }
     }

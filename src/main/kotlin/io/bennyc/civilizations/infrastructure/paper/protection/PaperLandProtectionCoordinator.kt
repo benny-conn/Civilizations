@@ -1,5 +1,8 @@
 package io.bennyc.civilizations.infrastructure.paper.protection
 
+import io.bennyc.civilizations.application.scarcity.ReconstructionResourcePolicy
+import io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied
+
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.protection.ProtectionDamageObservation
 import io.bennyc.civilizations.application.protection.ProtectionRepairAssessment
@@ -390,6 +393,9 @@ class PaperLandProtectionCoordinator(
             chunkFailure = null
             pauseJob(job, failure)
             return
+        }
+        if (!ReconstructionResourcePolicy.permits(item.restoreState, item.expectedState)) {
+            return pauseJob(job, ResourceReconstructionDenied.description)
         }
         when (val access = ensureChunk(job.id, item.position)) {
             ChunkAccess.Ready -> Unit

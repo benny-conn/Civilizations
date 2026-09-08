@@ -1,0 +1,8 @@
+name: ScarcityProbe
+version: '1'
+main: ScarcityProbe
+api-version: '26.2'
+depend: [Civilizations]
+commands:
+  s4probe:
+    permission: civilizations.admin

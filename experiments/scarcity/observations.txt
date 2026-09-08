@@ -1,0 +1,18 @@
+2026-09-07 local time; Paper 26.2-121, Java 25, loopback 25582.
+Original 2048 export: 16384 full chunks, 207138 diamond ore, 4 selected item stacks.
+Prepared unopened copy: 6 deposits x 256 ore, 1536 total; no outside-deposit ore,
+selected item stacks, lazy loot tables, or merchant offers. Source unchanged.
+Paper imported the prepared copy and sampled all six deposits successfully.
+Native ore/storage-block harvest -> injected historical battle execution refused ->
+second harvest had no block. Old exposure item took pause path; second harvest empty.
+Ordinary stone remained journalable and reconstructed.
+Native seeded end-city loot fills: 76 selected outputs and 220 other outputs before
+activation; 0 selected and 220 other outputs after activation and after JVM restart.
+Native diamond-equipped zombie spawn cancelled. Synthetic vault dispatch preserved
+emerald and removed diamond. Merchant purchase/offer checks covered by JVM adapter tests.
+Schema 17 persisted equipment mode, audit hash, actor/reason/time; mode-change rejection
+and identical retry verified after restart. No full multiplayer/playtest claim.
+Paper anti-xray mode 1 enabled for diamond/deepslate diamond ores to Y64.
+Idle/probe TPS 19.9/20/20; last 5s average 0.3ms. No packet or player-load benchmark.
+Both fresh boot and restart/shutdown clean; expected missing Vault-provider warning in
+this two-plugin fixture. Desktop server and original WorldPainter export untouched.

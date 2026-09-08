@@ -202,7 +202,7 @@ class ManagedMobServiceTest {
     @Test fun `schema fourteen upgrades without registering any mobs and restart is idempotent`() {
         SqliteTestDatabase().use { db ->
             SchemaMigrator(db.connectionFactory,CivilizationsSchema.migrations.filter { it.version<=14 }).migrate()
-            assertEquals(listOf(15, 16),db.migrator.migrate().appliedVersions)
+            assertEquals(listOf(15, 16, 17),db.migrator.migrate().appliedVersions)
             assertTrue(db.migrator.migrate().appliedVersions.isEmpty())
             db.connectionFactory.open().use { c ->
                 c.createStatement().use { s -> s.executeQuery("SELECT count(*) FROM managed_mobs").use { r -> assertTrue(r.next());assertEquals(0,r.getInt(1)) } }

@@ -86,6 +86,16 @@ class LandProtectionServiceTest {
             assertEquals(0, exposed.exposureDamageCount)
             assertEquals(2, exposed.exposureDamageLimit)
 
+            listOf("diamond_ore", "deepslate_diamond_ore", "diamond_block").forEach { material ->
+                val resource = SimpleBlockSnapshot("minecraft:$material")
+                assertIs<io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied>(
+                    fixture.land.prepareMutation(fixture.damageRequest(0, observed = resource)).rejection(),
+                )
+                assertIs<io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied>(
+                    fixture.land.prepareMutation(fixture.damageRequest(0, expected = resource)).rejection(),
+                )
+            }
+            assertEquals(0, fixture.land.assess(fixture.northId).unchangedValue().exposureDamageCount)
             val first = fixture.damage(0).appliedValue()
             val second = fixture.damage(1).appliedValue()
             assertEquals(true, first.firstDamageAtSite)

@@ -19,14 +19,58 @@ artifacts and next work; do not wait until the entire slice is finished.
 | WorldPainter installation | Complete | Official 2.27.1 portable Mac app installed at `/Applications/WorldPainter.app`; publisher archive SHA256 verified. Gatekeeper remains enabled. |
 | S0 map compatibility sample | Map portion complete | WorldPainter exported all 1,024 chunks of a 512-square world. Multiverse imported it on Paper; spawn, mountain, water and cave block checks passed before/after restart; UUID and 512-block border persisted. User subsequently joined and proceeded to the larger map. |
 | S0 managed-animal mechanics experiment | Complete | Native feeding/breeding/death, unload/reload, restart and hard-halt checkpoints verified on Paper 26.2-121. [Findings and S3 contract](animal-mechanics-spike.md); no production animal registry yet. |
-| 2,048-square authored prototype | Export complete; user accepted overview | All 16,384 chunks verified offline; three settlement spawn columns have solid grass and two air blocks. User explicitly declined a further playtest. Not imported or verified on Paper; acceptance of appearance is not runtime verification. |
+| 2,048-square authored prototype | Export complete; user accepted overview | All 16,384 chunks verified offline; three settlement spawn columns have solid grass and two air blocks. User explicitly declined a further playtest. Original export unchanged; S4’s separately prepared copy is now sampled/imported on Paper. Appearance acceptance alone was not runtime verification. |
 | S1 world manifest / resource zones | Complete (registration scope) | Schema 12, validated immutable YAML imports, memory index and admin inspection; 165 tests and isolated Paper import/restart passed. Enforcement/activation intentionally absent. |
 | S2a sugar-cane policy | Complete; Desktop not activated | Schema 13 explicit activation, frozen geography and bounded creation checks. 173 tests and Paper growth/harvest/restart passed. |
 | S2b fixed Nether pairs | Complete; Desktop not activated | Schema 14, simple YAML setup, exact pairing, safe exits and relighting; 182 tests, real bidirectional entity travel, denials and unloaded-destination/restart recovery passed. |
 | S3a managed-mob persistence | Complete | Schema 15; shared species identities, creation/parent reservations, deadlines, death intents/tombstones and bounded recovery reads. [Contract](managed-mobs.md). |
 | S3b cattle Paper integration | Complete | Opt-in SQL activation/fixed slots, bounded event coordination, native breeding/death, load reconciliation and pending-death settlement. [Setup](cattle-policy.md). Verified only in isolated fixture; Desktop unchanged. |
-| S4–S6 | Not started | Finite deposits/repair exclusions, integrated supply audit and season release remain. Other resource-mob adapters remain a staged follow-up. |
+| S4 finite extraction / repair boundary | Complete (isolated verification) | Deterministic 2048 preparation, six finite deposits, schema 17 diamond policy, resource-safe battle/exposure reconstruction. [Contract](diamond-scarcity.md). Integrated release audit remains S5. |
+| S5–S6 | Not started | Finite deposits/repair exclusions, integrated supply audit and season release remain. Other resource-mob adapters remain a staged follow-up. |
 | Proximity text chat | Explicitly deferred | Recorded in worktree roadmap; ordinary text chat retains existing behavior. |
+
+### S4 implementation progress
+
+- Worktree `../civilizations-s4`, branch `benny/scarcity-extraction`; Desktop server remains off and unchanged.
+- First implementation step: shared resource reconstruction exclusions at Paper break/place admission,
+  battle/exposure journal services, new repair assessments, and execution of historical jobs.
+  Historical records remain unchanged; unsafe saved work pauses with a diagnostic instead of
+  restoring supply or silently skipping paid items. No SQL migration or configuration override:
+  this is a reconstruction safety invariant. Ordinary authorized mining remains vanilla.
+- Reconstruction regression suite passes. Added migration 17 for explicit, immutable server-wide
+  diamond loot/trade activation, with raw-only/equipment choice and an admin-attested audit hash.
+  Import alone still activates nothing; registered geography freezes after activation.
+- Implemented `tools/scarcity/prepare_world.py`: bounded unopened-export audit/preparation,
+  deterministic ore selection, packed palette round-trip checks, source/output checksums,
+  strict no-overwrite/missing-chunk guards and explicit selected-container-item stripping.
+  Source 2048 scan found 207,138 diamond ores and four selected item stacks. Prepared a new
+  isolated copy with six 256-ore deposits; a separate audit confirms 1,536 ore, no ore outside
+  boxes, no selected item stacks, lazy loot tables or merchant offers. Original export unchanged.
+- Initial clean build passed 203 JVM tests; three Python preparation tests passed. Isolated Paper
+  verification now running on loopback 25582 against a copy of the prepared world.
+  No Desktop deployment; no player/client playtest. Full integrated release audit remains S5.
+
+- Final implementation verification: `./gradlew clean build` passed **206 JVM tests**,
+  zero failures; **four Python tests** pass, including palette-width boundaries, deterministic
+  budgets, no source mutation/overwrite, missing chunks and nested selected-item cleanup.
+- Paper 26.2-121 loaded the prepared copy and sampled one ore from each of six boxes.
+  Native mining + injected historical battle/exposure runner work could not produce a
+  second harvest; stone restoration succeeded. Old work was injected at runner boundaries,
+  not played through a multiplayer battle or a paid-job crash recovery scenario.
+- Native container loot fill: 76 selected outputs before activation → 0 after activation,
+  with 220 unrelated outputs unchanged. Native new diamond-equipped mob spawn denied.
+  Vault event dispatch and purchase tests are adapter tests, not client interactions.
+- Restart preserved activation/hash and a sampled deposit. Changed-mode request rejected;
+  identical retry accepted. Fixture anti-xray mode 1 covers both diamond ores to Y64.
+  Observed TPS 19.9/20/20 and recent 5s average 0.3ms at idle/probe load; this is not
+  a multiplayer benchmark or packet-obfuscation proof. S5 must cover those release checks.
+- Private artifacts under `civilizations-s4/server/verification`: `prototype-deposits.json`,
+  `source-audit.json`, `preparation-2048.json`, `prepared-audit.json`, `prepared-2048/`,
+  and Paper logs. Prepared audit SHA256:
+  `a72b4f2d582528218e2d13624c331878dfb723370fb44903c637a6b6106bdf42`.
+  Probe sources and reproduction notes: `experiments/scarcity/`. Desktop remains off/unchanged.
+  Final SQL integrity and foreign-key checks pass; both Paper boots/shutdowns have no ERROR.
+  Original export file hashes still match. Fixture is stopped. Integration commit is recorded after delivery.
 
 ### S1 implementation progress
 
@@ -276,10 +320,12 @@ S1 registration, S2a cane and S2b fixed portal pairs are implemented. Read the
 [manifest contract](world-manifests.md), [cane contract](cane-policy.md), and
 [portal setup](portal-sites.md). S0 mechanics is complete; read the
 [animal experiment and implementation contract](animal-mechanics-spike.md). S3b is implemented; read [cattle setup and recovery](cattle-policy.md). Next planned
-slice is **S4: finite resource extraction and the repair boundary**. Specify selected
-finite ore/deposit supply, prevent battle/exposure repair from recreating harvestable
-resources, and cover relevant loot/trade alternate supply before calling the scarcity
-audit complete. Follow the serialized durable/Paper lanes.
+slice is **S5: integrated scarcity sample**. S4 is implemented; read [finite diamonds and
+reconstruction](diamond-scarcity.md). Assemble the prepared 2048 copy with real 3D manifests,
+cane, cattle and registered portal pairs, establish every accessible dimension/border,
+and run the three-civilization supply/interdependence audit. Use a fresh isolated fixture;
+S4's live fixture includes deliberate probe mutations and generated test Nether/End worlds
+and is not a release artifact. Follow the serialized durable/Paper lanes.
 
 Cattle remains the first species adapter. Sheep (wool/regrowth), chickens (eggs/hatching),
 villagers (food/beds/trades/curing), and other selected resource mobs must reuse the shared
@@ -290,9 +336,13 @@ User preference: rectangular geometry is enough; irregular zones may come later.
 add draft editing, revisions or visible boundary previews. Keep configuration/setup direct.
 Cane and portal enforcement were enabled only in their isolated fixtures, not on Desktop.
 
-The accepted 2048 export remains offline and unregistered. Before a later integrated test,
-load it, obtain its actual UUID, choose exact 3D boxes from the proposed JSON, and register
-through the documented format. Do not treat marker locations as an audited resource supply.
+The accepted original 2048 export remains unchanged. S4 prepared a separate finite-diamond
+copy at `civilizations-s4/server/verification/prepared-2048`; use that pristine artifact,
+not S4's mutated live `server/world`, for integrated work. Transfer the private specification
+and audit reports with it. Obtain the new Paper UUID on import, then register all diamond,
+cane and cattle boxes together before any activation freezes geography. S4's six 256-ore
+budgets are configurable test values, not settled season balancing. Proposed cattle/cane
+marker locations still need precise boxes and live setup.
 Read AGENTS.md and the architecture/roadmap, serialize migrations/runtime changes, and
 update this progress record after every step. User requested merge/push of completed work;
 inspect Git history for the latest integration entry.
@@ -523,7 +573,7 @@ existing government/economy product sequence.
 | S5 — integrated resource playtest | After S2–S4. 2,048-square map, three civilizations, three resource types and registered portals. | At least two meaningful resource exchanges, successful herd relocation and reproduction, visible depletion, and no permanent basic-food lockout. |
 | S6 — season release | After tuning and the existing first-season governance/economy prerequisites. Full map and supply manifest, backups, recovery drill, player guide. | Staff can restore world and SQL together, explain every restriction, and show all acceptance evidence. |
 
-S0, S3a and S3b are complete. S4 is next. The cattle adapter is opt-in and tested in
+S0, S3a, S3b and S4 are complete. S5 integrated verification is next. The cattle adapter is opt-in and tested in
 an isolated fixture; broader species policies and the full resource supply audit remain.
 
 ## Playtest measurements and stop conditions

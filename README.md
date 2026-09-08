@@ -191,3 +191,11 @@ Paper is checksum-pinned through `gradle.properties`. Running the setup script c
 ## Architecture status
 
 The modernization and architecture cleanup are complete. There is one live domain/application model, one relational store, one runtime owner, one protection policy, and thin native Paper adapters. Removed unfinished systems remain available in Git history if a future feature needs product ideas, but their architecture should not be restored. Remaining roadmap items are net-new gameplay and operational work on these boundaries.
+
+## Finite diamond preparation and extraction (S4)
+
+The unopened-export tool creates deterministic finite deposits with source/output audits.
+`/civworld enable-diamonds` explicitly freezes raw-only or equipment-inclusive loot/trade
+policy in SQL (migration 17); import alone activates nothing. Resource-bearing blocks
+are always excluded from battle/exposure reconstruction, including saved repair work.
+See [preparation, activation and release boundary](docs/diamond-scarcity.md).

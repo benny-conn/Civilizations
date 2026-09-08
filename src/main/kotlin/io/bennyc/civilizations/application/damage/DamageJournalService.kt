@@ -1,5 +1,8 @@
 package io.bennyc.civilizations.application.damage
 
+import io.bennyc.civilizations.application.scarcity.ReconstructionResourcePolicy
+import io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied
+
 import io.bennyc.civilizations.application.ApplicationFailure
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.identity.CivilizationsIdGenerator
@@ -31,6 +34,9 @@ class DamageJournalService(
 ) {
     fun prepare(request: PrepareBlockMutation): ApplicationResult<PreparedBlockMutation> =
         repository.transaction {
+            if (ReconstructionResourcePolicy.excludes(request.observedState)) {
+                return@transaction ApplicationResult.Rejected(ResourceReconstructionDenied)
+            }
             val battle = findBattle(request.battleId)
                 ?: return@transaction ApplicationResult.Rejected(
                     BattleNotFound(request.battleId),

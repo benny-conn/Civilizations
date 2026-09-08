@@ -473,3 +473,20 @@ payout is single-attempt, tombstones suppress old saved entities, and pending de
 held for explicit no-reward settlement. No chunk tickets or world generation are used.
 The [cattle contract](cattle-policy.md) records controls, bounds, defaults and remaining
 species/multiplayer coverage. Broader mobs still share the generic durable model.
+
+## Finite extraction and reconstruction (S4)
+
+`ReconstructionResourcePolicy` is an application-owned invariant. Both damage journals
+reject resource-bearing state; new repair assessments reject historical resource work,
+and both Paper runners stop before applying excluded original/changed states. Existing
+reports, item targets and economic history are not rewritten. Ordinary extraction uses
+world persistence, not per-block SQL or an asserted exact global inventory balance.
+
+Migration 17 persists one immutable server-wide diamond activation: raw/equipment mode,
+reviewed audit hash, actor, reason and timestamp. Activation is explicit and independent of
+manifest import; it freezes geography and requires unopened setup without historical battle
+or unresolved exposure work across seasons. The hash is an operator attestation. The Paper
+listener reads immutable runtime state, filters generated container/vault supply, denies
+new equipped creatures and checks both new offers and every merchant purchase. No hot-path
+SQL or off-thread world access is added. Physical world preparation is an offline adapter
+in `tools/scarcity`; [contract and release gates](diamond-scarcity.md).

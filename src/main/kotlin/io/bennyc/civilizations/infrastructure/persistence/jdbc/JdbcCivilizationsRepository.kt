@@ -131,6 +131,7 @@ private open class JdbcReadContext(
     override fun findPortalNetwork() = JdbcPortalNetwork(connection).find()
 
     override fun findCaneActivation() = JdbcCaneActivation(connection).find()
+    override fun findDiamondActivation() = JdbcDiamondActivation(connection).find()
 
     override fun listWorldManifests() = JdbcWorldManifests(connection).list()
 
@@ -1266,6 +1267,7 @@ private class JdbcWriteContext(
     override fun insertPortalNetwork(network: io.bennyc.civilizations.application.scarcity.PortalNetwork) = JdbcPortalNetwork(connection).insert(network)
 
     override fun insertCaneActivation(record: io.bennyc.civilizations.application.scarcity.CaneActivation) = JdbcCaneActivation(connection).insert(record)
+    override fun insertDiamondActivation(record: io.bennyc.civilizations.application.scarcity.DiamondActivation) = JdbcDiamondActivation(connection).insert(record)
 
     override fun insertWorldManifest(record: io.bennyc.civilizations.application.scarcity.RegisteredWorldManifest) {
         JdbcWorldManifests(connection).insert(record)

@@ -83,7 +83,7 @@ creation/travel checks; see [portal setup](portal-sites.md). The S0 animal mecha
 experiment is complete; [findings](animal-mechanics-spike.md) define the recovery contract.
 S3a shared managed-mob persistence is implemented (schema 15); see the
 [contract](managed-mobs.md). S3b opt-in cattle Paper integration is complete (schema 16);
-[setup and recovery](cattle-policy.md). S4 finite extraction/repair boundaries are next. The common
+[setup and recovery](cattle-policy.md). S4 finite extraction/repair boundaries are implemented (schema 17); see [preparation and activation](diamond-scarcity.md). S5 integrated three-resource/dimension verification is next. The common
 identity model also supports later sheep, chicken, villager and other species adapters. User explicitly deferred irregular geometry and declined
 draft/revision/preview tooling. No parallel merge queue is active for these follow-ups.
 

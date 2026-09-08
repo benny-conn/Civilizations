@@ -117,6 +117,9 @@ class CivilizationsPlugin : JavaPlugin() {
             }, this,
         )
         cattleController = io.bennyc.civilizations.infrastructure.paper.mob.PaperCattle(this, runtime, cattleRules)
+        server.pluginManager.registerEvents(
+            io.bennyc.civilizations.infrastructure.paper.scarcity.PaperDiamondSupplyListener { runtime.state }, this,
+        )
         server.pluginManager.registerEvents(cattleController, this)
         registerCommand("civcattle", "Manage the opt-in cattle experiment", emptyList(), cattleController)
         portalListener = io.bennyc.civilizations.infrastructure.paper.scarcity.PaperPortalListener(this, { runtime.state })

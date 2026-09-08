@@ -1,5 +1,8 @@
 package io.bennyc.civilizations.application.protection
 
+import io.bennyc.civilizations.application.scarcity.ReconstructionResourcePolicy
+import io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied
+
 import io.bennyc.civilizations.application.ApplicationFailure
 import io.bennyc.civilizations.application.ApplicationResult
 import io.bennyc.civilizations.application.economy.EconomyLedger
@@ -159,6 +162,9 @@ class LandProtectionService(
     fun prepareMutation(
         request: PrepareExposureMutation,
     ): ApplicationResult<PreparedExposureMutation> = repository.transaction {
+        if (!ReconstructionResourcePolicy.permits(request.observedState, request.expectedState)) {
+            return@transaction ApplicationResult.Rejected(ResourceReconstructionDenied)
+        }
         val state = findLandProtectionState(request.ownerCivilizationId)
             ?: return@transaction ApplicationResult.Rejected(
                 LandProtectionStateNotFound(request.ownerCivilizationId),

@@ -24,6 +24,7 @@ class WorldManifestService(private val repository: CivilizationsRepository, priv
             else reject("manifest: ID already registered with a different definition")
         }
         if (findCattleActivation()?.seasonId == manifest.seasonId) return@transaction reject("season: manifests are frozen by cattle activation")
+        if (findDiamondActivation()?.seasonId == manifest.seasonId) return@transaction reject("season: manifests are frozen by diamond activation")
         if (findCaneActivation()?.seasonId == manifest.seasonId) return@transaction reject("season: manifests are frozen by cane activation")
         if (season.status != SeasonStatus.SETUP) return@transaction reject("season: new world registration requires SETUP")
         if (records.any { it.manifest.worldId == manifest.worldId || it.manifest.worldUuid == manifest.worldUuid }) {

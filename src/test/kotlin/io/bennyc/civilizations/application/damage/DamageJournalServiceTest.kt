@@ -35,6 +35,22 @@ class DamageJournalServiceTest {
     private val world = WorldId("minecraft:overworld")
 
     @Test
+    fun `resource extraction cannot enter the battle reconstruction journal`() {
+        SqliteTestDatabase().use { database ->
+            val fixture = fixture(database)
+            listOf("diamond_ore", "deepslate_diamond_ore", "diamond_block", "ancient_debris").forEach { material ->
+                assertIs<io.bennyc.civilizations.application.scarcity.ResourceReconstructionDenied>(
+                    fixture.journal.prepare(fixture.request(
+                        position = BlockPosition3D(world, 40, 72, 8),
+                        state = "minecraft:$material", actor = 2, cause = BlockMutationCause.PLAYER_BREAK,
+                    )).rejection(),
+                )
+            }
+            assertEquals(0, database.repository.read { countBlockChanges(fixture.battle.id) })
+        }
+    }
+
+    @Test
     fun `first mutation preserves the original state across later enemy and owner changes`() {
         SqliteTestDatabase().use { database ->
             val fixture = fixture(database)
