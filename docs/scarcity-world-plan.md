@@ -265,7 +265,8 @@ backup/recovery proposal below is not a requirement to back up this current test
   unresolved=0. Restoring config defaults did not alter the persisted 4s/2s test policy.
   Fixture is stopped; Desktop remains off and untouched. Migration 16 adds immutable activation/seed tables.
   Reproducible probe: `experiments/cattle`; logs: `civilizations-s3b/server/verification`.
-  Integration pending. No Desktop deployment or client playtest is claimed.
+  Delivery complete: `cb5c5c5` on `benny/cattle-paper`, rebased onto main, fast-forward
+  merged and pushed to `origin/main`. No Desktop deployment or client playtest is claimed.
 - Activation freezes 6-hour breeding / 12-hour maturity defaults into SQL; initial seeds
   come from a simple file of habitat positions. Broader species remain later adapters.
 
